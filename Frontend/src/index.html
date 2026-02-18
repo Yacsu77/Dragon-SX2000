@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dragon SX2000</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Top Bar com Abas -->
+  <div class="top-bar">
+    <div class="tabs" id="tabs"></div>
+    <div class="floating-add" id="newTabBtn">
+      <span class="plus">+</span>
+    </div>
+  </div>
+
+  <!-- Página Inicial -->
+  <div class="home-page" id="homePage">
+    <div class="logo-container">
+      <div class="logo">🐉 Dragon SX2000</div>
+      <div class="tagline">Navegue com estilo e velocidade</div>
+    </div>
+    
+    <div class="search-container-home">
+      <form class="search-box" id="searchForm">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          class="search-input-home" 
+          id="searchInput"
+          placeholder="Pesquise na web..."
+          autocomplete="off"
+        />
+        <button type="submit" class="search-button-home">Buscar</button>
+      </form>
+    </div>
+
+    <div class="quick-links">
+      <div class="quick-link" data-query="YouTube">📺 YouTube</div>
+      <div class="quick-link" data-query="GitHub">💻 GitHub</div>
+      <div class="quick-link" data-query="Stack Overflow">❓ Stack Overflow</div>
+      <div class="quick-link" data-query="Reddit">💬 Reddit</div>
+    </div>
+  </div>
+
+  <!-- Container do Navegador -->
+  <div class="browser-container" id="browser"></div>
+
+  <!-- Scripts -->
+  <script src="js/tabs.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

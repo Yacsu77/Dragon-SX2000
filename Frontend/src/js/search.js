@@ -10,7 +10,14 @@ function performSearch(query) {
   if (!query || !query.trim()) return;
 
   const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query.trim())}`;
-  createTab(googleSearchUrl, `Busca: ${query.trim()}`);
+  
+  // Usar aba atual se existir, senão criar nova
+  const activeWebview = document.querySelector('webview.active');
+  if (activeWebview) {
+    activeWebview.src = googleSearchUrl;
+  } else {
+    createTab(googleSearchUrl, `Busca: ${query.trim()}`);
+  }
 }
 
 /**

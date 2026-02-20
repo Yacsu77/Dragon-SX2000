@@ -64,7 +64,10 @@ function createTab(url, title = null, icon = null) {
   // Adicionar ponto que vira + na última aba (após adicionar a aba)
   setTimeout(() => {
     updateLastTabDot();
-    updateTabsBarVisibility();
+    // Aguardar o layout ser renderizado antes de calcular porcentagens
+    requestAnimationFrame(() => {
+      setTimeout(() => updateTabsBarVisibility(), 0);
+    });
   }, 0);
 
   // Criar webview
@@ -86,6 +89,11 @@ function createTab(url, title = null, icon = null) {
       // Aqui você poderia carregar o favicon real, por enquanto mantemos o emoji
     }
   });
+
+  // Configurar listeners de navegação
+  if (typeof setupWebviewNavigation === 'function') {
+    setupWebviewNavigation(webview);
+  }
 
   document.getElementById("browser").appendChild(webview);
   activateTab(tabId);
@@ -148,6 +156,71 @@ function updateTabsBarVisibility() {
       tabsBar.classList.remove('hidden');
     }
   }
+  
+  // Verificar se há muitas abas baseado em porcentagem
+  const tabsContainer = document.querySelector('.tabs');
+  if (tabsContainer && tabs.length > 0) {
+    // Forçar recálculo do layout
+    tabsContainer.offsetHeight;
+    
+    const activeTab = tabsContainer.querySelector('.tab.active');
+    if (activeTab) {
+      // Calcular a porcentagem que a aba ativa ocupa
+      const containerWidth = tabsContainer.offsetWidth;
+      const activeTabWidth = activeTab.offsetWidth;
+      const activeTabPercentage = containerWidth > 0 ? (activeTabWidth / containerWidth) * 100 : 0;
+      
+      // Se a aba ativa ocupa menos de 15% do espaço, há muitas abas
+      if (activeTabPercentage < 15 && containerWidth > 0) {
+        tabsContainer.classList.add('many-tabs');
+        
+        // Forçar que a aba ativa tenha exatamente 15% do espaço
+        const minWidthPixels = containerWidth * 0.15;
+        activeTab.style.minWidth = `${minWidthPixels}px`;
+        activeTab.style.flexShrink = '0';
+        activeTab.style.flexGrow = '0';
+        
+        // Garantir que abas inativas não tenham estilos inline que interfiram
+        const inactiveTabs = tabsContainer.querySelectorAll('.tab:not(.active)');
+        inactiveTabs.forEach(tab => {
+          tab.style.minWidth = '';
+          tab.style.maxWidth = '';
+          tab.style.width = '';
+          tab.style.flexGrow = '';
+          tab.style.flexShrink = '';
+        });
+      } else {
+        tabsContainer.classList.remove('many-tabs');
+        // Remover estilos forçados quando não há muitas abas
+        activeTab.style.minWidth = '';
+        activeTab.style.flexShrink = '';
+        activeTab.style.flexGrow = '';
+        
+        // Limpar estilos das abas inativas também
+        const inactiveTabs = tabsContainer.querySelectorAll('.tab:not(.active)');
+        inactiveTabs.forEach(tab => {
+          tab.style.minWidth = '';
+          tab.style.maxWidth = '';
+          tab.style.width = '';
+          tab.style.flexGrow = '';
+          tab.style.flexShrink = '';
+        });
+      }
+    } else {
+      // Se não há aba ativa, verificar pelo número total de abas
+      const containerWidth = tabsContainer.offsetWidth;
+      if (containerWidth > 0) {
+        const estimatedTabWidth = containerWidth / tabs.length;
+        const estimatedPercentage = (estimatedTabWidth / containerWidth) * 100;
+        
+        if (estimatedPercentage < 15) {
+          tabsContainer.classList.add('many-tabs');
+        } else {
+          tabsContainer.classList.remove('many-tabs');
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -183,16 +256,30 @@ function activateTab(tabId) {
 
   // Se não há aba ativa ou é a mesma, ativar diretamente
   if (currentIndex === -1 || currentIndex === targetIndex) {
-    targetTab.classList.add("active");
-    targetWebview.classList.add("active");
-    currentActiveTab = tabId;
-    showBrowser();
-    
-    const addressInput = document.getElementById('addressInput');
-    if (addressInput) {
-      addressInput.value = targetWebview.src;
-    }
-    return;
+      targetTab.classList.add("active");
+      targetWebview.classList.add("active");
+      
+      // Adicionar classe nas abas adjacentes para esconder divisórias
+      const prevTab = targetTab.previousElementSibling;
+      const nextTab = targetTab.nextElementSibling;
+      if (prevTab && prevTab.classList.contains('tab')) {
+        prevTab.classList.add('adjacent-to-active');
+      }
+      if (nextTab && nextTab.classList.contains('tab')) {
+        nextTab.classList.add('adjacent-to-active');
+      }
+      
+      currentActiveTab = tabId;
+      showBrowser();
+      
+      // Atualizar barra de endereço e botões de navegação
+      if (typeof updateAddressBar === 'function') {
+        updateAddressBar();
+      }
+      if (typeof updateNavigationButtons === 'function') {
+        updateNavigationButtons();
+      }
+      return;
   }
 
   // Animação de transição passando por todas as abas
@@ -200,12 +287,13 @@ function activateTab(tabId) {
 }
 
 /**
- * Anima a transição entre abas com efeito WhatsApp iOS 26
+ * Anima a transição entre abas com efeito suave e otimizado
  */
 function animateTabTransition(currentIndex, targetIndex, tabs, targetTab, targetWebview, tabId) {
   const direction = targetIndex > currentIndex ? 1 : -1;
   const steps = Math.abs(targetIndex - currentIndex);
-  const totalDuration = Math.max(300, steps * 80); // Duração baseada no número de passos
+  // Duração mais curta e suave: 200ms base + 50ms por passo
+  const totalDuration = Math.min(400, 200 + steps * 50);
   const startTime = Date.now();
 
   // Adicionar classe de transição ao container
@@ -214,89 +302,106 @@ function animateTabTransition(currentIndex, targetIndex, tabs, targetTab, target
     tabsBar.classList.add('transitioning-container');
   }
 
-  // Remover active de todas inicialmente
-  tabs.forEach(tab => tab.classList.remove("active"));
-  document.querySelectorAll("webview").forEach(view => view.classList.remove("active"));
+  // Remover active de todas inicialmente, mas manter o webview atual ativo durante a animação
+  tabs.forEach(tab => {
+    tab.classList.remove("active", "adjacent-to-active");
+  });
+  // Não remover o webview ativo ainda - só no final para evitar travamentos
+
+  let lastClampedIndex = currentIndex;
 
   function animateStep() {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / totalDuration, 1);
     
-    // Spring easing (cubic-bezier para efeito de mola)
-    const springProgress = springEasing(progress);
+    // Easing suave (ease-out-cubic)
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
     
     if (progress < 1) {
-      // Calcular índice intermediário baseado no progresso
-      const currentIntermediateIndex = Math.round(currentIndex + (direction * steps * springProgress));
-      const clampedIndex = Math.max(0, Math.min(currentIntermediateIndex, tabs.length - 1));
+      // Calcular índice intermediário com interpolação suave
+      const exactIndex = currentIndex + (direction * steps * easedProgress);
+      const clampedIndex = Math.max(0, Math.min(Math.round(exactIndex), tabs.length - 1));
       
-      // Aplicar efeitos em todas as abas
+      // Só atualizar se o índice mudou (otimização)
+      if (clampedIndex !== lastClampedIndex) {
+        // Remover active de todas as abas
+        tabs.forEach(tab => tab.classList.remove("active"));
+        
+        // Ativar a aba intermediária
+        if (clampedIndex >= 0 && clampedIndex < tabs.length) {
+          tabs[clampedIndex].classList.add("active");
+        }
+        
+        lastClampedIndex = clampedIndex;
+      }
+      
+      // Aplicar efeitos visuais suaves em todas as abas
       tabs.forEach((tab, tabIndex) => {
-        const distanceFromCurrent = Math.abs(tabIndex - currentIndex);
-        const distanceFromTarget = Math.abs(tabIndex - targetIndex);
         const distanceFromActive = Math.abs(tabIndex - clampedIndex);
+        const maxDistance = Math.max(steps, 1);
         
-        // Influência baseada na distância da aba ativa
-        const influence = Math.max(0, 1 - (distanceFromActive / (steps + 1)) * 0.5);
+        // Influência baseada na distância (mais suave)
+        const influence = Math.max(0, 1 - (distanceFromActive / (maxDistance + 1)) * 0.6);
         
-        // Transformação suave (translateX com spring) - efeito mais pronunciado
-        const translateX = (tabIndex - currentIndex) * springProgress * 5;
-        const scale = 0.92 + influence * 0.08;
+        // Transformação suave e sutil
+        const translateX = (tabIndex - currentIndex) * easedProgress * 3;
+        const scale = 0.95 + influence * 0.05;
         tab.style.transform = `translateX(${translateX}px) scale(${scale})`;
         tab.style.transition = 'none';
         
-        // Opacidade baseada na distância - mais dramática
-        tab.style.opacity = 0.5 + influence * 0.5;
+        // Opacidade suave
+        tab.style.opacity = 0.6 + influence * 0.4;
         
-        // Blur reativo - mais blur nas abas mais distantes
-        const blurAmount = distanceFromActive * 6;
-        const saturation = 170 + (influence * 50);
-        const brightness = 100 + (influence * 15);
+        // Blur mais sutil para melhor performance
+        const blurAmount = Math.min(distanceFromActive * 3, 12);
+        const saturation = 180 + (influence * 40);
+        const brightness = 105 + (influence * 10);
         tab.style.backdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${saturation}%) brightness(${brightness}%)`;
         tab.style.webkitBackdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${saturation}%) brightness(${brightness}%)`;
-        
-        // Adicionar classe transitioning para abas intermediárias
-        if (tabIndex === clampedIndex) {
-          tab.classList.add("transitioning");
-        } else {
-          tab.classList.remove("transitioning");
-        }
       });
-      
-      // Ativar webview da aba intermediária
-      if (clampedIndex >= 0 && clampedIndex < tabs.length) {
-        const intermediateTab = tabs[clampedIndex];
-        const intermediateWebview = document.querySelector(`webview[data-id="${intermediateTab.dataset.id}"]`);
-        
-        if (intermediateWebview) {
-          intermediateWebview.classList.add("active");
-        }
-      }
 
       requestAnimationFrame(animateStep);
     } else {
-      // Finalizar na aba alvo
+      // Finalizar na aba alvo - limpar todos os estilos inline
       tabs.forEach(tab => {
-        tab.classList.remove("transitioning");
         tab.style.transform = '';
         tab.style.opacity = '';
         tab.style.backdropFilter = '';
         tab.style.webkitBackdropFilter = '';
         tab.style.transition = '';
+        tab.classList.remove("active", "adjacent-to-active");
       });
+      
+      // Remover active de todos os webviews
+      document.querySelectorAll("webview").forEach(view => view.classList.remove("active"));
       
       if (tabsBar) {
         tabsBar.classList.remove('transitioning-container');
       }
       
+      // Ativar a aba e webview alvo
       targetTab.classList.add("active");
       targetWebview.classList.add("active");
+      
+      // Adicionar classe nas abas adjacentes para esconder divisórias
+      const prevTab = targetTab.previousElementSibling;
+      const nextTab = targetTab.nextElementSibling;
+      if (prevTab && prevTab.classList.contains('tab')) {
+        prevTab.classList.add('adjacent-to-active');
+      }
+      if (nextTab && nextTab.classList.contains('tab')) {
+        nextTab.classList.add('adjacent-to-active');
+      }
+      
       currentActiveTab = tabId;
       showBrowser();
       
-      const addressInput = document.getElementById('addressInput');
-      if (addressInput) {
-        addressInput.value = targetWebview.src;
+      // Atualizar barra de endereço e botões de navegação
+      if (typeof updateAddressBar === 'function') {
+        updateAddressBar();
+      }
+      if (typeof updateNavigationButtons === 'function') {
+        updateNavigationButtons();
       }
     }
   }
@@ -305,29 +410,9 @@ function animateTabTransition(currentIndex, targetIndex, tabs, targetTab, target
 }
 
 /**
- * Spring easing function (cubic-bezier para efeito de mola - iOS 26 style)
+ * Easing suave para transições (ease-out-cubic)
+ * Função removida - agora usando easing inline mais simples e performático
  */
-function springEasing(t) {
-  // Efeito de mola mais pronunciado (cubic-bezier(0.34, 1.56, 0.64, 1))
-  // Simula o efeito de "bounce" suave do iOS
-  const c1 = 0.34;
-  const c2 = 1.56;
-  const c3 = 0.64;
-  const c4 = 1;
-  
-  // Aproximação do cubic-bezier com overshoot
-  if (t === 0) return 0;
-  if (t === 1) return 1;
-  
-  // Overshoot suave
-  if (t > 0.7) {
-    const overshoot = (t - 0.7) / 0.3;
-    return 1 + (overshoot * overshoot * 0.05) * (1 - overshoot);
-  }
-  
-  // Curva principal
-  return t * t * (3 - 2 * t) + Math.sin(t * Math.PI * 2) * 0.02;
-}
 
 /**
  * Fecha uma aba
@@ -342,7 +427,10 @@ function closeTab(tabId) {
 
   // Atualizar ponto na última aba
   updateLastTabDot();
-  updateTabsBarVisibility();
+  // Aguardar o layout ser renderizado antes de calcular porcentagens
+  requestAnimationFrame(() => {
+    setTimeout(() => updateTabsBarVisibility(), 0);
+  });
 
   // Se fechou a aba ativa, mostrar home ou ativar outra
   if (currentActiveTab === tabId) {
@@ -405,7 +493,10 @@ function createHomeTab() {
   // Adicionar ponto que vira + na última aba (após adicionar a aba)
   setTimeout(() => {
     updateLastTabDot();
-    updateTabsBarVisibility();
+    // Aguardar o layout ser renderizado antes de calcular porcentagens
+    requestAnimationFrame(() => {
+      setTimeout(() => updateTabsBarVisibility(), 0);
+    });
   }, 0);
 
   // Ativar a aba home
@@ -423,9 +514,9 @@ function activateHomeTab(tabId) {
 
   if (targetIndex === -1) return;
 
-  // Remover classe active de todas
+  // Remover classe active de todas e classes de adjacência
   document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.remove("active");
+    tab.classList.remove("active", "adjacent-to-active");
   });
 
   document.querySelectorAll("webview").forEach(view => {
@@ -435,11 +526,11 @@ function activateHomeTab(tabId) {
   const tab = tabs[targetIndex];
   
   if (tab) {
-    // Se há transição necessária, animar com efeito spring
+    // Se há transição necessária, animar com efeito suave
     if (currentIndex !== -1 && currentIndex !== targetIndex) {
       const direction = targetIndex > currentIndex ? 1 : -1;
       const steps = Math.abs(targetIndex - currentIndex);
-      const totalDuration = Math.max(300, steps * 80);
+      const totalDuration = Math.min(400, 200 + steps * 50);
       const startTime = Date.now();
       
       const tabsBar = document.querySelector('.tabs-bar');
@@ -447,39 +538,49 @@ function activateHomeTab(tabId) {
         tabsBar.classList.add('transitioning-container');
       }
 
+      let lastClampedIndex = currentIndex;
+
       function animateStep() {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / totalDuration, 1);
-        const springProgress = springEasing(progress);
+        // Easing suave (ease-out-cubic)
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
         
         if (progress < 1) {
-          const clampedIndex = Math.max(0, Math.min(Math.round(currentIndex + (direction * steps * springProgress)), tabs.length - 1));
+          const exactIndex = currentIndex + (direction * steps * easedProgress);
+          const clampedIndex = Math.max(0, Math.min(Math.round(exactIndex), tabs.length - 1));
+          
+          // Só atualizar se o índice mudou
+          if (clampedIndex !== lastClampedIndex) {
+            tabs.forEach(t => t.classList.remove("active", "adjacent-to-active"));
+            if (clampedIndex >= 0 && clampedIndex < tabs.length) {
+              tabs[clampedIndex].classList.add("active");
+            }
+            lastClampedIndex = clampedIndex;
+          }
           
           tabs.forEach((t, tIndex) => {
             const distanceFromActive = Math.abs(tIndex - clampedIndex);
-            const influence = Math.max(0, 1 - (distanceFromActive / (steps + 1)) * 0.5);
-            const translateX = (tIndex - currentIndex) * springProgress * 3;
-            const scale = 0.94 + influence * 0.06;
+            const maxDistance = Math.max(steps, 1);
+            const influence = Math.max(0, 1 - (distanceFromActive / (maxDistance + 1)) * 0.6);
+            const translateX = (tIndex - currentIndex) * easedProgress * 3;
+            const scale = 0.95 + influence * 0.05;
             
             t.style.transform = `translateX(${translateX}px) scale(${scale})`;
             t.style.transition = 'none';
-            t.style.opacity = 0.5 + influence * 0.5;
+            t.style.opacity = 0.6 + influence * 0.4;
             
-            const blurAmount = distanceFromActive * 6;
-            t.style.backdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${170 + influence * 50}%) brightness(${100 + influence * 15}%)`;
-            t.style.webkitBackdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${170 + influence * 50}%) brightness(${100 + influence * 15}%)`;
-            
-            if (tIndex === clampedIndex) {
-              t.classList.add("transitioning");
-            } else {
-              t.classList.remove("transitioning");
-            }
+            const blurAmount = Math.min(distanceFromActive * 3, 12);
+            const saturation = 180 + (influence * 40);
+            const brightness = 105 + (influence * 10);
+            t.style.backdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${saturation}%) brightness(${brightness}%)`;
+            t.style.webkitBackdropFilter = `blur(${Math.max(15, 15 + blurAmount)}px) saturate(${saturation}%) brightness(${brightness}%)`;
           });
 
           requestAnimationFrame(animateStep);
         } else {
           tabs.forEach(t => {
-            t.classList.remove("transitioning");
+            t.classList.remove("active");
             t.style.transform = '';
             t.style.opacity = '';
             t.style.backdropFilter = '';
@@ -492,13 +593,30 @@ function activateHomeTab(tabId) {
           }
           
           tab.classList.add("active");
+          
+          // Adicionar classe nas abas adjacentes para esconder divisórias
+          const prevTab = tab.previousElementSibling;
+          const nextTab = tab.nextElementSibling;
+          if (prevTab && prevTab.classList.contains('tab')) {
+            prevTab.classList.add('adjacent-to-active');
+          }
+          if (nextTab && nextTab.classList.contains('tab')) {
+            nextTab.classList.add('adjacent-to-active');
+          }
+          
           currentActiveTab = tabId;
           showHome();
-          updateTabsBarVisibility();
+          requestAnimationFrame(() => {
+            setTimeout(() => updateTabsBarVisibility(), 0);
+          });
           
+          // Atualizar barra de endereço e botões de navegação
           const addressInput = document.getElementById('addressInput');
           if (addressInput) {
             addressInput.value = '';
+          }
+          if (typeof updateNavigationButtons === 'function') {
+            updateNavigationButtons();
           }
         }
       }
@@ -506,13 +624,30 @@ function activateHomeTab(tabId) {
       animateStep();
     } else {
       tab.classList.add("active");
+      
+      // Adicionar classe nas abas adjacentes para esconder divisórias
+      const prevTab = tab.previousElementSibling;
+      const nextTab = tab.nextElementSibling;
+      if (prevTab && prevTab.classList.contains('tab')) {
+        prevTab.classList.add('adjacent-to-active');
+      }
+      if (nextTab && nextTab.classList.contains('tab')) {
+        nextTab.classList.add('adjacent-to-active');
+      }
+      
       currentActiveTab = tabId;
       showHome();
-      updateTabsBarVisibility();
+      requestAnimationFrame(() => {
+        setTimeout(() => updateTabsBarVisibility(), 0);
+      });
       
+      // Atualizar barra de endereço e botões de navegação
       const addressInput = document.getElementById('addressInput');
       if (addressInput) {
         addressInput.value = '';
+      }
+      if (typeof updateNavigationButtons === 'function') {
+        updateNavigationButtons();
       }
     }
   }
@@ -525,6 +660,15 @@ function createNewTab() {
   // Criar aba especial para página inicial
   createHomeTab();
 }
+
+// Adicionar listener para recalcular quando a janela for redimensionada
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    updateTabsBarVisibility();
+  }, 150);
+});
 
 // Exportar funções para uso global
 window.createTab = createTab;

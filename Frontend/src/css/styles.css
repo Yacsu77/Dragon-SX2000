@@ -194,25 +194,33 @@ body::before {
   padding: 0 8px;
   padding-top: 4px;
   padding-bottom: 8px;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: hidden;
   margin-top: 0;
   position: relative;
   z-index: 1;
   border: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tabs-bar.hidden {
   display: none;
 }
 
+/* Esconder scrollbar completamente */
 .tabs-bar::-webkit-scrollbar {
-  height: 4px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .tabs-bar::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
-  border-radius: 2px;
+  display: none;
+}
+
+.tabs-bar {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 .tabs {
@@ -225,7 +233,9 @@ body::before {
   border-radius: 10px;
   overflow: visible;
   position: relative;
-  padding: 1px;
+  padding: 0;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .tabs-bar.transitioning-container {
@@ -312,10 +322,36 @@ body::before {
   min-width: 0;
   position: relative;
   overflow: visible;
-  border-right: none;
   height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
   will-change: transform, backdrop-filter, background;
+  box-sizing: border-box;
+}
+
+/* Quando há muitas abas, fazer as inativas encolherem mais e preencher espaço */
+.tabs.many-tabs {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.tabs.many-tabs .tab:not(.active) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  width: 0 !important; /* Força todas as abas inativas a terem o mesmo tamanho base */
+}
+
+/* Esconder texto das abas inativas quando há muitas abas */
+.tabs.many-tabs .tab:not(.active) .tab-title {
+  display: none;
+}
+
+/* Ajustar padding quando não há texto */
+.tabs.many-tabs .tab:not(.active) {
+  padding-left: 8px;
+  padding-right: 8px;
+  justify-content: center;
 }
 
 .tab.transitioning {
@@ -335,6 +371,7 @@ body::before {
   border-radius: 10px;
 }
 
+
 .tab:not(:first-child)::before {
   content: '';
   position: absolute;
@@ -348,8 +385,12 @@ body::before {
 }
 
 .tab.active:not(:first-child)::before {
-  border-radius: 0.5px;
-  background: rgba(255, 255, 255, 0.12);
+  display: none;
+}
+
+/* Esconder divisória da aba anterior quando a próxima está ativa */
+.tab.active + .tab::before {
+  display: none;
 }
 
 .tab:not(:last-child)::after {
@@ -365,8 +406,12 @@ body::before {
 }
 
 .tab.active:not(:last-child)::after {
-  border-radius: 0.5px;
-  background: rgba(255, 255, 255, 0.12);
+  display: none;
+}
+
+/* Esconder divisória direita da aba anterior quando a próxima está ativa */
+.tab.adjacent-to-active::after {
+  display: none;
 }
 
 .tab-title {
@@ -387,14 +432,48 @@ body::before {
   -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(115%);
   border-bottom: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 10px;
-  z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  border: none;
   box-shadow: 
     0 4px 20px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   animation: liquidActivateSpring 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform: translateX(0) scale(1);
   will-change: transform, backdrop-filter, background;
+  position: relative;
+  /* Sobrepor 10% de cada lado - usando em para ser relativo ao tamanho da fonte */
+  margin-left: -0.8em;
+  margin-right: -0.8em;
+  flex-shrink: 0;
+}
+
+/* Quando há muitas abas, manter a aba ativa com pelo menos 15% do espaço */
+.tabs.many-tabs .tab.active {
+  flex: 0 0 auto !important;
+  min-width: 15% !important;
+  width: auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+  max-width: 30%;
+}
+
+/* Unificar abas adjacentes com a aba ativa */
+.tab.adjacent-to-active {
+  background: rgba(50, 50, 50, 0.48);
+  backdrop-filter: blur(38px) saturate(215%) brightness(113%);
+  -webkit-backdrop-filter: blur(38px) saturate(215%) brightness(113%);
+  border: none;
+  z-index: 1;
+  transition: all 0.3s ease;
+  margin: 0;
+  box-shadow: none;
+  position: relative;
+}
+
+/* Quando hover em aba adjacente, manter visual unificado */
+.tab.adjacent-to-active:hover {
+  background: rgba(50, 50, 50, 0.5);
+  backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(115%);
 }
 
 @keyframes liquidActivateSpring {

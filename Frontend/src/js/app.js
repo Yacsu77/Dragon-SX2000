@@ -21,6 +21,9 @@ function showHome() {
   if (addressInput) {
     addressInput.value = '';
   }
+
+  // Atualizar botões de navegação
+  updateNavigationButtons();
 }
 
 /**
@@ -91,6 +94,9 @@ function initApp() {
     });
   }
 
+  // Atualizar estado dos botões de navegação
+  updateNavigationButtons();
+
   // Links rápidos
   quickLinks.forEach(link => {
     link.addEventListener('click', () => {
@@ -155,6 +161,107 @@ if (document.readyState === 'loading') {
   initApp();
 }
 
+/**
+ * Atualiza o estado dos botões de navegação (voltar/avançar)
+ */
+function updateNavigationButtons() {
+  const backBtn = document.getElementById('backBtn');
+  const forwardBtn = document.getElementById('forwardBtn');
+  const activeWebview = document.querySelector('webview.active');
+
+  if (activeWebview) {
+    // Habilitar/desabilitar botão voltar
+    if (backBtn) {
+      if (activeWebview.canGoBack()) {
+        backBtn.classList.remove('disabled');
+        backBtn.style.opacity = '1';
+        backBtn.style.cursor = 'pointer';
+      } else {
+        backBtn.classList.add('disabled');
+        backBtn.style.opacity = '0.5';
+        backBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    // Habilitar/desabilitar botão avançar
+    if (forwardBtn) {
+      if (activeWebview.canGoForward()) {
+        forwardBtn.classList.remove('disabled');
+        forwardBtn.style.opacity = '1';
+        forwardBtn.style.cursor = 'pointer';
+      } else {
+        forwardBtn.classList.add('disabled');
+        forwardBtn.style.opacity = '0.5';
+        forwardBtn.style.cursor = 'not-allowed';
+      }
+    }
+  } else {
+    // Se não há webview ativo, desabilitar ambos os botões
+    if (backBtn) {
+      backBtn.classList.add('disabled');
+      backBtn.style.opacity = '0.5';
+      backBtn.style.cursor = 'not-allowed';
+    }
+    if (forwardBtn) {
+      forwardBtn.classList.add('disabled');
+      forwardBtn.style.opacity = '0.5';
+      forwardBtn.style.cursor = 'not-allowed';
+    }
+  }
+}
+
+/**
+ * Configura listeners de navegação para um webview
+ * @param {HTMLElement} webview - Elemento webview
+ */
+function setupWebviewNavigation(webview) {
+  if (!webview) return;
+
+  // Atualizar botões quando a navegação começar
+  webview.addEventListener('did-start-navigation', () => {
+    updateNavigationButtons();
+  });
+
+  // Atualizar botões e barra de endereço quando a navegação terminar
+  webview.addEventListener('did-finish-load', () => {
+    updateNavigationButtons();
+    updateAddressBar();
+  });
+
+  // Atualizar quando a URL mudar (incluindo navegação no histórico)
+  webview.addEventListener('did-navigate', (e) => {
+    updateNavigationButtons();
+    updateAddressBar();
+  });
+
+  webview.addEventListener('did-navigate-in-page', (e) => {
+    updateNavigationButtons();
+    updateAddressBar();
+  });
+}
+
+/**
+ * Atualiza a barra de endereço com a URL atual do webview ativo
+ */
+function updateAddressBar() {
+  const activeWebview = document.querySelector('webview.active');
+  const addressInput = document.getElementById('addressInput');
+  
+  if (activeWebview && addressInput) {
+    try {
+      const url = activeWebview.getURL();
+      if (url && url !== 'about:blank') {
+        addressInput.value = url;
+      }
+    } catch (e) {
+      // Ignorar erros ao obter URL
+    }
+  }
+}
+
 // Exportar funções para uso global
 window.showHome = showHome;
 window.showBrowser = showBrowser;
+window.updateNavigationButtons = updateNavigationButtons;
+window.setupWebviewNavigation = setupWebviewNavigation;
+window.updateAddressBar = updateAddressBar;

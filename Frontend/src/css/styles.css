@@ -308,7 +308,7 @@ body::before {
   background: rgba(60, 60, 60, 0.3);
   backdrop-filter: blur(20px) saturate(180%) brightness(105%);
   -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%);
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   white-space: nowrap;
   font-size: 12px;
@@ -325,6 +325,126 @@ body::before {
   height: 28px;
   will-change: transform, backdrop-filter, background;
   box-sizing: border-box;
+  user-select: none;
+}
+
+.tab:active {
+  cursor: grabbing;
+}
+
+/* Efeito Liquid Glass durante o arraste - mais sutil */
+.tab.dragging {
+  background: linear-gradient(
+    to bottom,
+    rgba(100, 100, 100, 0.98) 0%,
+    rgba(80, 80, 80, 0.95) 100%
+  ) !important;
+  backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: scale(1.02) rotate(0.5deg);
+  border-radius: 12px;
+  z-index: 10000 !important;
+  transition: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  color: #e0e0e0 !important;
+  pointer-events: none !important;
+  mix-blend-mode: normal !important;
+  -webkit-font-smoothing: antialiased !important;
+  font-smoothing: antialiased !important;
+}
+
+/* Clone visual (ghost) com informações da aba durante o arraste */
+.tab-drag-ghost {
+  position: fixed;
+  z-index: 10001 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 24px;
+  background: linear-gradient(
+    to bottom,
+    rgba(100, 100, 100, 0.95) 0%,
+    rgba(80, 80, 80, 0.92) 100%
+  );
+  backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: scale(1.05) rotate(1deg) perspective(500px) rotateY(2deg);
+  border-radius: 12px;
+  color: #e0e0e0;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  mix-blend-mode: normal;
+  -webkit-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+  box-sizing: border-box;
+  height: 28px;
+}
+
+.tab-drag-ghost .tab-icon {
+  opacity: 1;
+  visibility: visible;
+  color: #e0e0e0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.tab-drag-ghost .tab-icon img {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transform: scale(1.1);
+}
+
+.tab-drag-ghost .tab-title {
+  opacity: 1;
+  visibility: visible;
+  color: #ffffff;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  transform: scale(1.05);
+  letter-spacing: 0.3px;
+}
+
+/* Efeito nas outras abas durante o arraste - mais fluido */
+.tab.drag-affected {
+  transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Placeholder para indicar onde a aba será solta - estilo bolha */
+.tab-placeholder {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  margin: 0 2px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  height: 20px;
+  width: 20px;
+  min-width: 20px;
+  box-sizing: border-box;
+  box-shadow: 
+    0 4px 16px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  align-self: center;
+}
+
+/* Container durante o arraste - transições mais fluidas */
+.tabs.dragging-tabs .tab:not(.dragging) {
+  transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* Quando há muitas abas, fazer as inativas encolherem mais e preencher espaço */

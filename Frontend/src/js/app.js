@@ -73,6 +73,20 @@ function initApp() {
         handleAddressBar();
       }
     });
+    
+    // Mostrar URL completa quando focar
+    addressInput.addEventListener('focus', () => {
+      if (fullUrl) {
+        addressInput.value = fullUrl;
+      }
+    });
+    
+    // Mostrar apenas domínio quando perder o foco
+    addressInput.addEventListener('blur', () => {
+      if (fullUrl) {
+        addressInput.value = getDomainFromUrl(fullUrl);
+      }
+    });
   }
 
   // Botões de navegação
@@ -241,6 +255,23 @@ function setupWebviewNavigation(webview) {
 }
 
 /**
+ * Extrai apenas o domínio de uma URL
+ */
+function getDomainFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch (e) {
+    return url;
+  }
+}
+
+/**
+ * Armazena a URL completa para restaurar quando focar
+ */
+let fullUrl = '';
+
+/**
  * Atualiza a barra de endereço com a URL atual do webview ativo
  */
 function updateAddressBar() {
@@ -251,7 +282,13 @@ function updateAddressBar() {
     try {
       const url = activeWebview.getURL();
       if (url && url !== 'about:blank') {
-        addressInput.value = url;
+        fullUrl = url;
+        // Se não está focado, mostrar apenas o domínio
+        if (document.activeElement !== addressInput) {
+          addressInput.value = getDomainFromUrl(url);
+        } else {
+          addressInput.value = url;
+        }
       }
     } catch (e) {
       // Ignorar erros ao obter URL

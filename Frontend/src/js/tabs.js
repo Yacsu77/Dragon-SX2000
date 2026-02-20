@@ -86,7 +86,23 @@ function createTab(url, title = null, icon = null) {
   // Atualizar ícone baseado no favicon (se disponível)
   webview.addEventListener('page-favicon-updated', (e) => {
     if (e.favicons && e.favicons.length > 0) {
-      // Aqui você poderia carregar o favicon real, por enquanto mantemos o emoji
+      const faviconUrl = e.favicons[0];
+      updateTabIcon(tabId, faviconUrl);
+    }
+  });
+  
+  // Atualizar ícone quando a página carregar completamente
+  webview.addEventListener('did-finish-load', () => {
+    try {
+      const currentUrl = webview.getURL();
+      if (currentUrl && currentUrl !== 'about:blank' && !currentUrl.includes('google.com/search')) {
+        // Tentar obter favicon da URL (não para buscas do Google)
+        const urlObj = new URL(currentUrl);
+        const faviconUrl = `${urlObj.protocol}//${urlObj.host}/favicon.ico`;
+        updateTabIcon(tabId, faviconUrl);
+      }
+    } catch (e) {
+      // Ignorar erros
     }
   });
 
@@ -654,8 +670,143 @@ function activateHomeTab(tabId) {
 }
 
 /**
+ * Atualiza o ícone de uma aba com um favicon
+ * @param {string} tabId - ID da aba
+ * @param {string} faviconUrl - URL do favicon
+ */
+function updateTabIcon(tabId, faviconUrl) {
+  const tab = document.querySelector(`.tab[data-id="${tabId}"]`);
+  if (!tab) return;
+  
+  const iconSpan = tab.querySelector('.tab-icon');
+  if (!iconSpan) return;
+  
+  // Criar elemento de imagem para o favicon
+  let faviconImg = iconSpan.querySelector('img');
+  
+  if (!faviconImg) {
+    faviconImg = document.createElement('img');
+    faviconImg.style.width = '14px';
+    faviconImg.style.height = '14px';
+    faviconImg.style.objectFit = 'contain';
+    faviconImg.style.borderRadius = '2px';
+    faviconImg.onerror = () => {
+      // Se falhar ao carregar, manter o ícone padrão
+      if (faviconImg.parentNode) {
+        faviconImg.remove();
+      }
+    };
+    iconSpan.textContent = ''; // Limpar emoji/texto
+    iconSpan.appendChild(faviconImg);
+  }
+  
+  faviconImg.src = faviconUrl;
+}
+
+/**
  * Cria uma nova aba mostrando a página inicial
  */
+/**
+ * Converte uma home tab em uma aba normal com uma URL
+ * @param {string} tabId - ID da home tab
+ * @param {string} url - URL para carregar
+ * @param {string} title - Título da aba
+ */
+function convertHomeTabToNormalTab(tabId, url, title = null) {
+  const tab = document.querySelector(`.tab[data-id="${tabId}"]`);
+  if (!tab) return;
+  
+  // Atualizar o ID da aba para uma aba normal
+  const newTabId = "tab-" + (++tabCount);
+  tab.dataset.id = newTabId;
+  
+  // IMPORTANTE: Atualizar o onclick para usar activateTab em vez de activateHomeTab
+  tab.onclick = () => activateTab(newTabId);
+  
+  // Atualizar título
+  const titleSpan = tab.querySelector('.tab-title');
+  if (titleSpan) {
+    titleSpan.textContent = title || 'Nova Aba';
+  }
+  
+  // Atualizar ícone
+  const iconSpan = tab.querySelector('.tab-icon');
+  if (iconSpan) {
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      if (hostname.includes('youtube')) iconSpan.textContent = '▶';
+      else if (hostname.includes('github')) iconSpan.textContent = '🐙';
+      else if (hostname.includes('whatsapp')) iconSpan.textContent = '💬';
+      else if (hostname.includes('google')) iconSpan.textContent = 'G';
+      else iconSpan.textContent = '🌐';
+    } catch {
+      iconSpan.textContent = '🌐';
+    }
+  }
+  
+  // Criar webview para esta aba
+  const webview = document.createElement("webview");
+  webview.src = url;
+  webview.dataset.id = newTabId;
+  webview.classList.add("active");
+  
+  // Atualizar título quando a página carregar
+  webview.addEventListener('page-title-updated', (e) => {
+    if (e.title && titleSpan) {
+      const titleText = e.title.length > 25 ? e.title.substring(0, 25) + '...' : e.title;
+      titleSpan.textContent = titleText;
+    }
+  });
+  
+  // Atualizar ícone baseado no favicon
+  webview.addEventListener('page-favicon-updated', (e) => {
+    if (e.favicons && e.favicons.length > 0) {
+      const faviconUrl = e.favicons[0];
+      updateTabIcon(newTabId, faviconUrl);
+    }
+  });
+  
+  // Atualizar ícone quando a página carregar completamente
+  webview.addEventListener('did-finish-load', () => {
+    try {
+      const currentUrl = webview.getURL();
+      if (currentUrl && currentUrl !== 'about:blank' && !currentUrl.includes('google.com/search')) {
+        const urlObj = new URL(currentUrl);
+        const faviconUrl = `${urlObj.protocol}//${urlObj.host}/favicon.ico`;
+        updateTabIcon(newTabId, faviconUrl);
+      }
+    } catch (e) {
+      // Ignorar erros
+    }
+  });
+  
+  // Configurar listeners de navegação
+  if (typeof setupWebviewNavigation === 'function') {
+    setupWebviewNavigation(webview);
+  }
+  
+  // Adicionar webview ao container
+  document.getElementById("browser").appendChild(webview);
+  
+  // Atualizar referência da aba ativa
+  currentActiveTab = newTabId;
+  
+  // Mostrar o browser
+  showBrowser();
+  
+  // Atualizar visibilidade da barra de abas
+  updateTabsBarVisibility();
+  
+  // Atualizar barra de endereço e botões de navegação
+  if (typeof updateAddressBar === 'function') {
+    updateAddressBar();
+  }
+  if (typeof updateNavigationButtons === 'function') {
+    updateNavigationButtons();
+  }
+}
+
 function createNewTab() {
   // Criar aba especial para página inicial
   createHomeTab();
@@ -678,3 +829,5 @@ window.createNewTab = createNewTab;
 window.createHomeTab = createHomeTab;
 window.activateHomeTab = activateHomeTab;
 window.updateTabsBarVisibility = updateTabsBarVisibility;
+window.updateTabIcon = updateTabIcon;
+window.convertHomeTabToNormalTab = convertHomeTabToNormalTab;

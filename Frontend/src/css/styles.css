@@ -6,7 +6,7 @@
 
 body {
   margin: 0;
-  background: #1a1a1a;
+  background: #000;
   color: #e0e0e0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   display: flex;
@@ -16,37 +16,28 @@ body {
   position: relative;
 }
 
-/* Efeito Liquid Glass (iOS 26+) */
-body::before {
-  content: '';
+.background {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(120, 200, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-  animation: liquidGlass 20s ease-in-out infinite;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: #000;
 }
 
-@keyframes liquidGlass {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.3;
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.1);
-    opacity: 0.4;
-  }
-  66% {
-    transform: translate(-20px, 30px) scale(0.9);
-    opacity: 0.35;
-  }
+.background-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
+
+.nav-bar,
+.tabs-bar,
+.home-page,
+.browser-container {
+  display: none;
+}
+
+/* Efeito Liquid Glass removido para deixar só o wallpaper */
 
 /* NAVIGATION BAR */
 .nav-bar {
@@ -957,4 +948,8 @@ webview {
 
 webview.active {
   display: flex;
+}
+
+.home-page {
+  display: none !important;
 }

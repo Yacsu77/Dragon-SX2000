@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dragon SX2000</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/Wallpaper/index.css">
 </head>
 <body>
   <div class="background">
@@ -100,10 +101,10 @@
     <nav class="tabs-list">
       <span class="tabs-hover" aria-hidden="true"></span>
       <span class="tabs-tooltip" id="tabsTooltip" aria-hidden="true"></span>
-      <button class="tab-item active" data-idget="wallpaper" aria-label="Wallpaper" title="Wallpaper">
+      <a class="tab-item active" data-idget="wallpaper" aria-label="Wallpaper" title="Wallpaper" href="#wallpaper-widget">
         <span class="tab-icon" data-lucide="image"></span>
         <span class="tab-label">Wallpaper</span>
-      </button>
+      </a>
       <button class="tab-item" data-idget="tema" aria-label="Tema" title="Tema">
         <span class="tab-icon" data-lucide="palette"></span>
         <span class="tab-label">Tema</span>
@@ -155,10 +156,65 @@
   <!-- Container do Navegador -->
   <div class="browser-container" id="browser"></div>
 
+  <!-- Wallpaper Widget -->
+  <div id="wallpaper-widget" class="wallpaper-overlay" aria-hidden="true">
+    <div class="wallpaper-shell wallpaper-widget" role="dialog" aria-modal="true" aria-labelledby="wallpaperWidgetTitle">
+      <a class="wallpaper-close" href="#" aria-label="Fechar">×</a>
+      <main class="widget">
+        <header class="widget-header">
+          <h1 id="wallpaperWidgetTitle">Wallpaper</h1>
+          <p>Escolha e ajuste o wallpaper do ambiente.</p>
+        </header>
+
+        <section class="wallpaper-panel">
+          <div class="wallpaper-preview" id="wallpaperPreview">
+            <div class="preview-layer" id="previewLayer">
+              <span class="preview-placeholder">Selecione uma imagem ou video</span>
+            </div>
+          </div>
+
+          <div class="wallpaper-controls">
+            <div class="wallpaper-actions">
+              <label class="upload-btn">
+                Subir imagem
+                <input id="wallpaperImageInput" type="file" accept="image/*" hidden />
+              </label>
+              <label class="upload-btn secondary">
+                Subir video
+                <input id="wallpaperVideoInput" type="file" accept="video/*" hidden />
+              </label>
+            </div>
+
+            <div class="adjustments">
+              <div class="adjustment-row">
+                <label for="rotateControl">Rotacao</label>
+                <input id="rotateControl" type="range" min="-180" max="180" value="0" />
+              </div>
+              <div class="adjustment-row buttons">
+                <button class="control-btn" id="flipHorizontal" type="button">Inverter X</button>
+                <button class="control-btn" id="flipVertical" type="button">Inverter Y</button>
+                <button class="control-btn ghost" id="resetAdjustments" type="button">Resetar</button>
+              </div>
+              <p class="hint">
+                Arraste no preview para mover o wallpaper.
+              </p>
+            </div>
+
+            <div class="apply-row">
+              <button class="apply-btn" id="applyWallpaper" type="button">Aplicar</button>
+              <span class="status" id="wallpaperStatus" aria-live="polite"></span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/tabs.js"></script>
   <script src="js/search.js"></script>
   <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
   <script src="js/app.js"></script>
+  <script src="../../UserINTer/Tabline/idget/Wallpaper/index.js"></script>
 </body>
 </html>

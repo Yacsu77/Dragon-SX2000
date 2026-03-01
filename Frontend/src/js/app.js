@@ -46,6 +46,10 @@ function initApp() {
   const quickLinks = document.querySelectorAll('.quick-link');
   const backBtn = document.getElementById('backBtn');
   const forwardBtn = document.getElementById('forwardBtn');
+  const idgetTabs = document.querySelectorAll('.side-tabs .tab-item');
+  const tabsList = document.querySelector('.tabs-list');
+  const tabsHover = document.querySelector('.tabs-hover');
+  const tabsTooltip = document.getElementById('tabsTooltip');
 
   // Formulário de busca na página inicial
   if (searchForm) {
@@ -120,6 +124,65 @@ function initApp() {
       }
     });
   });
+
+  // Idgets - marcar ativo
+  if (idgetTabs.length > 0) {
+    idgetTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        idgetTabs.forEach(item => item.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+  }
+
+  // Hover seguindo o mouse na lista de idgets
+  if (tabsList && tabsHover && idgetTabs.length > 0) {
+    const updateHover = (button) => {
+      const offsetTop = button.offsetTop;
+      tabsHover.style.opacity = '1';
+      tabsHover.style.setProperty('--hover-y', `${offsetTop}px`);
+      tabsHover.style.height = `${button.offsetHeight}px`;
+    };
+
+    idgetTabs.forEach(tab => {
+      tab.addEventListener('mouseenter', () => {
+        updateHover(tab);
+        if (tabsTooltip) {
+          const label = tab.getAttribute('aria-label') || tab.title || '';
+          const rect = tab.getBoundingClientRect();
+          tabsTooltip.textContent = label;
+          tabsTooltip.style.opacity = '1';
+          tabsTooltip.style.left = `${Math.round(rect.right + 12)}px`;
+          const centerY = rect.top + rect.height / 2;
+          tabsTooltip.style.top = `${Math.round(centerY)}px`;
+        }
+      });
+      tab.addEventListener('focus', () => {
+        updateHover(tab);
+        if (tabsTooltip) {
+          const label = tab.getAttribute('aria-label') || tab.title || '';
+          const rect = tab.getBoundingClientRect();
+          tabsTooltip.textContent = label;
+          tabsTooltip.style.opacity = '1';
+          tabsTooltip.style.left = `${Math.round(rect.right + 12)}px`;
+          const centerY = rect.top + rect.height / 2;
+          tabsTooltip.style.top = `${Math.round(centerY)}px`;
+        }
+      });
+    });
+
+    tabsList.addEventListener('mouseleave', () => {
+      tabsHover.style.opacity = '0';
+      if (tabsTooltip) {
+        tabsTooltip.style.opacity = '0';
+      }
+    });
+  }
+
+  // Inicializar ícones Lucide
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
 
   // Focar no input quando a página carregar
   const searchInput = document.getElementById('searchInput');

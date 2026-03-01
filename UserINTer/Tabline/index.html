@@ -7,7 +7,62 @@
     <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <div id="tabline-root"></div>
+    <div id="tabline-root">
+      <div class="edge-hitbox" aria-hidden="true"></div>
+
+      <aside class="side-tabs" id="sideTabs" aria-label="Idgets">
+        <div class="side-header">
+          <div class="side-title">Idgets</div>
+          <div class="side-subtitle">Dragon SX2000</div>
+        </div>
+
+        <nav class="tabs-list">
+          <button class="tab-item active" data-panel="panel-wallpaper">
+            <span class="tab-dot"></span>
+            <span class="tab-label">Wallpaper</span>
+          </button>
+          <button class="tab-item" data-panel="panel-tema">
+            <span class="tab-dot"></span>
+            <span class="tab-label">Tema</span>
+          </button>
+          <button class="tab-item" data-panel="panel-customise">
+            <span class="tab-dot"></span>
+            <span class="tab-label">Customise</span>
+          </button>
+          <button class="tab-item" data-panel="panel-donate">
+            <span class="tab-dot"></span>
+            <span class="tab-label">Donate</span>
+          </button>
+          <button class="tab-item" data-panel="panel-autotune">
+            <span class="tab-dot"></span>
+            <span class="tab-label">AutoTune</span>
+          </button>
+        </nav>
+      </aside>
+
+      <main class="tab-content" id="tabContent">
+        <section class="panel active" id="panel-wallpaper">
+          <h1>Wallpaper</h1>
+          <p>Area reservada para o idget Wallpaper.</p>
+        </section>
+        <section class="panel" id="panel-tema">
+          <h1>Tema</h1>
+          <p>Area reservada para o idget Tema.</p>
+        </section>
+        <section class="panel" id="panel-customise">
+          <h1>Customise</h1>
+          <p>Area reservada para o idget Customise.</p>
+        </section>
+        <section class="panel" id="panel-donate">
+          <h1>Donate</h1>
+          <p>Area reservada para o idget Donate.</p>
+        </section>
+        <section class="panel" id="panel-autotune">
+          <h1>AutoTune</h1>
+          <p>Area reservada para o idget AutoTune.</p>
+        </section>
+      </main>
+    </div>
     <script src="./index.js"></script>
   </body>
 </html>

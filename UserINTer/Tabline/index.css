@@ -1,8 +1,129 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
+  background: #0b0f1a;
+  color: #e5e7eb;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #tabline-root {
   min-height: 100vh;
+  position: relative;
+}
+
+.edge-hitbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 100vh;
+  z-index: 3;
+}
+
+.side-tabs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  padding: 16px 12px;
+  background: rgba(17, 22, 32, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(120%);
+  transform: translateX(-100%);
+  transition: transform 200ms ease;
+  z-index: 4;
+}
+
+.edge-hitbox:hover + .side-tabs,
+.side-tabs:hover,
+.side-tabs:focus-within {
+  transform: translateX(0);
+}
+
+.side-header {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.side-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.side-subtitle {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.tabs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tab-item {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.tab-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.tab-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.tab-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.tab-item.active .tab-dot {
+  background: #8b9cff;
+  box-shadow: 0 0 0 2px rgba(139, 156, 255, 0.25);
+}
+
+.tab-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tab-content {
+  height: 100vh;
+  padding: 32px 32px 32px 40px;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
 }

@@ -105,8 +105,28 @@
         <span class="tab-icon" data-lucide="image"></span>
         <span class="tab-label">Wallpaper</span>
       </a>
-      <button class="tab-item" data-idget="tema" aria-label="Tema" title="Tema">
-        <span class="tab-icon" data-lucide="palette"></span>
+      <button type="button" class="tab-item tab-theme" id="temaTabBtn" data-idget="tema" aria-label="Tema" title="Tema">
+        <span class="theme-toggler-viewport" aria-hidden="true">
+          <span class="theme-toggler-strip" id="themeTogglerStrip" data-index="0">
+            <span class="theme-toggler-slot">
+              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              </svg>
+            </span>
+            <span class="theme-toggler-slot">
+              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+              </svg>
+            </span>
+            <span class="theme-toggler-slot">
+              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <path d="M8 21h8M12 17v4"></path>
+              </svg>
+            </span>
+          </span>
+        </span>
         <span class="tab-label">Tema</span>
       </button>
       <button class="tab-item" data-idget="customise" aria-label="Customise" title="Customise">
@@ -216,5 +236,6 @@
   <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
   <script src="js/app.js"></script>
   <script src="../../UserINTer/Tabline/idget/Wallpaper/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/Tema/index.js"></script>
 </body>
 </html>

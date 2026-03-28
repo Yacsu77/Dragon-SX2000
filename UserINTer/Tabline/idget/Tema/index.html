@@ -6,10 +6,48 @@
     <title>Tema</title>
     <link rel="stylesheet" href="./index.css" />
   </head>
-  <body>
+  <body class="tema-widget">
     <main class="widget">
-      <h1>Tema</h1>
-      <p>Area do widget Tema.</p>
+      <header class="widget-header">
+        <h1>Tema</h1>
+        <p>Alterne entre claro, escuro ou o tema do sistema.</p>
+      </header>
+
+      <section class="tema-panel">
+        <div class="tema-preview-card">
+          <span class="tema-preview-label">Aparência</span>
+          <button
+            type="button"
+            class="theme-toggler-btn"
+            id="themeTogglerBtn"
+            aria-label="Alternar tema"
+            data-direction="ltr"
+          >
+            <span class="theme-toggler-viewport" aria-hidden="true">
+              <span class="theme-toggler-strip" id="themeTogglerStrip" data-index="0">
+                <span class="theme-toggler-slot">
+                  <svg class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                  </svg>
+                </span>
+                <span class="theme-toggler-slot">
+                  <svg class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                  </svg>
+                </span>
+                <span class="theme-toggler-slot">
+                  <svg class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                    <path d="M8 21h8M12 17v4"></path>
+                  </svg>
+                </span>
+              </span>
+            </span>
+          </button>
+          <p class="tema-mode-label" id="themeModeLabel">Escuro</p>
+        </div>
+      </section>
     </main>
     <script src="./index.js"></script>
   </body>

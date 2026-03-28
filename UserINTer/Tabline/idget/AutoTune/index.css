@@ -1,10 +1,337 @@
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #0b0f1a;
-  color: #e5e7eb;
+/* Painel AutoTune (overlay) */
+.autotune-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 18, 0.55);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  transition: opacity 180ms ease;
 }
 
-.widget {
-  padding: 24px;
+.autotune-overlay:target {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.autotune-shell {
+  position: relative;
+  width: min(420px, 92vw);
+  max-height: min(520px, 88vh);
+  background: rgba(16, 20, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  transform: translateY(18px) scale(0.98);
+  opacity: 0;
+  transition: transform 220ms ease, opacity 220ms ease;
+  overflow: auto;
+  padding: 22px 20px 18px;
+}
+
+.autotune-overlay:target .autotune-shell {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.autotune-close {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autotune-shell h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.autotune-shell > p {
+  margin: 0 0 16px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.autotune-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.autotune-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.autotune-add-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(155, 175, 255, 0.35);
+}
+
+.autotune-add-btn span {
+  font-size: 11px;
+  opacity: 0.65;
+  font-weight: 500;
+}
+
+.autotune-catalog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.autotune-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.autotune-row-text strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.autotune-row-text span {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.autotune-panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.autotune-panel-toggle-label {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 44px;
+  text-align: right;
+}
+
+.autotune-panel-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+.autotune-panel-switch {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  position: relative;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.autotune-panel-toggle input:checked + .autotune-panel-switch {
+  background: rgba(100, 200, 130, 0.55);
+}
+
+.autotune-panel-switch::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.autotune-panel-toggle input:checked + .autotune-panel-switch::after {
+  transform: translateX(18px);
+}
+
+/* Camada dos cosméticos na tela (só visível na página inicial) */
+#floating-cosmetics-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+#floating-cosmetics-root.floating-cosmetics--hidden {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+#floating-cosmetics-root .floating-widget {
+  pointer-events: auto;
+}
+
+/* Widget flutuante */
+.floating-widget {
+  position: fixed;
+  min-width: 140px;
+  min-height: 100px;
+  border-radius: 14px;
+  background: rgba(18, 22, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.floating-widget-header {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.floating-widget-header:active {
+  cursor: grabbing;
+}
+
+.floating-widget-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-widget-body {
+  padding: 10px;
+  flex: 1;
+  min-height: 0;
+  font-size: 12px;
+  user-select: text;
+}
+
+.floating-widget-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    rgba(255, 255, 255, 0.25) 50%
+  );
+  border-radius: 0 0 12px 0;
+}
+
+/* Timer */
+.autotune-timer-display {
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+
+.autotune-timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.autotune-timer-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(120, 140, 255, 0.2);
+  color: #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.autotune-timer-btn.ghost {
+  background: transparent;
+}
+
+/* Share */
+.autotune-share-hint {
+  margin: 0 0 6px;
+  font-size: 10px;
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.autotune-share-url {
+  font-size: 11px;
+  word-break: break-all;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  margin-bottom: 8px;
+  max-height: 72px;
+  overflow-y: auto;
+}
+
+.autotune-share-copy {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 255, 0.35);
+  background: rgba(120, 140, 255, 0.18);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.autotune-share-status {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  min-height: 14px;
+  opacity: 0.85;
 }

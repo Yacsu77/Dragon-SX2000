@@ -6,6 +6,7 @@
   <title>Dragon SX2000</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="../../UserINTer/Tabline/idget/Wallpaper/index.css">
+  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/index.css">
 </head>
 <body>
   <div class="background">
@@ -137,12 +138,14 @@
         <span class="tab-icon" data-lucide="heart"></span>
         <span class="tab-label">Donate</span>
       </button>
-      <button class="tab-item" data-idget="autotune" aria-label="AutoTune" title="AutoTune">
+      <a class="tab-item" data-idget="autotune" aria-label="AutoTune" title="AutoTune" href="#autotune-widget">
         <span class="tab-icon" data-lucide="sparkles"></span>
         <span class="tab-label">AutoTune</span>
-      </button>
+      </a>
     </nav>
   </aside>
+
+  <div id="floating-cosmetics-root" aria-live="polite"></div>
 
   <!-- Página Inicial -->
   <div class="home-page" id="homePage">
@@ -230,6 +233,39 @@
     </div>
   </div>
 
+  <!-- AutoTune: painel para adicionar cosméticos -->
+  <div id="autotune-widget" class="autotune-overlay" aria-hidden="true">
+    <div class="autotune-shell">
+      <a class="autotune-close" href="#" aria-label="Fechar">×</a>
+      <h2>AutoTune</h2>
+      <p>Ative cada cosmético para mostrá-lo na página inicial. Desative para escondê-lo (a posição fica guardada). Arraste pelo título; redimensione pelo canto.</p>
+      <div class="autotune-catalog">
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Timer</strong>
+            <span>Cronômetro</span>
+          </div>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="timer">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="timer" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Share</strong>
+            <span>Copiar link da barra</span>
+          </div>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="share">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="share" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/tabs.js"></script>
   <script src="js/search.js"></script>
@@ -237,5 +273,8 @@
   <script src="js/app.js"></script>
   <script src="../../UserINTer/Tabline/idget/Wallpaper/index.js"></script>
   <script src="../../UserINTer/Tabline/idget/Tema/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/AutoTune/Timer/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/AutoTune/Share/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/AutoTune/index.js"></script>
 </body>
 </html>

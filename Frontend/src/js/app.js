@@ -24,6 +24,10 @@ function showHome() {
 
   // Atualizar botões de navegação
   updateNavigationButtons();
+
+  if (typeof window.setAutoTuneHomeVisible === 'function') {
+    window.setAutoTuneHomeVisible(true);
+  }
 }
 
 /**
@@ -32,6 +36,10 @@ function showHome() {
 function showBrowser() {
   document.getElementById('homePage').classList.add('hidden');
   document.getElementById('browser').classList.add('active');
+
+  if (typeof window.setAutoTuneHomeVisible === 'function') {
+    window.setAutoTuneHomeVisible(false);
+  }
 }
 
 /**

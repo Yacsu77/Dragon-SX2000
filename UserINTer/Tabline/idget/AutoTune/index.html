@@ -6,11 +6,38 @@
     <title>AutoTune</title>
     <link rel="stylesheet" href="./index.css" />
   </head>
-  <body>
-    <main class="widget">
+  <body class="autotune-standalone">
+    <main class="widget" style="padding: 24px; max-width: 480px; margin: 0 auto">
       <h1>AutoTune</h1>
-      <p>Area do widget AutoTune.</p>
+      <p>Teste local dos cosméticos. No app principal eles aparecem sobre a janela.</p>
+      <div id="floating-cosmetics-root" style="position: fixed; inset: 0; pointer-events: none; z-index: 10"></div>
+      <div class="autotune-catalog" style="margin-top: 16px">
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Timer</strong>
+            <span>Cronômetro</span>
+          </div>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="timer">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="timer" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Share</strong>
+            <span>Link</span>
+          </div>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="share">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="share" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
     </main>
+    <script src="./Timer/index.js"></script>
+    <script src="./Share/index.js"></script>
     <script src="./index.js"></script>
   </body>
 </html>

@@ -63,6 +63,24 @@
     writeStore(store);
   }
 
+  function sanitizeStoreForAutoTune() {
+    const store = readStore();
+    const clean = {};
+    Object.keys(store).forEach((key) => {
+      if (isAutoTuneKey(key)) {
+        clean[key] = store[key];
+      }
+    });
+    writeStore(clean);
+  }
+
+  function removeLegacyStyleNodes() {
+    document.querySelectorAll(`[id^="${STYLE_NODE_PREFIX}"]`).forEach((node) => {
+      if (node.id.includes("autotune-")) return;
+      node.remove();
+    });
+  }
+
   function slug(input) {
     return (input || "component")
       .toLowerCase()
@@ -151,59 +169,16 @@
     previewStyleTag.textContent = cssText || "";
   }
 
-  function buildFactoryButton(label, key, selector) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "factory-mini-btn";
-    btn.textContent = "⚙";
-    btn.title = `Factory de ${label}`;
-    btn.setAttribute("aria-label", `Factory de ${label}`);
-    btn.dataset.openFactory = "true";
-    btn.dataset.factoryLabel = label;
-    btn.dataset.factoryKey = key;
-    btn.dataset.factoryTarget = selector;
-    return btn;
+  function isAutoTuneKey(key) {
+    return typeof key === "string" && key.startsWith("autotune-");
   }
 
-  function installSideTabButtons() {
-    const items = document.querySelectorAll(".side-tabs .tab-item");
-    items.forEach((item, index) => {
-      if (item.querySelector(".factory-mini-btn")) return;
-      const label = item.getAttribute("aria-label") || item.title || `Tab ${index + 1}`;
-      const dataIdget = item.getAttribute("data-idget") || label;
-      const key = `tabline-${slug(dataIdget)}`;
-      let selector = ".side-tabs";
-      const href = item.getAttribute("href");
-      if (href && href.startsWith("#")) {
-        selector = href;
-      } else {
-        selector = `.side-tabs .tab-item[data-idget="${dataIdget}"]`;
-      }
-      item.appendChild(buildFactoryButton(label, key, selector));
-      item.dataset.factoryKey = key;
-    });
-  }
-
-  function installGlobalButton() {
-    const globalBtn = document.getElementById("factoryAccessBtn");
-    if (!globalBtn) return;
-    globalBtn.dataset.openFactory = "true";
-    globalBtn.dataset.factoryLabel = "Factory Global";
-    globalBtn.dataset.factoryKey = "global-layout";
-    globalBtn.dataset.factoryTarget = "body";
-    if (document.body && document.body.dataset) {
-      document.body.dataset.factoryKey = "global-layout";
-    }
-  }
-
-  function installCatalogRowKeys() {
-    document.querySelectorAll(".autotune-catalog-row").forEach((row, index) => {
-      const type = row.querySelector("[data-autotune-panel-toggle]")?.getAttribute("data-autotune-panel-toggle") || `row-${index + 1}`;
-      row.dataset.factoryKey = `autotune-row-${slug(type)}`;
-      const btn = row.querySelector(".autotune-row-factory-btn");
-      if (btn && !btn.dataset.openFactory) {
-        btn.dataset.openFactory = "true";
-      }
+  function ensureAutoTuneFactoryTriggers() {
+    document.querySelectorAll(".autotune-row-factory-btn").forEach((btn) => {
+      const type = btn.dataset.factoryTarget?.includes('"timer"') ? "timer" : "share";
+      btn.dataset.openFactory = "true";
+      btn.dataset.factoryKey = `autotune-widget-${type}`;
+      btn.dataset.factoryLabel = `AutoTune ${type === "timer" ? "Timer" : "Share"}`;
     });
   }
 
@@ -386,17 +361,17 @@
     const direct = selector ? document.querySelector(selector) : null;
     if (direct) return direct;
     if (trigger && trigger.closest(".floating-widget")) return trigger.closest(".floating-widget");
-    if (trigger && trigger.closest(".autotune-catalog-row")) return trigger.closest(".autotune-catalog-row");
-    if (trigger && trigger.closest(".tab-item")) return trigger.closest(".tab-item");
-    return document.body;
+    return null;
   }
 
   function openFactory(options) {
     ensureOverlay();
     const trigger = options?.trigger || null;
     targetEl = options?.target || resolveTargetFromTrigger(trigger);
-    targetLabel = options?.label || trigger?.dataset?.factoryLabel || targetEl?.dataset?.widgetType || targetEl?.id || "Componente";
+    targetLabel = options?.label || trigger?.dataset?.factoryLabel || targetEl?.dataset?.widgetType || "Componente";
     targetKey = options?.key || trigger?.dataset?.factoryKey || buildElementKey(targetEl);
+    if (!isAutoTuneKey(targetKey)) return;
+    if (!targetEl) return;
     if (targetEl && targetEl.dataset) {
       targetEl.dataset.factoryKey = targetKey;
     }
@@ -477,6 +452,8 @@
   function onGlobalClick(event) {
     const trigger = event.target.closest("[data-open-factory='true']");
     if (!trigger) return;
+    const key = trigger.dataset.factoryKey || "";
+    if (!isAutoTuneKey(key)) return;
     event.preventDefault();
     event.stopPropagation();
     openFactory({ trigger });
@@ -485,6 +462,7 @@
   function applyAllPersisted() {
     const store = readStore();
     Object.keys(store).forEach((key) => {
+      if (!isAutoTuneKey(key)) return;
       const record = store[key] || {};
       applyCssForKey(key, record.css || "");
       const selector = `[data-factory-key="${key}"]`;
@@ -499,6 +477,7 @@
   function applyPersistedToElement(el) {
     if (!el) return;
     const key = buildElementKey(el);
+    if (!isAutoTuneKey(key)) return;
     const store = readStore();
     const record = store[key];
     if (!record) return;
@@ -508,10 +487,10 @@
   }
 
   function boot() {
-    installGlobalButton();
-    installSideTabButtons();
-    installCatalogRowKeys();
+    ensureAutoTuneFactoryTriggers();
     ensureOverlay();
+    sanitizeStoreForAutoTune();
+    removeLegacyStyleNodes();
     document.addEventListener("click", onGlobalClick);
     applyAllPersisted();
   }

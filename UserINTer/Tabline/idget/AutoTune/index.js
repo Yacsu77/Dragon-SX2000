@@ -176,23 +176,7 @@
     wrap.dataset.widgetId = id;
     wrap.dataset.widgetType = type;
     wrap.dataset.factoryKey = `autotune-widget-${type}`;
-    const title = TITLES[type] || type;
     wrap.innerHTML = `
-      <div class="floating-widget-header">
-        <span class="floating-widget-title">${title}</span>
-        <button
-          type="button"
-          class="floating-widget-factory-btn"
-          data-open-factory="true"
-          data-factory-key="autotune-widget-${type}"
-          data-factory-target='[data-widget-type="${type}"]'
-          data-factory-label="${title}"
-          title="Factory de ${title}"
-          aria-label="Factory de ${title}"
-        >
-          ⚙
-        </button>
-      </div>
       <div class="floating-widget-body"></div>
       <div class="floating-widget-resize" aria-label="Redimensionar"></div>
     `;
@@ -234,7 +218,6 @@
   }
 
   function attachDragResize(el, root, onChange) {
-    const header = el.querySelector(".floating-widget-header");
     const handle = el.querySelector(".floating-widget-resize");
 
     let drag = false;
@@ -255,8 +238,9 @@
       };
     }
 
-    header.addEventListener("mousedown", (e) => {
+    el.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
+      if (e.target.closest("button, a, input, select, textarea, .floating-widget-resize")) return;
       drag = true;
       bringToFront(el);
       const r = readLayout();

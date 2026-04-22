@@ -266,9 +266,26 @@
 }
 
 /* Timer */
+.autotune-pomodoro-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.autotune-pomodoro-phase,
+.autotune-pomodoro-cycle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
 .autotune-timer-display {
   font-variant-numeric: tabular-nums;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 600;
   text-align: center;
   margin-bottom: 10px;
@@ -296,6 +313,208 @@
   background: transparent;
 }
 
+.autotune-pomodoro-config {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.autotune-pomodoro-config label {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.autotune-pomodoro-config input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 16, 25, 0.85);
+  color: #e5e7eb;
+  padding: 7px 8px;
+}
+
+/* Tasklist */
+.autotune-tasklist-add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.autotune-tasklist-input {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 16, 25, 0.85);
+  color: #e5e7eb;
+  padding: 0 10px;
+}
+
+.autotune-tasklist-add-btn {
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 255, 0.42);
+  background: rgba(120, 140, 255, 0.2);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.autotune-tasklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.autotune-tasklist-item {
+  display: grid;
+  grid-template-columns: 24px 1fr auto 22px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 5px 6px;
+}
+
+.autotune-tasklist-item.is-active {
+  border-color: rgba(122, 140, 255, 0.5);
+  box-shadow: 0 0 16px rgba(122, 140, 255, 0.2);
+}
+
+.autotune-tasklist-item.is-done .autotune-tasklist-text {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.autotune-tasklist-check,
+.autotune-tasklist-remove {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.autotune-tasklist-text {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.autotune-tasklist-time {
+  font-size: 10px;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.autotune-tasklist-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Fusion */
+.floating-widget--fusion {
+  border-color: rgba(158, 121, 255, 0.42);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), 0 0 28px rgba(156, 111, 255, 0.3);
+}
+
+.autotune-fusion-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  height: 100%;
+}
+
+.autotune-fusion-timer,
+.autotune-fusion-tasks {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.autotune-fusion-phase {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.82;
+}
+
+.autotune-fusion-display {
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  margin: 10px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.autotune-fusion-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.autotune-fusion-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.autotune-fusion-input-row input {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 16, 25, 0.85);
+  color: #e5e7eb;
+  padding: 0 8px;
+}
+
+.autotune-fusion-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+  flex: 1;
+}
+
+.autotune-fusion-finish {
+  margin-top: 8px;
+  border: 1px solid rgba(236, 88, 88, 0.44);
+  background: rgba(236, 88, 88, 0.18);
+  color: #fef2f2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Share */
 .autotune-share-hint {
   margin: 0 0 6px;
@@ -305,19 +524,25 @@
   letter-spacing: 0.08em;
 }
 
-.autotune-share-url {
-  font-size: 11px;
-  word-break: break-all;
-  padding: 8px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
+.autotune-share-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
   margin-bottom: 8px;
-  max-height: 72px;
-  overflow-y: auto;
+}
+
+.autotune-share-input {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 16, 25, 0.85);
+  color: #e5e7eb;
+  font-size: 12px;
+  padding: 0 10px;
+  min-height: 34px;
 }
 
 .autotune-share-copy {
-  width: 100%;
+  width: auto;
   padding: 8px;
   border-radius: 8px;
   border: 1px solid rgba(120, 140, 255, 0.35);

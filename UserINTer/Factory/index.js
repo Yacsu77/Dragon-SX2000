@@ -30,9 +30,14 @@
       { id: "timerButtonsRadius", label: "Borda dos botoes", min: 4, max: 22, value: 8, unit: "px", selector: ".autotune-timer-btn", property: "borderRadius" }
     ],
     "autotune-widget-share": [
-      { id: "shareUrlHeight", label: "Altura da area do link", min: 50, max: 220, value: 72, unit: "px", selector: ".autotune-share-url", property: "maxHeight" },
+      { id: "shareInputHeight", label: "Altura do campo de busca", min: 28, max: 56, value: 34, unit: "px", selector: ".autotune-share-input", property: "minHeight" },
       { id: "shareHintOpacity", label: "Opacidade do subtitulo", min: 10, max: 100, value: 65, unit: "%", selector: ".autotune-share-hint", property: "opacity", transform: (n) => String(n / 100) },
-      { id: "shareButtonRadius", label: "Borda do botao copiar", min: 4, max: 22, value: 8, unit: "px", selector: ".autotune-share-copy", property: "borderRadius" }
+      { id: "shareButtonRadius", label: "Borda do botao buscar", min: 4, max: 22, value: 8, unit: "px", selector: ".autotune-share-copy", property: "borderRadius" }
+    ],
+    "autotune-widget-tasklist": [
+      { id: "taskItemGap", label: "Espaco da lista", min: 2, max: 20, value: 8, unit: "px", selector: ".autotune-tasklist-list", property: "gap" },
+      { id: "taskItemRadius", label: "Borda dos itens", min: 4, max: 16, value: 8, unit: "px", selector: ".autotune-tasklist-item", property: "borderRadius" },
+      { id: "taskInputHeight", label: "Altura do input", min: 30, max: 60, value: 36, unit: "px", selector: ".autotune-tasklist-input", property: "height" }
     ]
   };
 
@@ -221,10 +226,12 @@
 
   function ensureAutoTuneFactoryTriggers() {
     document.querySelectorAll(".autotune-row-factory-btn").forEach((btn) => {
-      const type = btn.dataset.factoryTarget?.includes('"timer"') ? "timer" : "share";
+      const raw = String(btn.dataset.factoryKey || "");
+      const match = raw.match(/autotune-widget-(.+)$/);
+      const type = match ? match[1] : "timer";
       btn.dataset.openFactory = "true";
       btn.dataset.factoryKey = `autotune-widget-${type}`;
-      btn.dataset.factoryLabel = `AutoTune ${type === "timer" ? "Timer" : "Share"}`;
+      btn.dataset.factoryLabel = `AutoTune ${type.charAt(0).toUpperCase()}${type.slice(1)}`;
     });
   }
 

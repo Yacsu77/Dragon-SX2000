@@ -1,57 +1,71 @@
-/**
- * Conteúdo do cosmético Share (copiar URL da barra de endereço).
- * @param {HTMLElement} bodyEl - .floating-widget-body
- */
 window.AutoTuneWidgets = window.AutoTuneWidgets || {};
 
 window.AutoTuneWidgets.share = function initShareWidget(bodyEl) {
   bodyEl.innerHTML = `
-    <p class="autotune-share-hint">Link atual</p>
-    <div class="autotune-share-url" data-role="url" title="">—</div>
-    <button type="button" class="autotune-share-copy" data-action="copy">Copiar link</button>
+    <p class="autotune-share-hint">Pesquisa rapida</p>
+    <form class="autotune-share-search" data-role="searchForm">
+      <input
+        type="text"
+        class="autotune-share-input"
+        data-role="queryInput"
+        placeholder="Buscar na web..."
+        autocomplete="off"
+      />
+      <button type="submit" class="autotune-share-copy" data-action="search">Buscar</button>
+    </form>
     <span class="autotune-share-status" data-role="status" aria-live="polite"></span>
   `;
 
-  const urlEl = bodyEl.querySelector('[data-role="url"]');
+  const formEl = bodyEl.querySelector('[data-role="searchForm"]');
+  const inputEl = bodyEl.querySelector('[data-role="queryInput"]');
   const statusEl = bodyEl.querySelector('[data-role="status"]');
 
-  function readUrl() {
-    const input = document.getElementById("addressInput");
-    if (input && input.value.trim()) return input.value.trim();
-    return "";
+  function toSearchUrl(query) {
+    return `https://www.google.com/search?q=${encodeURIComponent(query.trim())}`;
   }
 
-  function refresh() {
-    const u = readUrl();
-    urlEl.textContent = u || "Nenhum link na barra";
-    urlEl.title = u;
+  function looksLikeUrl(value) {
+    return value.includes(".") && !value.includes(" ");
   }
 
-  refresh();
-  const input = document.getElementById("addressInput");
-  if (input) {
-    input.addEventListener("input", refresh);
-    input.addEventListener("change", refresh);
+  function normalizeUrl(value) {
+    if (value.startsWith("http://") || value.startsWith("https://")) return value;
+    return `https://${value}`;
   }
-  window.addEventListener("focusin", refresh);
 
-  bodyEl.addEventListener("click", (e) => {
-    if (!e.target.closest('[data-action="copy"]')) return;
-    const u = readUrl();
-    if (!u) {
-      statusEl.textContent = "Nada para copiar.";
-      return;
-    }
-    navigator.clipboard.writeText(u).then(
-      () => {
-        statusEl.textContent = "Copiado.";
-        setTimeout(() => {
-          statusEl.textContent = "";
-        }, 2000);
-      },
-      () => {
-        statusEl.textContent = "Nao foi possivel copiar.";
+  function runSearch(rawValue) {
+    const query = String(rawValue || "").trim();
+    if (!query) return;
+
+    if (looksLikeUrl(query)) {
+      if (typeof window.createTab === "function") {
+        window.createTab(normalizeUrl(query));
+        statusEl.textContent = "Abrindo URL em nova aba...";
+      } else {
+        window.open(normalizeUrl(query), "_blank");
+        statusEl.textContent = "Abrindo URL...";
       }
-    );
+    } else {
+      if (typeof window.createTab === "function") {
+        window.createTab(toSearchUrl(query), `Busca: ${query}`);
+        statusEl.textContent = "Busca aberta em nova aba.";
+      } else if (typeof window.performSearch === "function") {
+        window.performSearch(query);
+        statusEl.textContent = "Buscando...";
+      } else {
+        window.open(toSearchUrl(query), "_blank");
+        statusEl.textContent = "Busca aberta.";
+      }
+    }
+
+    inputEl.value = "";
+    setTimeout(() => {
+      statusEl.textContent = "";
+    }, 2200);
+  }
+
+  formEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runSearch(inputEl.value);
   });
 };

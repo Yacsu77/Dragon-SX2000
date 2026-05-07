@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="../../UserINTer/Tabline/idget/Wallpaper/index.css">
   <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/index.css">
+  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/Music/index.css">
   <link rel="stylesheet" href="../../UserINTer/Factory/index.css">
 </head>
 <body>
@@ -267,7 +268,7 @@
         <div class="autotune-catalog-row">
           <div class="autotune-row-text">
             <strong>Share</strong>
-            <span>Copiar link da barra</span>
+            <span>Pesquisa rapida</span>
           </div>
           <button
             type="button"
@@ -287,11 +288,58 @@
             <span class="autotune-panel-switch" aria-hidden="true"></span>
           </label>
         </div>
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Tasklist</strong>
+            <span>Lista de tarefas</span>
+          </div>
+          <button
+            type="button"
+            class="autotune-row-factory-btn"
+            data-open-factory="true"
+            data-factory-key="autotune-widget-tasklist"
+            data-factory-target='[data-widget-type="tasklist"]'
+            data-factory-label="AutoTune Tasklist"
+            title="Factory do Tasklist"
+            aria-label="Factory do Tasklist"
+          >
+            ⚙
+          </button>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="tasklist">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="tasklist" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="autotune-catalog-row">
+          <div class="autotune-row-text">
+            <strong>Music</strong>
+            <span>Now playing (Dragon Media SDK)</span>
+          </div>
+          <button
+            type="button"
+            class="autotune-row-factory-btn"
+            data-open-factory="true"
+            data-factory-key="autotune-widget-music"
+            data-factory-target='[data-widget-type="music"]'
+            data-factory-label="AutoTune Music"
+            title="Factory do Music"
+            aria-label="Factory do Music"
+          >
+            ⚙
+          </button>
+          <label class="autotune-panel-toggle">
+            <span class="autotune-panel-toggle-label" data-autotune-panel-label="music">Inativo</span>
+            <input type="checkbox" data-autotune-panel-toggle="music" />
+            <span class="autotune-panel-switch" aria-hidden="true"></span>
+          </label>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
+  <script src="js/dragon-media-bridge.js"></script>
   <script src="js/tabs.js"></script>
   <script src="js/search.js"></script>
   <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
@@ -300,7 +348,9 @@
   <script src="../../UserINTer/Tabline/idget/Wallpaper/index.js"></script>
   <script src="../../UserINTer/Tabline/idget/Tema/index.js"></script>
   <script src="../../UserINTer/Tabline/idget/AutoTune/Timer/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js"></script>
   <script src="../../UserINTer/Tabline/idget/AutoTune/Share/index.js"></script>
+  <script src="../../UserINTer/Tabline/idget/AutoTune/Music/index.js"></script>
   <script src="../../UserINTer/Tabline/idget/AutoTune/index.js"></script>
 </body>
 </html>

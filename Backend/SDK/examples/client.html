@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dragon Media SDK - Cliente de Teste</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-1: #0d0d18;
+      --bg-2: #1a1a2e;
+      --accent: #7c5cff;
+      --accent-2: #4ad6ff;
+      --text: #f1f1ff;
+      --muted: #8a8aa3;
+      --ok: #4ade80;
+      --err: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: radial-gradient(circle at 20% 0%, var(--bg-2), var(--bg-1) 60%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+    .card {
+      width: min(720px, 100%);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .title { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--err);
+      box-shadow: 0 0 8px var(--err);
+      transition: 0.2s;
+    }
+    .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .player {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+    .cover {
+      width: 160px; height: 160px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      object-fit: cover;
+      box-shadow: 0 12px 30px rgba(124,92,255,0.3);
+    }
+    .meta .app {
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--accent-2);
+      margin-bottom: 6px;
+    }
+    .meta .track-title {
+      font-size: 22px; font-weight: 700; margin: 0 0 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .meta .track-artist { font-size: 14px; color: var(--muted); margin: 0 0 2px; }
+    .meta .track-album  { font-size: 12px; color: var(--muted); opacity: 0.7; }
+    .progress {
+      margin-top: 18px;
+      grid-column: 1 / -1;
+    }
+    .bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.4s linear;
+    }
+    .times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .log {
+      margin-top: 22px;
+      max-height: 180px;
+      overflow: auto;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      color: #cfcfe6;
+    }
+    .log .line { margin-bottom: 4px; opacity: 0.85; }
+    .log .ev { color: var(--accent-2); }
+    .empty {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="title">Dragon Media SDK - Test Client</div>
+      <div class="status">
+        <span id="dot" class="dot"></span>
+        <span id="state">desconectado</span>
+      </div>
+    </div>
+
+    <div id="empty" class="empty">Aguardando uma sessão de mídia ativa…</div>
+
+    <div id="player" class="player" style="display:none">
+      <img id="cover" class="cover" alt="cover" />
+      <div class="meta">
+        <div id="app" class="app">—</div>
+        <h2 id="title" class="track-title">—</h2>
+        <p id="artist" class="track-artist">—</p>
+        <p id="album" class="track-album">—</p>
+      </div>
+      <div class="progress">
+        <div class="bar"><div id="fill" class="bar-fill"></div></div>
+        <div class="times">
+          <span id="position">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="log" class="log"></div>
+  </div>
+
+  <script>
+    const WS_URL = 'ws://127.0.0.1:8974';
+
+    const els = {
+      dot: document.getElementById('dot'),
+      state: document.getElementById('state'),
+      empty: document.getElementById('empty'),
+      player: document.getElementById('player'),
+      cover: document.getElementById('cover'),
+      app: document.getElementById('app'),
+      title: document.getElementById('title'),
+      artist: document.getElementById('artist'),
+      album: document.getElementById('album'),
+      position: document.getElementById('position'),
+      duration: document.getElementById('duration'),
+      fill: document.getElementById('fill'),
+      log: document.getElementById('log'),
+    };
+
+    let current = null;
+
+    function fmt(s) {
+      s = Math.max(0, Math.floor(s || 0));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${m}:${String(r).padStart(2, '0')}`;
+    }
+
+    function logLine(event, data) {
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.innerHTML = `<span class="ev">[${event}]</span> ${JSON.stringify(data).slice(0, 200)}`;
+      els.log.prepend(div);
+      while (els.log.children.length > 40) els.log.lastChild.remove();
+    }
+
+    function renderSnapshot(s) {
+      if (!s || !s.title) {
+        els.empty.style.display = '';
+        els.player.style.display = 'none';
+        current = null;
+        return;
+      }
+      current = s;
+      els.empty.style.display = 'none';
+      els.player.style.display = '';
+      els.app.textContent = s.app || 'Desconhecido';
+      els.title.textContent = s.title;
+      els.artist.textContent = s.artist || '—';
+      els.album.textContent = s.album || '';
+      els.cover.src = s.cover || '';
+      els.cover.style.opacity = s.cover ? 1 : 0.2;
+      updateProgress(s.position, s.duration);
+    }
+
+    function updateProgress(pos, dur) {
+      els.position.textContent = fmt(pos);
+      els.duration.textContent = fmt(dur);
+      const pct = dur > 0 ? Math.min(100, (pos / dur) * 100) : 0;
+      els.fill.style.width = pct + '%';
+    }
+
+    function setConnected(ok) {
+      els.dot.classList.toggle('on', ok);
+      els.state.textContent = ok ? 'conectado' : 'desconectado';
+    }
+
+    function connect() {
+      const ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => { setConnected(true); logLine('open', WS_URL); };
+      ws.onclose = () => {
+        setConnected(false);
+        logLine('close', 'tentando reconectar em 2s...');
+        setTimeout(connect, 2000);
+      };
+      ws.onerror = () => logLine('error', 'falha de conexão');
+
+      ws.onmessage = (msg) => {
+        try {
+          const { event, data } = JSON.parse(msg.data);
+          logLine(event, data);
+          switch (event) {
+            case 'hello':
+              if (data?.snapshot) renderSnapshot(data.snapshot);
+              break;
+            case 'media_change':
+              renderSnapshot(data);
+              break;
+            case 'media_play':
+            case 'media_pause':
+              if (current) {
+                current.paused = !!data.paused;
+                if (typeof data.position === 'number') current.position = data.position;
+                updateProgress(current.position, current.duration);
+              }
+              break;
+            case 'media_progress':
+              if (current) {
+                current.position = data.position;
+                current.duration = data.duration ?? current.duration;
+                updateProgress(current.position, current.duration);
+              }
+              break;
+            case 'media_stop':
+              renderSnapshot(null);
+              break;
+          }
+        } catch (e) {
+          logLine('parse-error', String(e));
+        }
+      };
+    }
+
+    connect();
+  </script>
+</body>
+</html>

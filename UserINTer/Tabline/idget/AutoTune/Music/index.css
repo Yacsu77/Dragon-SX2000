@@ -1,0 +1,203 @@
+/* AutoTune - Music Widget
+ * Card horizontal de Now Playing alimentado pelo Dragon Media SDK.
+ * Dimensionamento otimizado para o tamanho default 360x150.
+ */
+
+.floating-widget[data-widget-type="music"] {
+  background: rgba(245, 245, 248, 0.96);
+  color: #1a1c22;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 16px 38px rgba(20, 24, 40, 0.18);
+  overflow: hidden;
+}
+
+.floating-widget[data-widget-type="music"] .floating-widget-body {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.floating-widget[data-widget-type="music"].floating-widget--idle {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.floating-widget[data-widget-type="music"]:not(.floating-widget--idle) {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+/* Card layout - cover à esquerda, info à direita */
+.autotune-music-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  align-items: stretch;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Cover */
+.autotune-music-cover {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #cfd2dc, #8d92a3);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autotune-music-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.autotune-music-cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Coluna principal com texto, progresso e controles */
+.autotune-music-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 6px;
+}
+
+.autotune-music-text {
+  min-width: 0;
+}
+
+.autotune-music-title {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.autotune-music-artist {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(26, 28, 34, 0.6);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Barra de progresso */
+.autotune-music-progress {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.autotune-music-time {
+  font-size: 10px;
+  color: rgba(26, 28, 34, 0.6);
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+}
+
+.autotune-music-time:last-child {
+  text-align: right;
+}
+
+.autotune-music-bar {
+  height: 3px;
+  background: rgba(26, 28, 34, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.autotune-music-fill {
+  height: 100%;
+  background: #1a1c22;
+  border-radius: inherit;
+  width: 0%;
+  transition: width 0.4s linear;
+}
+
+/* Controles play/pause/prev/next */
+.autotune-music-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.autotune-music-btn {
+  border: none;
+  background: transparent;
+  color: rgba(26, 28, 34, 0.7);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  transition: color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+  position: relative;
+}
+
+.autotune-music-btn:hover {
+  color: #1a1c22;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.autotune-music-btn:active {
+  transform: scale(0.92);
+}
+
+.autotune-music-btn--play {
+  width: 30px;
+  height: 30px;
+  background: #1a1c22;
+  color: #ffffff;
+}
+
+.autotune-music-btn--play:hover {
+  background: #2a2d36;
+  color: #ffffff;
+}
+
+.autotune-music-btn--flash {
+  transform: scale(0.88);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.autotune-music-btn--play.autotune-music-btn--flash {
+  background: #4a4d56;
+  color: #ffffff;
+}
+
+/* Garante que cliques nos SVGs/paths internos sejam capturados pelo <button> pai.
+   Sem isso, event.target seria o <svg>/<path> e os data-* internos quebrariam
+   o handler de click. */
+.autotune-music-btn svg,
+.autotune-music-btn svg * {
+  pointer-events: none;
+}

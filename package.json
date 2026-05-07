@@ -19,5 +19,8 @@
   "homepage": "https://github.com/Yacsu77/Dragon-SX2000#readme",
   "dependencies": {
     "lucide": "^0.575.0"
+  },
+  "devDependencies": {
+    "electron": "^41.1.1"
   }
 }

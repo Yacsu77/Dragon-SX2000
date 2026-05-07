@@ -1,0 +1,32 @@
+{
+  "name": "dragon-media-sdk",
+  "version": "1.0.0",
+  "description": "Dragon Media SDK - captura de mídia em tempo real do sistema operacional e distribuição via WebSocket local para o Dragon SX2000.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --debug",
+    "test:client": "echo \"Abra examples/client.html no navegador\""
+  },
+  "keywords": [
+    "dragon",
+    "sx2000",
+    "media",
+    "spotify",
+    "smtc",
+    "nowplaying",
+    "websocket",
+    "sdk"
+  ],
+  "author": "Dragon SX2000 Team",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "@coooookies/windows-smtc-monitor": "^1.0.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

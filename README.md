@@ -1,56 +1,103 @@
-# 🐉 Dragon SX2000
+<p align="center">
+  <img src="Version/Banner.png" alt="Dragon SX2000 — Um navegador com a sua cara" width="100%">
+</p>
 
-Navegador desktop customizável desenvolvido com Electron, com página inicial personalizada e integração com Google Search.
+<h1 align="center">Dragon SX2000</h1>
+
+<p align="center">
+  <strong>Beta 1.0</strong>
+</p>
+
+<p align="center">
+  <em>Disponível em 07/06/2026</em>
+</p>
+
+<p align="center">
+
+  <!-- Electron -->
+  <a href="https://www.electronjs.org/" target="_blank">
+    <img
+      src="https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white&labelColor=000000"
+      alt="Electron"
+    />
+  </a>
+
+  <!-- Node.js -->
+  <a href="https://nodejs.org/" target="_blank">
+    <img
+      src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white&labelColor=000000"
+      alt="Node.js"
+    />
+  </a>
+
+  <!-- JavaScript -->
+  <a href="https://developer.mozilla.org/docs/Web/JavaScript" target="_blank">
+    <img
+      src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black&labelColor=000000"
+      alt="JavaScript"
+    />
+  </a>
+
+  <!-- HTML5 -->
+  <a href="https://developer.mozilla.org/docs/Web/HTML" target="_blank">
+    <img
+      src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white&labelColor=000000"
+      alt="HTML5"
+    />
+  </a>
+
+  <!-- CSS3 -->
+  <a href="https://developer.mozilla.org/docs/Web/CSS" target="_blank">
+    <img
+      src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white&labelColor=000000"
+      alt="CSS3"
+    />
+  </a>
+
+  <!-- Express -->
+  <a href="https://expressjs.com/" target="_blank">
+    <img
+      src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white&labelColor=000000"
+      alt="Express"
+    />
+  </a>
+
+  <!-- WebSocket -->
+  <a href="https://developer.mozilla.org/docs/Web/API/WebSockets_API" target="_blank">
+    <img
+      src="https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socketdotio&logoColor=white&labelColor=000000"
+      alt="WebSocket"
+    />
+  </a>
+
+</p>
 
 ---
 
-## 📁 Estrutura do Projeto
+## Sobre o Projeto
 
-```
-Dragon-SX2000/
-├── Frontend/                 # Frontend da aplicação
-│   └── src/
-│       ├── index.html       # HTML principal
-│       ├── css/
-│       │   └── styles.css   # Estilos da aplicação
-│       └── js/
-│           ├── app.js       # Lógica principal e inicialização
-│           ├── tabs.js      # Gerenciamento de abas
-│           └── search.js    # Lógica de busca
-│
-├── Backend/                  # Backend (API opcional)
-│   ├── server.js            # Servidor Express
-│   └── package.json         # Dependências do backend
-│
-├── main.js                  # Processo principal do Electron
-├── preload.js               # Script de pré-carregamento
-├── package.json             # Configuração do projeto Electron
-└── README.md                # Este arquivo
-```
+O **Dragon SX2000** é um navegador desktop **open source** pensado para quem quer ir além do comum. Aqui, cada detalhe pode refletir a sua identidade — porque um navegador não precisa ser genérico; ele pode ser **a cara do dono**.
+
+Personalize a tela inicial, escolha wallpapers, ajuste temas, adicione widgets e deixe o ambiente exatamente do jeito que você imagina. O Dragon SX2000 nasceu da ideia de que navegar na web também é uma forma de se expressar.
 
 ---
 
-## 🎯 Funcionalidades
+## Funcionalidades da Versão 1.0
 
-- ✅ **Página Inicial Personalizada**: Interface moderna com gradiente e animações
-- ✅ **Sistema de Abas**: Gerenciamento completo de abas com botão de fechar
-- ✅ **Busca no Google**: Pesquisa integrada que abre resultados em nova aba
-- ✅ **Links Rápidos**: Acesso rápido a sites populares (YouTube, GitHub, etc.)
-- ✅ **Interface Moderna**: Design com glassmorphism e animações suaves
+- Tela inicial **Home** totalmente personalizável
+- Sistema completo de **abas** com drag-and-drop e animações
+- **Persistência de dados** para salvar preferências e configurações
+- Busca integrada com o **Google** em múltiplos pontos da interface
+- Sistema de **Auto Tunes** — widgets flutuantes de produtividade e entretenimento
+- Suporte a **imagens e vídeos** como wallpaper
+- **Factory** de personalização visual e CSS/SCSS por componente
+- **Dragon Media SDK** — now playing em tempo real via WebSocket
 
----
-
-## 🛠️ Tecnologias Utilizadas
-
-- **Electron**: Framework para aplicações desktop
-- **Node.js**: Runtime JavaScript
-- **HTML5/CSS3**: Interface e estilização
-- **JavaScript (Vanilla)**: Lógica da aplicação
-- **Express** (Backend opcional): API para funcionalidades futuras
+> Para o changelog completo desta versão, consulte [`Version/Lançamento/Log 1.0.MD`](Version/Lançamento/Log%201.0.MD).
 
 ---
 
-## 💻 Como Executar
+## Como Executar
 
 ### Pré-requisitos
 
@@ -59,87 +106,31 @@ Dragon-SX2000/
 
 ### Instalação
 
-1. Clone o repositório:
 ```bash
 git clone https://github.com/Yacsu77/Dragon-SX2000.git
 cd Dragon-SX2000
-```
-
-2. Instale as dependências do Electron:
-```bash
 npm install
 ```
 
-3. (Opcional) Instale as dependências do Backend:
-```bash
-cd Backend
-npm install
-cd ..
-```
-
-### Executar a Aplicação
+### Executar
 
 ```bash
 npm start
 ```
 
-### Executar o Backend (se necessário)
+---
 
-```bash
-cd Backend
-npm start
-```
+## Contato
+
+| | |
+|---|---|
+| **E-mail** | [contato@yacsu.com.br](mailto:contato@yacsu.com.br) |
+| **Site** | [DragonSX.com.br](https://dragonsx.com.br) |
 
 ---
 
-## 📂 Organização do Código
-
-### Frontend
-
-- **`index.html`**: Estrutura HTML da aplicação
-- **`css/styles.css`**: Todos os estilos organizados por seções
-- **`js/app.js`**: Inicialização e gerenciamento geral da aplicação
-- **`js/tabs.js`**: Funções para criar, ativar e fechar abas
-- **`js/search.js`**: Lógica de busca e integração com Google
-
-### Backend
-
-- **`server.js`**: Servidor Express (atualmente usado para API de busca opcional)
-
-### Electron
-
-- **`main.js`**: Processo principal que cria a janela do Electron
-- **`preload.js`**: Script de pré-carregamento para segurança
-
----
-
-## 🎨 Características da Interface
-
-- **Design Moderno**: Gradiente roxo/azul com efeitos visuais
-- **Glassmorphism**: Efeitos de vidro fosco (backdrop-filter)
-- **Animações Suaves**: Transições e hover effects
-- **Responsivo**: Interface adaptável
-
----
-
-## 🚀 Próximos Passos
-
-- [ ] Histórico de navegação
-- [ ] Favoritos/Bookmarks
-- [ ] Modo escuro/claro
-- [ ] Extensões personalizadas
-- [ ] Sincronização de dados
-- [ ] Timer de produtividade
-- [ ] Relatórios de uso
-
----
-
-## 📝 Licença
-
-ISC
-
----
-
-## 👨‍💻 Autor
-
-Desenvolvido com ❤️ para uma experiência de navegação única.
+<p align="center">
+  <sub>
+    © 2026 — Todos os direitos reservados a <strong>Pedro Henrique Carneichuk Rosa</strong>
+  </sub>
+</p>

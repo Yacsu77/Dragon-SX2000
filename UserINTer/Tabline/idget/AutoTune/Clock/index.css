@@ -1,0 +1,82 @@
+/* AutoTune Clock Widget Styles */
+
+.autotune-clock-widget {
+  /* Base styles are set in JS for dynamic properties */
+}
+
+/* Analog clock styles (for future implementation) */
+.autotune-clock-analog {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.autotune-clock-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--clock-face-bg, #fff);
+  border: 2px solid var(--clock-border, #333);
+}
+
+.autotune-clock-hand {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  background: var(--clock-hand, #333);
+  transform-origin: bottom center;
+  transform: translateX(-50%);
+}
+
+.autotune-clock-hour-hand {
+  width: 4px;
+  height: 30%;
+}
+
+.autotune-clock-minute-hand {
+  width: 3px;
+  height: 40%;
+}
+
+.autotune-clock-second-hand {
+  width: 2px;
+  height: 45%;
+  background: var(--clock-second-hand, #e74c3c);
+}
+
+.autotune-clock-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--clock-center-dot, #333);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Digital clock styles */
+.autotune-clock-digital {
+  text-align: center;
+  width: 100%;
+}
+
+/* Theme variables */
+:root {
+  --clock-theme-dark-bg: rgba(0,0,0,0.7);
+  --clock-theme-dark-fg: #ffffff;
+  --clock-theme-dark-accent: #ff6b6b;
+  
+  --clock-theme-light-bg: rgba(255,255,255,0.8);
+  --clock-theme-light-fg: #000000;
+  --clock-theme-light-accent: #ff6b6b;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .autotune-clock-widget {
+    transform: scale(0.8);
+    transform-origin: top left;
+  }
+}

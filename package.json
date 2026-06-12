@@ -1,6 +1,6 @@
 {
   "name": "dragon-sx2000",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "kkkkkkkkkk",
   "main": "main.js",
   "scripts": {
@@ -21,6 +21,6 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.1.1"
+    "electron": "^41.7.2"
   }
 }

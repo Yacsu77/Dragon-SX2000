@@ -4,7 +4,8 @@
   "description": "kkkkkkkkkk",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,39 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.7.2"
+    "electron": "^41.7.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "br.com.yacsu.dragonsx2000",
+    "productName": "Dragon SX2000",
+    "copyright": "Copyright © 2026 Pedro Henrique Carneichuk Rosa",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!dist/**",
+      "!.git/**",
+      "!*.md"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "pkg", "arch": ["x64", "arm64"] }
+      ]
+    },
+    "linux": {
+      "target": [
+        { "target": "deb", "arch": ["amd64", "arm64"] }
+      ],
+      "category": "Network"
+    }
   }
 }

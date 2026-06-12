@@ -319,6 +319,14 @@
   margin: 0 auto;
 }
 
+.factory-plugin-panel {
+  display: none;
+}
+
+.factory-plugin-panel:not(:empty) {
+  display: block;
+}
+
 @media (max-width: 1280px) {
   .factory-stage1-layout {
     grid-template-columns: 1fr;

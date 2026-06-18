@@ -2,8 +2,26 @@
  * Gerenciamento de Abas do Navegador
  */
 
+const DEFAULT_TAB_ICON = '../../Image/Icons/icon com fundo verde .svg';
+
 let tabCount = 0;
 let currentActiveTab = null;
+
+/**
+ * Define o ícone padrão da aba inicial (página default, sem site externo)
+ * @param {HTMLElement} iconSpan
+ */
+function setDefaultTabIcon(iconSpan) {
+  iconSpan.textContent = '';
+  let img = iconSpan.querySelector('img');
+  if (!img) {
+    img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    iconSpan.appendChild(img);
+  }
+  img.src = DEFAULT_TAB_ICON;
+}
 
 /**
  * Cria uma nova aba
@@ -485,10 +503,10 @@ function createHomeTab() {
   tabButton.classList.add("tab");
   tabButton.dataset.id = tabId;
 
-  // Ícone da aba (dragão para página inicial)
+  // Ícone da aba (página inicial / default)
   const iconSpan = document.createElement("span");
   iconSpan.classList.add("tab-icon");
-  iconSpan.textContent = '🐉';
+  setDefaultTabIcon(iconSpan);
   tabButton.appendChild(iconSpan);
 
   // Título da aba

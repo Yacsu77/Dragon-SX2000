@@ -1,11 +1,15 @@
 {
   "name": "dragon-sx2000",
-  "version": "1.1.0",
-  "description": "kkkkkkkkkk",
+  "version": "1.1.0-beta",
+  "description": "Dragon SX2000 desktop application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "pack": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "dist:win": "electron-builder --win --x64 --publish=never",
+    "dist:mac": "electron-builder --mac --x64 --publish=never",
+    "dist:linux": "electron-builder --linux --x64 --publish=never"
   },
   "repository": {
     "type": "git",
@@ -26,35 +30,54 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "br.com.yacsu.dragonsx2000",
-    "productName": "Dragon SX2000",
+    "appId": "com.yacsu.dragonsx2000",
+    "productName": "DragonSX2000",
     "copyright": "Copyright © 2026 Pedro Henrique Carneichuk Rosa",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
-      "**/*",
-      "!node_modules/**/*",
-      "!dist/**",
-      "!.git/**",
-      "!*.md"
+      "main.js",
+      "preload.js",
+      "package.json",
+      "Frontend/**",
+      "Backend/**",
+      "UserINTer/**",
+      "resources/**",
+      "Image/**",
+      "node_modules/lucide/**"
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
-      ]
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "pkg", "arch": ["x64", "arm64"] }
-      ]
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.icns"
     },
     "linux": {
       "target": [
-        { "target": "deb", "arch": ["amd64", "arm64"] }
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
       ],
-      "category": "Network"
+      "icon": "build/icon.png",
+      "category": "Utility"
     }
   }
 }

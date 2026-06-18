@@ -1,0 +1,87 @@
+name: Build and Publish DragonSX2000
+
+on:
+  push:
+    branches:
+      - "1.1-beta"
+      - "Versão-1.1-Beta"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            build_script: npm run dist:win
+            artifact_name: DragonSX2000-Windows-x64
+            artifact_path: release/*.exe
+
+          - platform: macos
+            os: macos-latest
+            build_script: npm run dist:mac
+            artifact_name: DragonSX2000-macOS-x64
+            artifact_path: release/*.dmg
+
+          - platform: linux
+            os: ubuntu-latest
+            build_script: npm run dist:linux
+            artifact_name: DragonSX2000-Linux-x64
+            artifact_path: |
+              release/*.deb
+              release/*.AppImage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: ${{ matrix.build_script }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.1-beta-${{ github.run_number }}
+          name: DragonSX2000 v1.1 Beta Build ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: true
+          files: artifacts/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

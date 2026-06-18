@@ -1,17 +1,22 @@
 {
   "name": "dragon-sx2000",
-  "version": "1.0.0",
-  "description": "kkkkkkkkkk",
+  "version": "1.1.0-beta",
+  "description": "Dragon SX2000 desktop application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "dist:win": "electron-builder --win --x64 --publish=never",
+    "dist:mac": "electron-builder --mac --x64 --publish=never",
+    "dist:linux": "electron-builder --linux --x64 --publish=never"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Yacsu77/Dragon-SX2000.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Pedro Henrique <contatailandia134@gmail.com>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Yacsu77/Dragon-SX2000/issues"
@@ -21,6 +26,59 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.1.1"
+    "electron": "^41.7.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.yacsu.dragonsx2000",
+    "productName": "DragonSX2000",
+    "copyright": "Copyright © 2026 Pedro Henrique Carneichuk Rosa",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "Frontend/**",
+      "Backend/**",
+      "UserINTer/**",
+      "resources/**",
+      "Image/**",
+      "node_modules/lucide/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "maintainer": "Pedro Henrique <contatailandia134@gmail.com>",
+      "target": [
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility"
+    }
   }
 }

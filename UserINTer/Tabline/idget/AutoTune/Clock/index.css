@@ -1,0 +1,131 @@
+.autotune-clock-body {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.autotune-clock-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  overflow: hidden;
+}
+
+.autotune-clock-bg {
+  position: absolute;
+  pointer-events: none;
+}
+
+.autotune-clock-time,
+.autotune-clock-date,
+.autotune-clock-weekday {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 4px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.autotune-clock-time {
+  letter-spacing: 0.04em;
+}
+
+/* Factory Stage 1 — painel Clock */
+.clock-factory-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.clock-factory-tab {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clock-factory-tab.active {
+  background: rgba(116, 131, 255, 0.32);
+  border-color: rgba(154, 168, 255, 0.55);
+}
+
+.clock-factory-section {
+  display: none;
+}
+
+.clock-factory-section.active {
+  display: block;
+}
+
+.clock-factory-import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.clock-factory-import-btn {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(128, 144, 255, 0.2);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.clock-factory-import-btn:hover {
+  background: rgba(128, 144, 255, 0.34);
+}
+
+.clock-factory-import-input {
+  display: none;
+}
+
+.clock-factory-status {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.clock-factory-align-group {
+  display: flex;
+  gap: 6px;
+}
+
+.clock-factory-align-btn {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1d5db;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clock-factory-align-btn.active {
+  background: rgba(116, 131, 255, 0.28);
+  border-color: rgba(154, 168, 255, 0.5);
+}
+
+.floating-widget[data-widget-type="clock"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.floating-widget[data-widget-type="clock"] .floating-widget-body {
+  padding: 0;
+}

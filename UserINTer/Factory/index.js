@@ -62,9 +62,12 @@
   let previewStyleTags = [];
   let controls = {};
   let customContainer;
+  let pluginContainer;
   let customControls = {};
   let stageButtons = [];
   let stages = {};
+  let defaultPanels = [];
+  let activePlugin = null;
 
   function readStore() {
     try {
@@ -170,6 +173,52 @@
 
   function getCustomSchemaForKey(key) {
     return CUSTOM_CONFIG[key] || [];
+  }
+
+  function getPlugin(key) {
+    const registry = window.AutoTuneFactoryPlugins;
+    if (!registry || typeof registry !== "object") return null;
+    return registry[key] || null;
+  }
+
+  function setDefaultPanelsVisible(visible) {
+    defaultPanels.forEach((panel) => {
+      panel.style.display = visible ? "" : "none";
+    });
+    if (pluginContainer) {
+      pluginContainer.style.display = visible ? "none" : "";
+    }
+  }
+
+  function destroyActivePlugin() {
+    if (activePlugin && typeof activePlugin.destroyPanel === "function") {
+      activePlugin.destroyPanel();
+    }
+    activePlugin = null;
+    if (pluginContainer) pluginContainer.innerHTML = "";
+  }
+
+  function renderPluginPanel(record) {
+    destroyActivePlugin();
+    activePlugin = getPlugin(targetKey);
+    if (!activePlugin || typeof activePlugin.renderPanel !== "function" || !pluginContainer) {
+      setDefaultPanelsVisible(true);
+      return;
+    }
+    setDefaultPanelsVisible(false);
+    activePlugin.renderPanel(pluginContainer, {
+      record,
+      targetEl,
+      onUpdate: (patch) => {
+        const current = getRecord(targetKey);
+        const nextRecord = { ...current, ...patch };
+        updateRecord(targetKey, patch);
+        if (typeof activePlugin.applyToElement === "function") {
+          activePlugin.applyToElement(targetEl, nextRecord);
+        }
+        paintPreview();
+      }
+    });
   }
 
   function applyVisualStyles(el, visual) {
@@ -330,6 +379,7 @@
                   <h4>Personalizacao do componente</h4>
                   <div id="factoryCustomControls" class="factory-grid"></div>
                 </section>
+                <div id="factoryPluginPanel" class="factory-plugin-panel"></div>
               </div>
               <div class="factory-stage1-preview">
                 <div class="factory-pane-header">
@@ -369,6 +419,8 @@
     cssEditor = overlay.querySelector("#factoryCssEditor");
     htmlReadonly = overlay.querySelector("#factoryHtmlReadonly");
     customContainer = overlay.querySelector("#factoryCustomControls");
+    pluginContainer = overlay.querySelector("#factoryPluginPanel");
+    defaultPanels = Array.from(overlay.querySelectorAll(".factory-stage1-controls > .factory-panel"));
     previewRoots = Array.from(overlay.querySelectorAll("[data-factory-preview]"));
     stageButtons = Array.from(overlay.querySelectorAll("[data-stage-btn]"));
     stages = {
@@ -484,6 +536,7 @@
     const record = getRecord(targetKey);
     const visual = { ...DEFAULT_VISUAL, ...(record.visual || {}) };
     const custom = record.custom || {};
+    const plugin = getPlugin(targetKey);
     previewRoots.forEach((root) => {
       root.innerHTML = "";
       const clone = targetEl.cloneNode(true);
@@ -491,8 +544,12 @@
       const styleNode = document.createElement("style");
       root.appendChild(styleNode);
       previewStyleTags.push(styleNode);
-      applyVisualStyles(clone, visual);
-      applyCustomStyles(clone, targetKey, custom);
+      if (plugin && typeof plugin.applyToPreviewClone === "function") {
+        plugin.applyToPreviewClone(clone, record);
+      } else {
+        applyVisualStyles(clone, visual);
+        applyCustomStyles(clone, targetKey, custom);
+      }
     });
     mirrorPreviewCss(record.css || "");
   }
@@ -512,6 +569,8 @@
   }
 
   function applyCurrentVisual() {
+    const plugin = getPlugin(targetKey);
+    if (plugin) return;
     const visual = readVisualFromControls();
     const custom = readCustomFromControls();
     if (targetEl) {
@@ -547,14 +606,20 @@
     ensureScope(targetEl, targetKey);
 
     const record = getRecord(targetKey);
+    const plugin = getPlugin(targetKey);
     setControlsFromRecord(record);
     renderCustomControls(record);
+    renderPluginPanel(record);
     cssEditor.value = record.css || "";
     htmlReadonly.textContent = serializeTargetHtml(targetEl);
     infoLabel.textContent = `${targetLabel} • key: ${targetKey}`;
 
-    applyVisualStyles(targetEl, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
-    applyCustomStyles(targetEl, targetKey, record.custom || {});
+    if (plugin && typeof plugin.applyToElement === "function") {
+      plugin.applyToElement(targetEl, record);
+    } else {
+      applyVisualStyles(targetEl, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
+      applyCustomStyles(targetEl, targetKey, record.custom || {});
+    }
     applyCssForKey(targetKey, record.css || "");
     paintPreview();
     switchStage(activeStage);
@@ -563,6 +628,8 @@
 
   function closeFactory() {
     if (!overlay) return;
+    destroyActivePlugin();
+    setDefaultPanelsVisible(true);
     overlay.classList.remove("is-open");
   }
 
@@ -631,10 +698,15 @@
       const record = store[key] || {};
       applyCssForKey(key, record.css || "");
       const selector = `.floating-widget[data-factory-key="${key}"]`;
+      const plugin = getPlugin(key);
       document.querySelectorAll(selector).forEach((el) => {
         ensureScope(el, key);
-        applyVisualStyles(el, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
-        applyCustomStyles(el, key, record.custom || {});
+        if (plugin && typeof plugin.applyToElement === "function") {
+          plugin.applyToElement(el, record);
+        } else {
+          applyVisualStyles(el, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
+          applyCustomStyles(el, key, record.custom || {});
+        }
       });
     });
   }
@@ -647,8 +719,13 @@
     const record = store[key];
     if (!record) return;
     ensureScope(el, key);
-    applyVisualStyles(el, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
-    applyCustomStyles(el, key, record.custom || {});
+    const plugin = getPlugin(key);
+    if (plugin && typeof plugin.applyToElement === "function") {
+      plugin.applyToElement(el, record);
+    } else {
+      applyVisualStyles(el, { ...DEFAULT_VISUAL, ...(record.visual || {}) });
+      applyCustomStyles(el, key, record.custom || {});
+    }
     applyCssForKey(key, record.css || "");
   }
 

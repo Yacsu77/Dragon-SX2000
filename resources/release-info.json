@@ -1,0 +1,11 @@
+{
+  "app": "DragonSX2000",
+  "channel": "beta",
+  "currentBranch": "1.1-beta",
+  "releaseSource": "github-releases",
+  "platforms": {
+    "windows": [".exe"],
+    "macos": [".dmg"],
+    "linux": [".deb", ".AppImage"]
+  }
+}

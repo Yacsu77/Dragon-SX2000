@@ -39,6 +39,18 @@
 | **Autotune.md** | Estrutura de pastas e fluxo para widgets aparecerem na tela |
 | **NewComponet.md** | Passo a passo para criar um novo widget do zero até o Factory |
 
+### Histórico de Navegação — API-DSX
+
+Iniciada a implementação do módulo de histórico de navegação.
+
+- Criada estrutura inicial da API local API-DSX
+- Adicionada configuração base com Node.js e Express
+- Adicionada estrutura SQLite para histórico de navegação
+- Adicionada configuração inicial para Redis como cache de sessão
+- Criada estrutura de pastas Controller, Services, DTO, routes, DB, Exceptions e Docs
+- Criadas documentações iniciais DB.md e Historico.md
+- Criadas rotas iniciais para CRUD do histórico de navegação
+
 ---
 
 <p align="center">

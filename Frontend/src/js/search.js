@@ -9,6 +9,10 @@
 function performSearch(query) {
   if (!query || !query.trim()) return;
 
+  if (typeof window.setHistoryTransitionType === 'function') {
+    window.setHistoryTransitionType('search');
+  }
+
   const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query.trim())}`;
   
   // Verificar se há uma home tab ativa (New Tab)

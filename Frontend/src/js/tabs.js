@@ -133,6 +133,10 @@ function createTab(url, title = null, icon = null) {
     setupWebviewNavigation(webview);
   }
 
+  if (typeof window.trackWebviewHistory === 'function') {
+    window.trackWebviewHistory(webview);
+  }
+
   document.getElementById("browser").appendChild(webview);
   activateTab(tabId);
   return tabId;
@@ -811,7 +815,11 @@ function convertHomeTabToNormalTab(tabId, url, title = null) {
   if (typeof setupWebviewNavigation === 'function') {
     setupWebviewNavigation(webview);
   }
-  
+
+  if (typeof window.trackWebviewHistory === 'function') {
+    window.trackWebviewHistory(webview);
+  }
+
   // Adicionar webview ao container
   document.getElementById("browser").appendChild(webview);
   

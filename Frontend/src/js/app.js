@@ -54,6 +54,7 @@ function initApp() {
   const quickLinks = document.querySelectorAll('.quick-link');
   const backBtn = document.getElementById('backBtn');
   const forwardBtn = document.getElementById('forwardBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
   const idgetTabs = document.querySelectorAll('.side-tabs .tab-item');
   const tabsList = document.querySelector('.tabs-list');
   const tabsHover = document.querySelector('.tabs-hover');
@@ -116,6 +117,14 @@ function initApp() {
       const activeWebview = document.querySelector('webview.active');
       if (activeWebview && activeWebview.canGoForward()) {
         activeWebview.goForward();
+      }
+    });
+  }
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      if (window.DownloadsScreen && typeof window.DownloadsScreen.open === 'function') {
+        window.DownloadsScreen.open();
       }
     });
   }
@@ -224,12 +233,20 @@ function handleAddressBar() {
     // Verificar se parece uma URL (contém ponto e não tem espaços)
     if (input.includes('.') && !input.includes(' ')) {
       url = 'https://' + input;
+      if (typeof window.setHistoryTransitionType === 'function') {
+        window.setHistoryTransitionType('typed');
+      }
     } else {
       // É uma busca
+      if (typeof window.setHistoryTransitionType === 'function') {
+        window.setHistoryTransitionType('search');
+      }
       performSearch(input);
       addressInput.value = '';
       return;
     }
+  } else if (typeof window.setHistoryTransitionType === 'function') {
+    window.setHistoryTransitionType('typed');
   }
 
   // Criar nova aba com a URL

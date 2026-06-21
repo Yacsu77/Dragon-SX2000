@@ -51,6 +51,23 @@ Iniciada a implementação do módulo de histórico de navegação.
 - Criadas documentações iniciais DB.md e Historico.md
 - Criadas rotas iniciais para CRUD do histórico de navegação
 
+### Histórico de Navegação — Interface
+
+Implementada a interface inicial do módulo de histórico de navegação no Frontend.
+
+- Criada interface inicial do Histórico de Navegação
+- Criada mini tela de pré-visualização de histórico no menu principal
+- Criada tela completa de Histórico de Navegação
+- Adicionada integração com a API local API-DSX
+- Adicionada listagem de histórico com paginação
+- Adicionada busca por título e URL
+- Adicionada seleção individual e múltipla com checkbox
+- Adicionada seleção rápida com Shift
+- Adicionada exclusão individual, múltipla e total do histórico
+- Adicionado comportamento para abrir links do histórico no navegador
+- Adicionado atalho Ctrl + H para abrir a tela de histórico
+- Criado placeholder inicial para tela de downloads
+
 ---
 
 <p align="center">

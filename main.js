@@ -1,7 +1,8 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
+const fs = require('fs').promises;
 
 let mediaSdkProcess = null;
 let apiDsxProcess = null;
@@ -147,12 +148,32 @@ function createWindow() {
     height: 900,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      webviewTag: true
-    }
+      webviewTag: true,
+      contextIsolation: true,
+    },
   });
 
   win.loadFile('Frontend/src/index.html');
 }
+
+ipcMain.handle('files:readDir', async (_event, dirPath) => {
+  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  return entries.map((entry) => ({
+    name: entry.name,
+    isDirectory: entry.isDirectory(),
+    path: path.join(dirPath, entry.name),
+  }));
+});
+
+ipcMain.handle('files:getHome', () => app.getPath('home'));
+
+ipcMain.handle('files:pickFolder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  return result.filePaths[0];
+});
 
 app.whenReady().then(() => {
   startMediaSdk();

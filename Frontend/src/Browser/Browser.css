@@ -1,0 +1,24 @@
+/* WEBVIEW AREA — filho direto de body (flex: 1) */
+.browser-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: none;
+  z-index: 0;
+}
+
+.browser-container.active {
+  display: flex;
+  flex-direction: column;
+}
+
+webview {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: none;
+}
+
+webview.active {
+  display: flex;
+}

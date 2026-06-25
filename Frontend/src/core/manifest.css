@@ -1,0 +1,28 @@
+/**
+ * Agregador CSS — único ponto de entrada de estilos do Frontend.
+ */
+@import url('reset.css');
+@import url('variables.css');
+@import url('background.css');
+@import url('shell.css');
+@import url('../Top/Top.css');
+@import url('../Top/Menu/Menu.css');
+@import url('../Top/ButtonGo/ButtonGo.css');
+@import url('../Top/Search/Search.css');
+@import url('../Tabline/Tabline.css');
+@import url('../Tabs/Tabs.css');
+@import url('../Home/Home.css');
+@import url('../Home/HomeSearch/HomeSearch.css');
+@import url('../Browser/Browser.css');
+@import url('../Favoritos/Favoritos.css');
+@import url('../TopActions/Config/Config.css');
+@import url('../shortcuts/overlays/search-palette/index.css');
+@import url('../../MiniTelas/MiniHistorico-Navegação/MiniHistorico-Navegação.css');
+@import url('../../Telas/Historico-Navegação/Historico-Navegação.css');
+@import url('../../Telas/Downloads/Downloads.css');
+@import url('../../Telas/Arquivos/Arquivos.css');
+@import url('../../../UserINTer/Tabline/idget/Wallpaper/index.css');
+@import url('../../../UserINTer/Tabline/idget/AutoTune/index.css');
+@import url('../../../UserINTer/Tabline/idget/AutoTune/Music/index.css');
+@import url('../../../UserINTer/Tabline/idget/AutoTune/Clock/index.css');
+@import url('../../../UserINTer/Factory/index.css');

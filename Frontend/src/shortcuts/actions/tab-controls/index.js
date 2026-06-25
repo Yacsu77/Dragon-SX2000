@@ -7,7 +7,7 @@
  *   - Ctrl+Tab        → próxima aba (com wrap-around)
  *   - Ctrl+Shift+Tab  → aba anterior (com wrap-around)
  *
- * Reusa as APIs globais expostas por `Frontend/src/js/tabs.js`:
+ * Reusa as APIs globais expostas por `Frontend/src/Tabs/Tabs.core.js`:
  *   window.createNewTab(), window.closeTab(id), window.activateTab(id)
  *
  * Próxima/anterior é resolvida lendo a ordem visual do DOM (`.tabs .tab`),

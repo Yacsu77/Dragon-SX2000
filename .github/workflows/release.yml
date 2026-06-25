@@ -1,10 +1,9 @@
-name: Build and Publish DragonSX2000
+name: Build and Publish DSX
 
 on:
   push:
     branches:
-      - "1.1-beta"
-      - "Versão-1.1-Beta"
+      - main
 
 permissions:
   contents: write
@@ -21,22 +20,22 @@ jobs:
           - platform: windows
             os: windows-latest
             build_script: npm run dist:win
-            artifact_name: DragonSX2000-Windows-x64
-            artifact_path: release/*.exe
+            artifact_name: DSX-Windows-x64
+            artifact_path: release/DSX-*.exe
 
           - platform: macos
             os: macos-latest
             build_script: npm run dist:mac
-            artifact_name: DragonSX2000-macOS-x64
-            artifact_path: release/*.dmg
+            artifact_name: DSX-macOS-x64
+            artifact_path: release/DSX-*.dmg
 
           - platform: linux
             os: ubuntu-latest
             build_script: npm run dist:linux
-            artifact_name: DragonSX2000-Linux-x64
+            artifact_name: DSX-Linux-x64
             artifact_path: |
-              release/*.deb
-              release/*.AppImage
+              release/DSX-*.deb
+              release/DSX-*.AppImage
 
     steps:
       - name: Checkout repository
@@ -52,6 +51,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Prepare platform icons from Image/Icons
+        run: npm run icons:prepare
+
+      - name: Read package version
+        id: pkg
+        shell: bash
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
 
       - name: Build application
         run: ${{ matrix.build_script }}
@@ -69,6 +76,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read package version
+        id: pkg
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -78,9 +92,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1-beta-${{ github.run_number }}
-          name: DragonSX2000 v1.1 Beta Build ${{ github.run_number }}
-          prerelease: true
+          tag_name: v${{ steps.pkg.outputs.version }}-build.${{ github.run_number }}
+          name: DSX v${{ steps.pkg.outputs.version }} (build ${{ github.run_number }})
+          prerelease: false
           generate_release_notes: true
           files: artifacts/**
         env:

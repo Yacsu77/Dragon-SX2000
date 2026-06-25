@@ -1,6 +1,18 @@
-# Dragon SX2000 — Shortcuts
+# DSX — Shortcuts
 
-Sistema de atalhos globais do navegador. Centraliza registro, persistência de bindings customizados pelo usuário e a UI dos overlays acionados pelos atalhos.
+Sistema de atalhos globais do navegador **DSX** (anteriormente Dragon SX2000). Centraliza registro, persistência de bindings customizados pelo usuário e a UI dos overlays acionados pelos atalhos.
+
+---
+
+## Versão e downloads
+
+| | |
+|---|---|
+| **Versão disponível** | **v1.2.4** |
+| **Próximo lançamento** | **06/07/2026** |
+| **Executáveis** | Somente via [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+
+Os instaladores (`.exe`, `.dmg`, `.deb`, `.AppImage`) são publicados automaticamente na branch `main` com o nome **DSX** — ex.: `DSX-1.2.4-win-x64.exe`. Não há distribuição de binários fora do Release.
 
 ---
 
@@ -17,7 +29,9 @@ Frontend/src/shortcuts/
 │       ├── index.js
 │       └── index.css
 └── actions/                           # Atalhos SEM UI (apenas disparam ações)
-    └── tab-controls/                  # Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab
+    ├── tab-controls/                  # Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab
+    │   └── index.js
+    └── history-controls/              # Atalhos de histórico
         └── index.js
 ```
 
@@ -26,6 +40,8 @@ Convenção:
 - `actions/<nome>/` — atalhos que apenas disparam uma função (abrir aba, fechar aba, ativar widget, etc.). Só `index.js`.
 
 Cada arquivo registra seu próprio atalho via `window.ShortcutManager.register({ ... })` no momento em que o script é carregado.
+
+Documentação geral do Frontend: [`Version/Docs/Frontend/Inicial.MD`](../../../Version/Docs/Frontend/Inicial.MD) · módulo shortcuts: [`Version/Docs/Frontend/shortcuts.MD`](../../../Version/Docs/Frontend/shortcuts.MD)
 
 ---
 
@@ -219,4 +235,4 @@ window.SearchPalette.toggle();
 
 ## Licença
 
-ISC — Dragon SX2000 Team
+ISC — DSX / Pedro Henrique Carneichuk Rosa

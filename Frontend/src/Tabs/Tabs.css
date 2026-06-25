@@ -1,0 +1,597 @@
+/* TABS BAR */
+.tabs-bar {
+  height: 36px;
+  background: var(--tabs-bar-bg);
+  backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  border-bottom: none;
+  border-top: none;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  padding-top: 4px;
+  padding-bottom: 8px;
+  overflow: hidden;
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tabs-bar.hidden {
+  display: none;
+}
+
+/* Esconder scrollbar completamente */
+.tabs-bar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.tabs-bar::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+.tabs-bar {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+  height: 100%;
+  border-radius: 10px;
+  overflow: visible;
+  position: relative;
+  padding: 0;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.tabs-bar.transitioning-container {
+  backdrop-filter: blur(35px) saturate(210%) brightness(112%);
+  -webkit-backdrop-filter: blur(35px) saturate(210%) brightness(112%);
+  transition: backdrop-filter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Ponto que vira + em todas as abas */
+.tab .new-tab-dot {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 3px;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tab:hover .new-tab-dot {
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1.15);
+}
+
+.tab .new-tab-dot .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tab .new-tab-dot .plus-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 200;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  line-height: 1;
+}
+
+.tab:hover .new-tab-dot:hover .dot {
+  opacity: 0;
+  transform: scale(0) rotate(180deg);
+}
+
+.tab:hover .new-tab-dot:hover .plus-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.tab {
+  padding: 4px 6px 4px 24px;
+  background: rgba(60, 60, 60, 0.3);
+  backdrop-filter: blur(20px) saturate(180%) brightness(105%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%);
+  cursor: grab;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  font-size: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e0e0e0;
+  border-radius: 0;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: visible;
+  height: 28px;
+  will-change: transform, backdrop-filter, background;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.tab:active {
+  cursor: grabbing;
+}
+
+/* Efeito Liquid Glass durante o arraste - mais sutil */
+.tab.dragging {
+  background: linear-gradient(
+    to bottom,
+    rgba(100, 100, 100, 0.98) 0%,
+    rgba(80, 80, 80, 0.95) 100%
+  ) !important;
+  backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: scale(1.02) rotate(0.5deg);
+  border-radius: 12px;
+  z-index: 10000 !important;
+  transition: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  color: #e0e0e0 !important;
+  pointer-events: none !important;
+  mix-blend-mode: normal !important;
+  -webkit-font-smoothing: antialiased !important;
+  font-smoothing: antialiased !important;
+}
+
+/* Clone visual (ghost) com informações da aba durante o arraste */
+.tab-drag-ghost {
+  position: fixed;
+  z-index: 10001 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 24px;
+  background: linear-gradient(
+    to bottom,
+    rgba(100, 100, 100, 0.95) 0%,
+    rgba(80, 80, 80, 0.92) 100%
+  );
+  backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: scale(1.05) rotate(1deg) perspective(500px) rotateY(2deg);
+  border-radius: 12px;
+  color: #e0e0e0;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  mix-blend-mode: normal;
+  -webkit-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+  box-sizing: border-box;
+  height: 28px;
+}
+
+.tab-drag-ghost .tab-icon {
+  opacity: 1;
+  visibility: visible;
+  color: #e0e0e0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.tab-drag-ghost .tab-icon img {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transform: scale(1.1);
+}
+
+.tab-drag-ghost .tab-title {
+  opacity: 1;
+  visibility: visible;
+  color: #ffffff;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  transform: scale(1.05);
+  letter-spacing: 0.3px;
+}
+
+/* Efeito nas outras abas durante o arraste - mais fluido */
+.tab.drag-affected {
+  transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Placeholder para indicar onde a aba será solta - estilo bolha */
+.tab-placeholder {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  margin: 0 2px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  height: 20px;
+  width: 20px;
+  min-width: 20px;
+  box-sizing: border-box;
+  box-shadow: 
+    0 4px 16px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  align-self: center;
+}
+
+/* Container durante o arraste - transições mais fluidas */
+.tabs.dragging-tabs .tab:not(.dragging) {
+  transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Quando há muitas abas, fazer as inativas encolherem mais e preencher espaço */
+.tabs.many-tabs {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.tabs.many-tabs .tab:not(.active) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex-shrink: 1 !important;
+  flex-grow: 1 !important;
+  width: 0 !important; /* Força todas as abas inativas a terem o mesmo tamanho base */
+}
+
+/* Esconder texto das abas inativas quando há muitas abas */
+.tabs.many-tabs .tab:not(.active) .tab-title {
+  display: none;
+}
+
+/* Ajustar padding quando não há texto */
+.tabs.many-tabs .tab:not(.active) {
+  padding-left: 8px;
+  padding-right: 8px;
+  justify-content: center;
+}
+
+.tab.transitioning {
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, opacity, backdrop-filter;
+}
+
+.tab:first-child {
+  border-radius: 10px 0 0 10px;
+}
+
+.tab:last-child {
+  border-radius: 0 10px 10px 0;
+}
+
+.tab:only-child {
+  border-radius: 10px;
+}
+
+
+.tab:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  z-index: 0;
+}
+
+.tab.active:not(:first-child)::before {
+  display: none;
+}
+
+/* Esconder divisória da aba anterior quando a próxima está ativa */
+.tab.active + .tab::before {
+  display: none;
+}
+
+.tab:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  z-index: 0;
+}
+
+.tab.active:not(:last-child)::after {
+  display: none;
+}
+
+/* Esconder divisória direita da aba anterior quando a próxima está ativa */
+.tab.adjacent-to-active::after {
+  display: none;
+}
+
+.tab-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: rgba(69, 69, 69, 0.6);
+}
+
+.tab.active {
+  background: rgba(50, 50, 50, 0.5);
+  backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  z-index: 10;
+  border: none;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: liquidActivateSpring 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, backdrop-filter, background;
+  position: relative;
+  /* Sobrepor 10% de cada lado - usando em para ser relativo ao tamanho da fonte */
+  margin-left: -0.8em;
+  margin-right: -0.8em;
+  flex-shrink: 0;
+}
+
+/* Quando há muitas abas, manter a aba ativa com pelo menos 15% do espaço */
+.tabs.many-tabs .tab.active {
+  flex: 0 0 auto !important;
+  min-width: 15% !important;
+  width: auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+  max-width: 30%;
+}
+
+/* Unificar abas adjacentes com a aba ativa */
+.tab.adjacent-to-active {
+  background: rgba(50, 50, 50, 0.48);
+  backdrop-filter: blur(38px) saturate(215%) brightness(113%);
+  -webkit-backdrop-filter: blur(38px) saturate(215%) brightness(113%);
+  border: none;
+  z-index: 1;
+  transition: all 0.3s ease;
+  margin: 0;
+  box-shadow: none;
+  position: relative;
+}
+
+/* Quando hover em aba adjacente, manter visual unificado */
+.tab.adjacent-to-active:hover {
+  background: rgba(50, 50, 50, 0.5);
+  backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+}
+
+@keyframes liquidActivateSpring {
+  0% {
+    transform: translateX(0) scale(0.92);
+    opacity: 0.85;
+    backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  }
+  40% {
+    transform: translateX(0) scale(1.05);
+    backdrop-filter: blur(45px) saturate(230%) brightness(120%);
+    -webkit-backdrop-filter: blur(45px) saturate(230%) brightness(120%);
+  }
+  70% {
+    transform: translateX(0) scale(0.98);
+    backdrop-filter: blur(42px) saturate(225%) brightness(117%);
+    -webkit-backdrop-filter: blur(42px) saturate(225%) brightness(117%);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+    backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+    -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(115%);
+  }
+}
+
+.tab.active:first-child {
+  border-radius: 10px 0 0 10px;
+}
+
+.tab.active:last-child {
+  border-radius: 0 10px 10px 0;
+}
+
+.tab.active:only-child {
+  border-radius: 10px;
+}
+
+.tab-icon {
+  filter: grayscale(0%);
+}
+
+/* Feixe de luz animado ao redor da aba ativa */
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.12) 20%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.12) 80%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: lightBeamTop 12s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  opacity: 0.5;
+  mask: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+@keyframes lightBeamTop {
+  0%, 100% {
+    background-position: -200% 0;
+    opacity: 0.15;
+  }
+  50% {
+    background-position: 200% 0;
+    opacity: 0.5;
+  }
+}
+
+/* Animação com velocidade variável (lenta em cima, rápida embaixo) */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 25%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: lightBeamBottom 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  opacity: 0.6;
+  mask: linear-gradient(to bottom, transparent 0%, transparent 50%, black 70%, black 100%);
+  -webkit-mask: linear-gradient(to bottom, transparent 0%, transparent 50%, black 70%, black 100%);
+}
+
+@keyframes lightBeamBottom {
+  0%, 100% {
+    background-position: -200% 0;
+    opacity: 0.25;
+  }
+  50% {
+    background-position: 200% 0;
+    opacity: 0.6;
+  }
+}
+
+.tab-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background: rgba(90, 90, 90, 0.6);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  overflow: hidden;
+}
+
+.tab-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.tab[data-id^="home-tab"] .tab-icon {
+  background: transparent !important;
+  border-radius: 2px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  filter: none !important;
+}
+
+.tab[data-id^="home-tab"] .tab-icon img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.tab-close {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 14px;
+  line-height: 1;
+  transition: opacity 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tab:hover .tab-close {
+  opacity: 0.6;
+}
+
+.tab-close:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.1);
+}
+

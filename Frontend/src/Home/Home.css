@@ -1,0 +1,14 @@
+/* Área principal na home tab — transparente para mostrar o wallpaper */
+.home-page {
+  flex: 1;
+  position: relative;
+  display: flex;
+  background: transparent;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.home-page.hidden {
+  display: none;
+}

@@ -1,0 +1,120 @@
+.mini-historico {
+  width: 320px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(18, 22, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.mini-historico__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.mini-historico__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f3f4f6;
+  letter-spacing: 0.02em;
+}
+
+.mini-historico__open-full {
+  border: none;
+  background: rgba(159, 176, 255, 0.15);
+  color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.mini-historico__open-full:hover {
+  background: rgba(159, 176, 255, 0.28);
+  color: #eef2ff;
+}
+
+.mini-historico__state {
+  font-size: 12px;
+  color: rgba(229, 231, 235, 0.75);
+  padding: 10px 4px;
+}
+
+.mini-historico__error {
+  color: #fca5a5;
+}
+
+.mini-historico__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.mini-historico__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.mini-historico__item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mini-historico__favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mini-historico__favicon--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.mini-historico__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.mini-historico__item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #f9fafb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-historico__item-url {
+  font-size: 11px;
+  color: rgba(156, 163, 175, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-historico__item-time {
+  font-size: 10px;
+  color: rgba(156, 163, 175, 0.8);
+  flex-shrink: 0;
+}

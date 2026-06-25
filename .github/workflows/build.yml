@@ -1,34 +1,61 @@
-name: Build Electron App
+name: Build DSX (manual)
 
+# Build manual sem publicar release — produção usa release.yml na branch main.
 on:
-  push:
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            build_script: npm run dist:win
+            artifact_name: DSX-Windows-x64
+            artifact_path: release/DSX-*.exe
+
+          - platform: macos
+            os: macos-latest
+            build_script: npm run dist:mac
+            artifact_name: DSX-macOS-x64
+            artifact_path: release/DSX-*.dmg
+
+          - platform: linux
+            os: ubuntu-latest
+            build_script: npm run dist:linux
+            artifact_name: DSX-Linux-x64
+            artifact_path: |
+              release/DSX-*.deb
+              release/DSX-*.AppImage
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: npm
 
       - run: npm ci
 
+      - name: Prepare platform icons from Image/Icons
+        run: npm run icons:prepare
+
       - name: Build
-        run: npm run dist
+        run: ${{ matrix.build_script }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-artifacts
-          path: release/*
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error

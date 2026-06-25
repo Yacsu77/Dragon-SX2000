@@ -1,8 +1,14 @@
 {
-  "app": "DragonSX2000",
-  "channel": "beta",
-  "currentBranch": "1.1-beta",
+  "app": "DSX",
+  "version": "1.2.4",
+  "channel": "stable",
+  "currentBranch": "main",
   "releaseSource": "github-releases",
+  "iconSources": {
+    "windows": "Image/Icons/DSX_ICO_WIN.svg",
+    "macos": "Image/Icons/DSX_ICO_MAC.svg",
+    "linux": "Image/Icons/DSX_ICO_LINUX.svg"
+  },
   "platforms": {
     "windows": [".exe"],
     "macos": [".dmg"],

@@ -1,0 +1,24 @@
+:root {
+  --tabs-area-height: 84px;
+  --side-gap: 10px;
+  --side-width: 230px;
+  --app-bg: #000;
+  --app-text: #e0e0e0;
+  --nav-bg: rgba(40, 40, 40, 0.4);
+  --side-tabs-bg: rgba(12, 16, 24, 0.9);
+  --tabs-bar-bg: rgba(40, 40, 40, 0.4);
+  --address-bg: rgba(40, 40, 40, 0.3);
+  --address-border: rgba(255, 255, 255, 0.1);
+  --input-placeholder: #9aa0a6;
+}
+
+:root[data-theme="light"] {
+  --app-bg: #f2f2f7;
+  --app-text: #1a1a1a;
+  --nav-bg: rgba(255, 255, 255, 0.78);
+  --side-tabs-bg: rgba(255, 255, 255, 0.88);
+  --tabs-bar-bg: rgba(255, 255, 255, 0.72);
+  --address-bg: rgba(255, 255, 255, 0.55);
+  --address-border: rgba(0, 0, 0, 0.12);
+  --input-placeholder: #6b7280;
+}

@@ -4,389 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dragon SX2000</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/Wallpaper/index.css">
-  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/index.css">
-  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/Music/index.css">
-  <link rel="stylesheet" href="../../UserINTer/Tabline/idget/AutoTune/Clock/index.css">
-  <link rel="stylesheet" href="../../UserINTer/Factory/index.css">
-  <link rel="stylesheet" href="shortcuts/overlays/search-palette/index.css">
+  <link rel="stylesheet" href="core/manifest.css">
 </head>
 <body>
-  <div class="background">
-    <video
-      class="background-video"
-      autoplay
-      muted
-      loop
-      playsinline
-    >
-      <source src="../../UserINTer/back%20groud/dark-queen-knight-moewalls-com.mp4" type="video/mp4" />
-    </video>
-  </div>
-  <!-- Navigation Bar -->
-  <div class="nav-bar">
-    <div class="nav-left">
-      <button class="nav-btn menu-btn" id="menuBtn" title="Menu">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-      <button class="nav-btn" id="backBtn" title="Voltar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </button>
-      <button class="nav-btn" id="forwardBtn" title="Avançar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
-    </div>
-
-    <div class="nav-center">
-      <form class="address-bar" id="addressBar">
-        <svg class="search-icon-nav" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
-        <input 
-          type="text" 
-          class="address-input" 
-          id="addressInput"
-          placeholder="Busque ou digite o nome do site"
-          autocomplete="off"
-        />
-      </form>
-    </div>
-
-    <div class="nav-right">
-      <button class="nav-btn" id="downloadBtn" title="Downloads">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-      </button>
-      <button class="nav-btn" id="shareBtn" title="Compartilhar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="18" cy="5" r="3"></circle>
-          <circle cx="6" cy="12" r="3"></circle>
-          <circle cx="18" cy="19" r="3"></circle>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-        </svg>
-      </button>
-      <button class="nav-btn" id="newTabBtn" title="Nova aba">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
-      <button class="nav-btn" id="overviewBtn" title="Visão geral das abas">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- Tabs Bar -->
-  <div class="tabs-bar">
-    <div class="tabs" id="tabs"></div>
-  </div>
-
-  <div class="edge-hitbox" aria-hidden="true"></div>
-  <aside class="side-tabs" id="sideTabs" aria-label="Idgets">
-    <nav class="tabs-list">
-      <span class="tabs-hover" aria-hidden="true"></span>
-      <span class="tabs-tooltip" id="tabsTooltip" aria-hidden="true"></span>
-      <a class="tab-item active" data-idget="wallpaper" aria-label="Wallpaper" title="Wallpaper" href="#wallpaper-widget">
-        <span class="tab-icon" data-lucide="image"></span>
-        <span class="tab-label">Wallpaper</span>
-      </a>
-      <button type="button" class="tab-item tab-theme" id="temaTabBtn" data-idget="tema" aria-label="Tema" title="Tema">
-        <span class="theme-toggler-viewport" aria-hidden="true">
-          <span class="theme-toggler-strip" id="themeTogglerStrip" data-index="0">
-            <span class="theme-toggler-slot">
-              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-              </svg>
-            </span>
-            <span class="theme-toggler-slot">
-              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-              </svg>
-            </span>
-            <span class="theme-toggler-slot">
-              <svg class="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
-                <path d="M8 21h8M12 17v4"></path>
-              </svg>
-            </span>
-          </span>
-        </span>
-        <span class="tab-label">Tema</span>
-      </button>
-      <button class="tab-item" data-idget="customise" aria-label="Customise" title="Customise">
-        <span class="tab-icon" data-lucide="sliders"></span>
-        <span class="tab-label">Customise</span>
-      </button>
-      <button class="tab-item" data-idget="donate" aria-label="Donate" title="Donate">
-        <span class="tab-icon" data-lucide="heart"></span>
-        <span class="tab-label">Donate</span>
-      </button>
-      <a class="tab-item" data-idget="autotune" aria-label="AutoTune" title="AutoTune" href="#autotune-widget">
-        <span class="tab-icon" data-lucide="sparkles"></span>
-        <span class="tab-label">AutoTune</span>
-      </a>
-    </nav>
-  </aside>
-
+  <div id="backgroundRoot"></div>
+  <div id="topRoot"></div>
+  <div id="tabsRoot"></div>
+  <div id="tablineRoot"></div>
   <div id="floating-cosmetics-root" aria-live="polite"></div>
-
-  <!-- Página Inicial -->
-  <div class="home-page" id="homePage">
-    <div class="logo-container">
-      <div class="logo">🐉 Dragon SX2000</div>
-      <div class="tagline">Navegue com estilo e velocidade</div>
-    </div>
-    
-    <div class="search-container-home">
-      <form class="search-box" id="searchForm">
-        <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          class="search-input-home" 
-          id="searchInput"
-          placeholder="Pesquise na web..."
-          autocomplete="off"
-        />
-        <button type="submit" class="search-button-home">Buscar</button>
-      </form>
-    </div>
-
-    <div class="quick-links">
-      <div class="quick-link" data-query="YouTube">📺 YouTube</div>
-      <div class="quick-link" data-query="GitHub">💻 GitHub</div>
-      <div class="quick-link" data-query="Stack Overflow">❓ Stack Overflow</div>
-      <div class="quick-link" data-query="Reddit">💬 Reddit</div>
-    </div>
-  </div>
-
-  <!-- Container do Navegador -->
+  <div class="home-page" id="homePage"></div>
   <div class="browser-container" id="browser"></div>
+  <div id="wallpaperRoot"></div>
+  <div id="autotuneRoot"></div>
 
-  <!-- Wallpaper Widget -->
-  <div id="wallpaper-widget" class="wallpaper-overlay" aria-hidden="true">
-    <div class="wallpaper-shell wallpaper-widget" role="dialog" aria-modal="true" aria-labelledby="wallpaperWidgetTitle">
-      <a class="wallpaper-close" href="#" aria-label="Fechar">×</a>
-      <main class="widget">
-        <header class="widget-header">
-          <h1 id="wallpaperWidgetTitle">Wallpaper</h1>
-          <p>Escolha e ajuste o wallpaper do ambiente.</p>
-        </header>
-
-        <section class="wallpaper-panel">
-          <div class="wallpaper-preview" id="wallpaperPreview">
-            <div class="preview-layer" id="previewLayer">
-              <span class="preview-placeholder">Selecione uma imagem ou video</span>
-            </div>
-          </div>
-
-          <div class="wallpaper-controls">
-            <div class="wallpaper-actions">
-              <label class="upload-btn">
-                Subir imagem
-                <input id="wallpaperImageInput" type="file" accept="image/*" hidden />
-              </label>
-              <label class="upload-btn secondary">
-                Subir video
-                <input id="wallpaperVideoInput" type="file" accept="video/*" hidden />
-              </label>
-            </div>
-
-            <div class="adjustments">
-              <div class="adjustment-row">
-                <label for="rotateControl">Rotacao</label>
-                <input id="rotateControl" type="range" min="-180" max="180" value="0" />
-              </div>
-              <div class="adjustment-row buttons">
-                <button class="control-btn" id="flipHorizontal" type="button">Inverter X</button>
-                <button class="control-btn" id="flipVertical" type="button">Inverter Y</button>
-                <button class="control-btn ghost" id="resetAdjustments" type="button">Resetar</button>
-              </div>
-              <p class="hint">
-                Arraste no preview para mover o wallpaper.
-              </p>
-            </div>
-
-            <div class="apply-row">
-              <button class="apply-btn" id="applyWallpaper" type="button">Aplicar</button>
-              <span class="status" id="wallpaperStatus" aria-live="polite"></span>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-  </div>
-
-  <!-- AutoTune: painel para adicionar cosméticos -->
-  <div id="autotune-widget" class="autotune-overlay" aria-hidden="true">
-    <div class="autotune-shell">
-      <a class="autotune-close" href="#" aria-label="Fechar">×</a>
-      <h2>AutoTune</h2>
-      <p>Ative cada cosmético para mostrá-lo na página inicial. Desative para escondê-lo (a posição fica guardada). Arraste pelo título; redimensione pelo canto.</p>
-      <div class="autotune-catalog">
-        <div class="autotune-catalog-row">
-          <div class="autotune-row-text">
-            <strong>Timer</strong>
-            <span>Cronômetro</span>
-          </div>
-          <button
-            type="button"
-            class="autotune-row-factory-btn"
-            data-open-factory="true"
-            data-factory-key="autotune-widget-timer"
-            data-factory-target='[data-widget-type="timer"]'
-            data-factory-label="AutoTune Timer"
-            title="Factory do Timer"
-            aria-label="Factory do Timer"
-          >
-            ⚙
-          </button>
-          <label class="autotune-panel-toggle">
-            <span class="autotune-panel-toggle-label" data-autotune-panel-label="timer">Inativo</span>
-            <input type="checkbox" data-autotune-panel-toggle="timer" />
-            <span class="autotune-panel-switch" aria-hidden="true"></span>
-          </label>
-        </div>
-        <div class="autotune-catalog-row">
-          <div class="autotune-row-text">
-            <strong>Share</strong>
-            <span>Pesquisa rapida</span>
-          </div>
-          <button
-            type="button"
-            class="autotune-row-factory-btn"
-            data-open-factory="true"
-            data-factory-key="autotune-widget-share"
-            data-factory-target='[data-widget-type="share"]'
-            data-factory-label="AutoTune Share"
-            title="Factory do Share"
-            aria-label="Factory do Share"
-          >
-            ⚙
-          </button>
-          <label class="autotune-panel-toggle">
-            <span class="autotune-panel-toggle-label" data-autotune-panel-label="share">Inativo</span>
-            <input type="checkbox" data-autotune-panel-toggle="share" />
-            <span class="autotune-panel-switch" aria-hidden="true"></span>
-          </label>
-        </div>
-        <div class="autotune-catalog-row">
-          <div class="autotune-row-text">
-            <strong>Tasklist</strong>
-            <span>Lista de tarefas</span>
-          </div>
-          <button
-            type="button"
-            class="autotune-row-factory-btn"
-            data-open-factory="true"
-            data-factory-key="autotune-widget-tasklist"
-            data-factory-target='[data-widget-type="tasklist"]'
-            data-factory-label="AutoTune Tasklist"
-            title="Factory do Tasklist"
-            aria-label="Factory do Tasklist"
-          >
-            ⚙
-          </button>
-          <label class="autotune-panel-toggle">
-            <span class="autotune-panel-toggle-label" data-autotune-panel-label="tasklist">Inativo</span>
-            <input type="checkbox" data-autotune-panel-toggle="tasklist" />
-            <span class="autotune-panel-switch" aria-hidden="true"></span>
-          </label>
-        </div>
-        <div class="autotune-catalog-row">
-          <div class="autotune-row-text">
-            <strong>Music</strong>
-            <span>Now playing (Dragon Media SDK)</span>
-          </div>
-          <button
-            type="button"
-            class="autotune-row-factory-btn"
-            data-open-factory="true"
-            data-factory-key="autotune-widget-music"
-            data-factory-target='[data-widget-type="music"]'
-            data-factory-label="AutoTune Music"
-            title="Factory do Music"
-            aria-label="Factory do Music"
-          >
-            ⚙
-          </button>
-          <label class="autotune-panel-toggle">
-            <span class="autotune-panel-toggle-label" data-autotune-panel-label="music">Inativo</span>
-            <input type="checkbox" data-autotune-panel-toggle="music" />
-            <span class="autotune-panel-switch" aria-hidden="true"></span>
-          </label>
-        </div>
-        <div class="autotune-catalog-row">
-          <div class="autotune-row-text">
-            <strong>Clock</strong>
-            <span>Relogio personalizavel</span>
-          </div>
-          <button
-            type="button"
-            class="autotune-row-factory-btn"
-            data-open-factory="true"
-            data-factory-key="autotune-widget-clock"
-            data-factory-target='[data-widget-type="clock"]'
-            data-factory-label="AutoTune Clock"
-            title="Factory do Clock"
-            aria-label="Factory do Clock"
-          >
-            ⚙
-          </button>
-          <label class="autotune-panel-toggle">
-            <span class="autotune-panel-toggle-label" data-autotune-panel-label="clock">Inativo</span>
-            <input type="checkbox" data-autotune-panel-toggle="clock" />
-            <span class="autotune-panel-switch" aria-hidden="true"></span>
-          </label>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
   <script src="js/dragon-media-bridge.js"></script>
-  <script src="js/tabs.js"></script>
-  <script src="js/search.js"></script>
+  <script src="core/AppShell.js"></script>
+  <script src="Tabs/Tabs.state.js"></script>
+  <script src="Tabs/Tabs.anim.js"></script>
+  <script src="Tabs/Tabs.reorder.js"></script>
+  <script src="Tabs/Tabs.visibility.js"></script>
+  <script src="Tabs/Tabs.core.js"></script>
+  <script src="Browser/Browser.js"></script>
+  <script src="Home/HomeSearch/HomeSearch.anim.js"></script>
+  <script src="Home/HomeSearch/HomeSearch.js"></script>
+  <script src="Top/ButtonGo/ButtonGo.anim.js"></script>
+  <script src="Top/ButtonGo/ButtonGo.js"></script>
+  <script src="Top/Search/Search.anim.js"></script>
+  <script src="Top/Search/Search.js"></script>
+  <script src="js/historyApi.js"></script>
+  <script src="js/historyNavigation.js"></script>
+  <script src="js/historyTracker.js"></script>
+  <script src="../MiniTelas/MiniHistorico-Navegação/MiniHistorico-Navegação.js"></script>
+  <script src="../Telas/Historico-Navegação/Historico-Navegação.js"></script>
+  <script src="../Telas/Downloads/Downloads.js"></script>
+  <script src="../Telas/Arquivos/Arquivos.js"></script>
+  <script src="Favoritos/constants.js"></script>
+  <script src="Favoritos/Favoritos.anim.js"></script>
+  <script src="Favoritos/Favoritos.js"></script>
+  <script src="Top/Menu/Menu.anim.js"></script>
+  <script src="Top/Menu/Menu.js"></script>
+  <script src="TopActions/Downloads/Downloads.js"></script>
+  <script src="TopActions/Arquivos/Arquivos.js"></script>
+  <script src="TopActions/NewTab/NewTab.js"></script>
+  <script src="TopActions/Config/Config.anim.js"></script>
+  <script src="TopActions/Config/Config.js"></script>
+  <script src="Home/Home.js"></script>
+  <script src="Tabline/Tabline.anim.js"></script>
+  <script src="Tabline/Tabline.js"></script>
+  <script src="Top/Top.js"></script>
   <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
   <script src="../../UserINTer/Factory/index.js"></script>
+  <script src="core/Shell.js"></script>
   <script src="js/app.js"></script>
-  <script src="../../UserINTer/Tabline/idget/Wallpaper/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/Tema/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Timer/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Share/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Music/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Clock/config.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Clock/fonts.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Clock/render.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Clock/index.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/Clock/factory.js"></script>
-  <script src="../../UserINTer/Tabline/idget/AutoTune/index.js"></script>
-
-  <!-- Shortcuts (atalhos globais do navegador) -->
   <script src="shortcuts/core/ShortcutManager.js"></script>
   <script src="shortcuts/overlays/search-palette/index.js"></script>
   <script src="shortcuts/actions/tab-controls/index.js"></script>
+  <script src="shortcuts/actions/history-controls/index.js"></script>
   <script src="shortcuts/index.js"></script>
 </body>
 </html>

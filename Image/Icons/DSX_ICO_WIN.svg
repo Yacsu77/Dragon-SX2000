@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Superfice" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">
+  <!-- Generator: Adobe Illustrator 29.8.7, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #033842;
+      }
+
+      .st1 {
+        fill: #15253e;
+        stroke: #1d1d1b;
+        stroke-miterlimit: 10;
+      }
+
+      .st2 {
+        fill: #dcd9c9;
+      }
+    </style>
+  </defs>
+  <line class="st1" x1="64.22" y1="9.19" x2="64.22" y2="8.77"/>
+  <g>
+    <rect class="st2" width="256" height="256" rx="26.45" ry="26.45"/>
+    <polygon class="st0" points="212.78 90.25 212.78 235.89 186.8 235.89 99.4 140.65 71.85 140.65 71.85 231.96 45.06 231.96 45.06 39.85 73.42 39.85 73.42 112.29 117.51 112.29 182.87 191.02 182.87 104.42 146.64 71.35 97.05 71.35 97.05 39.85 144.27 39.85 212.78 90.25"/>
+  </g>
+</svg>

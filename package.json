@@ -1,15 +1,16 @@
 {
-  "name": "dragon-sx2000",
-  "version": "1.1.0-beta",
-  "description": "Dragon SX2000 desktop application",
+  "name": "dsx",
+  "version": "1.2.4",
+  "description": "DSX desktop application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder",
-    "dist": "electron-builder --publish=never",
-    "dist:win": "electron-builder --win --x64 --publish=never",
-    "dist:mac": "electron-builder --mac --x64 --publish=never",
-    "dist:linux": "electron-builder --linux --x64 --publish=never"
+    "icons:prepare": "node scripts/prepare-icons.js",
+    "pack": "npm run icons:prepare && electron-builder",
+    "dist": "npm run icons:prepare && electron-builder --publish=never",
+    "dist:win": "npm run icons:prepare && electron-builder --win --x64 --publish=never",
+    "dist:mac": "npm run icons:prepare && electron-builder --mac --x64 --publish=never",
+    "dist:linux": "npm run icons:prepare && electron-builder --linux --x64 --publish=never"
   },
   "repository": {
     "type": "git",
@@ -27,12 +28,16 @@
   },
   "devDependencies": {
     "electron": "^41.7.2",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8",
+    "png2icons": "^2.0.1",
+    "sharp": "^0.33.5"
   },
   "build": {
-    "appId": "com.yacsu.dragonsx2000",
-    "productName": "DragonSX2000",
+    "appId": "com.yacsu.dsx",
+    "productName": "DSX",
     "copyright": "Copyright © 2026 Pedro Henrique Carneichuk Rosa",
+    "artifactName": "DSX-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release"
     },

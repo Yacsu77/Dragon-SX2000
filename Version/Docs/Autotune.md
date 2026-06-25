@@ -8,6 +8,7 @@ O **AutoTune** é o sistema de widgets flutuantes do Dragon-SX2000. Eles aparece
 
 ```
 UserINTer/Tabline/idget/AutoTune/
+├── catalog.html      ← Catálogo do painel (montado por core/Shell.js)
 ├── index.js          ← Motor: spawn, drag, resize, persistência de posição
 ├── index.css         ← Estilos dos widgets flutuantes + painel AutoTune
 ├── index.html        ← Página de teste local (opcional)
@@ -24,8 +25,11 @@ UserINTer/Tabline/idget/AutoTune/
     └── index.css
 
 Frontend/src/
-├── index.html        ← Catálogo AutoTune, scripts, #floating-cosmetics-root
-└── js/app.js         ← Controla visibilidade na home (setAutoTuneHomeVisible)
+├── index.html        ← Shell mínimo; `#floating-cosmetics-root` + mount points
+├── core/Shell.js     ← Monta background, top, tabs, wallpaper, catalog.html
+├── core/manifest.css ← Agregador CSS único
+├── Wallpaper/Wallpaper.html
+└── js/app.js         ← Bootstrap da aplicação
 
 UserINTer/Factory/
 ├── index.js          ← Editor visual (Stage 1 e Stage 2)
@@ -144,6 +148,7 @@ Separada das configurações visuais do Factory.
 
 ```
 1. Usuário abre #autotune-widget (aba AutoTune na Tabline)
+   ↳ markup em UserINTer/Tabline/idget/AutoTune/catalog.html (montado por Shell.js)
 2. Ativa o toggle do widget desejado
 3. setPanelTypeActive() → spawnWidget()
 4. createWidgetElement() cria .floating-widget

@@ -1,0 +1,96 @@
+name: Build and Publish DSX
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            build_script: npm run dist:win
+            artifact_name: DSX-Windows-x64
+            artifact_path: release/DSX-*.exe
+
+          - platform: macos
+            os: macos-latest
+            build_script: npm run dist:mac
+            artifact_name: DSX-macOS-x64
+            artifact_path: release/DSX-*.dmg
+
+          - platform: linux
+            os: ubuntu-latest
+            build_script: npm run dist:linux
+            artifact_name: DSX-Linux-x64
+            artifact_path: |
+              release/DSX-*.deb
+              release/DSX-*.AppImage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare platform icons from Image/Icons
+        run: npm run icons:prepare
+
+      - name: Build application
+        run: ${{ matrix.build_script }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read package version
+        id: pkg
+        run: node -e "require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + require('./package.json').version + '\n')"
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}-build.${{ github.run_number }}
+          name: DSX v${{ steps.pkg.outputs.version }} (build ${{ github.run_number }})
+          prerelease: false
+          generate_release_notes: true
+          files: artifacts/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

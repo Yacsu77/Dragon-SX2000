@@ -3,8 +3,8 @@
   const LEGACY_KEY = "autotuneCosmetics";
   const MIN_W = 140;
   const MIN_H = 100;
-  const TYPES = ["timer", "share", "tasklist", "music"];
-  const TITLES = { timer: "Timer", share: "Share", tasklist: "Tasklist", music: "Music" };
+  const TYPES = ["timer", "share", "tasklist", "music", "clock"];
+  const TITLES = { timer: "Timer", share: "Share", tasklist: "Tasklist", music: "Music", clock: "Clock" };
   const FUSION_TYPE = "focusflow";
   const FUSION_RATIO_TRIGGER = 0.35;
   // Widgets que ignoram a regra "só aparece na home" e ficam em todas as telas.
@@ -20,7 +20,7 @@
   }
 
   function emptyState() {
-    return { timer: null, share: null, tasklist: null, music: null };
+    return { timer: null, share: null, tasklist: null, music: null, clock: null };
   }
 
   function migrateLegacySettings() {

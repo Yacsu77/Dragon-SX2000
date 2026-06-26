@@ -1,17 +1,23 @@
 {
-  "name": "dragon-sx2000",
-  "version": "1.0.0",
-  "description": "kkkkkkkkkk",
+  "name": "dsx",
+  "version": "1.2.4",
+  "description": "DSX desktop application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "icons:prepare": "node scripts/prepare-icons.js",
+    "pack": "npm run icons:prepare && electron-builder",
+    "dist": "npm run icons:prepare && electron-builder --publish=never",
+    "dist:win": "npm run icons:prepare && electron-builder --win --x64 --publish=never",
+    "dist:mac": "npm run icons:prepare && electron-builder --mac --x64 --publish=never",
+    "dist:linux": "npm run icons:prepare && electron-builder --linux --x64 --publish=never"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Yacsu77/Dragon-SX2000.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Pedro Henrique <contatailandia134@gmail.com>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Yacsu77/Dragon-SX2000/issues"
@@ -21,6 +27,63 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.1.1"
+    "electron": "^41.7.2",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8",
+    "png2icons": "^2.0.1",
+    "sharp": "^0.33.5"
+  },
+  "build": {
+    "appId": "com.yacsu.dsx",
+    "productName": "DSX",
+    "copyright": "Copyright © 2026 Pedro Henrique Carneichuk Rosa",
+    "artifactName": "DSX-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "Frontend/**",
+      "Backend/**",
+      "UserINTer/**",
+      "resources/**",
+      "Image/**",
+      "node_modules/lucide/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "maintainer": "Pedro Henrique <contatailandia134@gmail.com>",
+      "target": [
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility"
+    }
   }
 }

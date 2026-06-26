@@ -1,15 +1,24 @@
 <p align="center">
-  <img src="Version/Banner.png" alt="Dragon SX2000 — Um navegador com a sua cara" width="100%">
+  <img src="Version/Banner.png" alt="DSX — Um navegador com a sua cara" width="100%">
 </p>
 
-<h1 align="center">Dragon SX2000</h1>
+<h1 align="center">DSX</h1>
 
 <p align="center">
-  <strong>Beta 1.0</strong>
+  <strong>v1.2.4</strong>
 </p>
 
 <p align="center">
-  <em>Disponível em 07/06/2026</em>
+  <em>Próximo lançamento: 06/07/2026</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Yacsu77/Dragon-SX2000/releases">
+    <img
+      src="https://img.shields.io/badge/Download-GitHub%20Releases-24292F?style=for-the-badge&logo=github&logoColor=white"
+      alt="Download no GitHub Releases"
+    />
+  </a>
 </p>
 
 <p align="center">
@@ -76,28 +85,47 @@
 
 ## Sobre o Projeto
 
-O **Dragon SX2000** é um navegador desktop **open source** pensado para quem quer ir além do comum. Aqui, cada detalhe pode refletir a sua identidade — porque um navegador não precisa ser genérico; ele pode ser **a cara do dono**.
-
-Personalize a tela inicial, escolha wallpapers, ajuste temas, adicione widgets e deixe o ambiente exatamente do jeito que você imagina. O Dragon SX2000 nasceu da ideia de que navegar na web também é uma forma de se expressar.
+O **DSX** (sucessor do Dragon SX2000) é um navegador desktop **open source** pensado para quem quer ir além do comum. Cada detalhe pode refletir a sua identidade — wallpapers, temas, widgets AutoTune e uma interface modular feita para personalização.
 
 ---
 
-## Funcionalidades da Versão 1.0
+## Versão e downloads
 
-- Tela inicial **Home** totalmente personalizável
-- Sistema completo de **abas** com drag-and-drop e animações
-- **Persistência de dados** para salvar preferências e configurações
-- Busca integrada com o **Google** em múltiplos pontos da interface
-- Sistema de **Auto Tunes** — widgets flutuantes de produtividade e entretenimento
-- Suporte a **imagens e vídeos** como wallpaper
-- **Factory** de personalização visual e CSS/SCSS por componente
+| | |
+|---|---|
+| **Versão disponível** | **v1.2.4** |
+| **Próximo lançamento** | **06/07/2026** |
+| **Executáveis** | Somente via [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+
+Os instaladores são publicados na branch `main` com o prefixo **DSX**:
+
+- Windows: `DSX-1.2.4-win-x64.exe`
+- macOS: `DSX-1.2.4-mac-x64.dmg`
+- Linux: `DSX-1.2.4-linux-x64.deb` e `.AppImage`
+
+Não há distribuição de binários fora do Release.
+
+---
+
+## Funcionalidades (v1.2)
+
+- **Home** com wallpaper visível e widgets AutoTune flutuantes
+- Sistema de **abas** com drag-and-drop, animações e visão geral estilo Safari
+- **Barra superior** modular: menu, histórico, favoritos, arquivos locais, downloads
+- Busca integrada com o **Google** na barra de endereço
+- **Favoritos** com persistência em localStorage
+- **AutoTune** — widgets flutuantes (Timer, Music, Clock, Share, Tasklist)
+- **Wallpaper** com imagem e vídeo
+- **Factory** de personalização visual por componente
 - **Dragon Media SDK** — now playing em tempo real via WebSocket
+- **Atalhos globais** de teclado ([documentação](Frontend/src/shortcuts/README.md))
 
-> Para o changelog completo desta versão, consulte [`Version/Lançamento/Log 1.0.MD`](Version/Lançamento/Log%201.0.MD).
+> Changelog completo: [`Version/Lançamento/Log v1.2.MD`](Version/Lançamento/Log%20v1.2.MD)  
+> Documentação do Frontend: [`Version/Docs/Frontend/Inicial.MD`](Version/Docs/Frontend/Inicial.MD)
 
 ---
 
-## Como Executar
+## Como Executar (desenvolvimento)
 
 ### Pré-requisitos
 
@@ -116,6 +144,14 @@ npm install
 
 ```bash
 npm start
+```
+
+### Build local
+
+```bash
+npm run dist:win    # Windows
+npm run dist:mac    # macOS
+npm run dist:linux  # Linux
 ```
 
 ---

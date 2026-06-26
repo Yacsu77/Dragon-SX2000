@@ -1,0 +1,50 @@
+<div id="wallpaper-widget" class="wallpaper-overlay" aria-hidden="true">
+  <div class="wallpaper-shell wallpaper-widget" role="dialog" aria-modal="true" aria-labelledby="wallpaperWidgetTitle">
+    <a class="wallpaper-close" href="#" aria-label="Fechar">×</a>
+    <main class="widget">
+      <header class="widget-header">
+        <h1 id="wallpaperWidgetTitle">Wallpaper</h1>
+        <p>Escolha e ajuste o wallpaper do ambiente.</p>
+      </header>
+
+      <section class="wallpaper-panel">
+        <div class="wallpaper-preview" id="wallpaperPreview">
+          <div class="preview-layer" id="previewLayer">
+            <span class="preview-placeholder">Selecione uma imagem ou video</span>
+          </div>
+        </div>
+
+        <div class="wallpaper-controls">
+          <div class="wallpaper-actions">
+            <label class="upload-btn">
+              Subir imagem
+              <input id="wallpaperImageInput" type="file" accept="image/*" hidden />
+            </label>
+            <label class="upload-btn secondary">
+              Subir video
+              <input id="wallpaperVideoInput" type="file" accept="video/*" hidden />
+            </label>
+          </div>
+
+          <div class="adjustments">
+            <div class="adjustment-row">
+              <label for="rotateControl">Rotacao</label>
+              <input id="rotateControl" type="range" min="-180" max="180" value="0" />
+            </div>
+            <div class="adjustment-row buttons">
+              <button class="control-btn" id="flipHorizontal" type="button">Inverter X</button>
+              <button class="control-btn" id="flipVertical" type="button">Inverter Y</button>
+              <button class="control-btn ghost" id="resetAdjustments" type="button">Resetar</button>
+            </div>
+            <p class="hint">Arraste no preview para mover o wallpaper.</p>
+          </div>
+
+          <div class="apply-row">
+            <button class="apply-btn" id="applyWallpaper" type="button">Aplicar</button>
+            <span class="status" id="wallpaperStatus" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>

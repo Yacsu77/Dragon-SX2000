@@ -1,0 +1,7 @@
+/* Visibilidade inicial dos painéis principais (sobrescrita pelos módulos) */
+.nav-bar,
+.tabs-bar,
+.home-page,
+.browser-container {
+  display: none;
+}

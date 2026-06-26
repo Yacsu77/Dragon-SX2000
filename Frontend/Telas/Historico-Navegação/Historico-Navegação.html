@@ -1,0 +1,84 @@
+<div class="history-screen" data-role="history-screen">
+  <header class="history-screen__header">
+    <div class="history-screen__header-text">
+      <h1 class="history-screen__title">Histórico de Navegação</h1>
+      <p class="history-screen__subtitle">Gerencie suas visitas recentes</p>
+    </div>
+    <button type="button" class="history-screen__close" data-role="close" aria-label="Fechar">×</button>
+  </header>
+
+  <div class="history-screen__toolbar">
+    <div class="history-screen__search-wrap">
+      <svg class="history-screen__search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <input
+        type="search"
+        class="history-screen__search"
+        data-role="search"
+        placeholder="Buscar por título ou URL…"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="history-screen__actions">
+      <button type="button" class="history-screen__btn history-screen__btn--danger" data-role="delete-selected" disabled>
+        Apagar selecionados
+      </button>
+      <button type="button" class="history-screen__btn history-screen__btn--ghost" data-role="clear-all">
+        Limpar histórico
+      </button>
+    </div>
+  </div>
+
+  <div class="history-screen__state history-screen__loading" data-role="loading" hidden>
+    <span class="history-screen__spinner" aria-hidden="true"></span>
+    Carregando histórico…
+  </div>
+
+  <div class="history-screen__state history-screen__error" data-role="error" hidden></div>
+
+  <div class="history-screen__state history-screen__empty" data-role="empty" hidden>
+    <div class="history-screen__empty-icon" aria-hidden="true">🕘</div>
+    <h2>Nenhum histórico encontrado</h2>
+    <p>Suas visitas aparecerão aqui conforme você navegar.</p>
+  </div>
+
+  <div class="history-screen__table-wrap" data-role="table-wrap" hidden>
+    <table class="history-screen__table" data-role="table">
+      <thead>
+        <tr>
+          <th class="history-screen__th history-screen__th--check">
+            <input type="checkbox" data-role="select-all" aria-label="Selecionar todos" />
+          </th>
+          <th class="history-screen__th history-screen__th--icon"></th>
+          <th class="history-screen__th">Título</th>
+          <th class="history-screen__th">URL</th>
+          <th class="history-screen__th">Visitas</th>
+          <th class="history-screen__th">Tipo</th>
+          <th class="history-screen__th">Última visita</th>
+          <th class="history-screen__th history-screen__th--actions">Ações</th>
+        </tr>
+      </thead>
+      <tbody data-role="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer class="history-screen__footer" data-role="footer" hidden>
+    <span class="history-screen__count" data-role="count"></span>
+    <div class="history-screen__pagination" data-role="pagination"></div>
+  </footer>
+
+  <div class="history-screen__confirm" data-role="confirm" hidden>
+    <div class="history-screen__confirm-card" role="dialog" aria-modal="true" aria-labelledby="historyConfirmTitle">
+      <h3 id="historyConfirmTitle">Limpar todo o histórico?</h3>
+      <p>Esta ação não pode ser desfeita. Todos os registros serão removidos.</p>
+      <div class="history-screen__confirm-actions">
+        <button type="button" class="history-screen__btn history-screen__btn--ghost" data-role="confirm-cancel">Cancelar</button>
+        <button type="button" class="history-screen__btn history-screen__btn--danger" data-role="confirm-ok">Limpar tudo</button>
+      </div>
+    </div>
+  </div>
+</div>

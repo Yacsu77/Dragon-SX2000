@@ -1,0 +1,17 @@
+<div class="favoritos-screen" data-role="favoritos-screen">
+  <header class="favoritos-screen__header">
+    <h1 class="favoritos-screen__title">Favoritos</h1>
+    <button type="button" class="favoritos-screen__close" data-role="close" aria-label="Fechar">×</button>
+  </header>
+
+  <form class="favoritos-form" data-role="form">
+    <input type="text" class="favoritos-form__input" data-role="title" placeholder="Título" autocomplete="off" required />
+    <input type="url" class="favoritos-form__input" data-role="url" placeholder="https://..." autocomplete="off" required />
+    <button type="submit" class="favoritos-form__submit">Adicionar</button>
+  </form>
+
+  <div class="favoritos-screen__body">
+    <p class="favoritos-empty" data-role="empty" hidden>Nenhum favorito salvo.</p>
+    <ul class="favoritos-list" data-role="list"></ul>
+  </div>
+</div>

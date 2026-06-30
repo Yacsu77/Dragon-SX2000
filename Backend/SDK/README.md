@@ -68,8 +68,9 @@ npm install
 
 | Plataforma | Dependência | Como instalar |
 |------------|-------------|---------------|
-| Windows 10/11 (>= 1809) | `@coooookies/windows-smtc-monitor` (já em `optionalDependencies`, prebuilds) | `npm install @coooookies/windows-smtc-monitor` |
-| macOS 10.15+ | `nowplaying-cli` | `brew install nowplaying-cli` |
+| Windows 10/11 (>= 1809) | `@coooookies/windows-smtc-monitor` + script SMTC | `npm install` em `Backend/SDK` (incluído no `dist:win`) |
+| macOS 10.15+ | `nowplaying-cli` | `brew install nowplaying-cli` (ou bundled no `dist:mac`) |
+| Linux (MPRIS) | `dbus-next` (npm) | `npm install` em `Backend/SDK` (incluído no `dist:linux` / AppImage) |
 | Outros | — | usa `NullCapture` (sem captura, mas WebSocket funciona) |
 
 > Se o capturador nativo não estiver disponível, o SDK **não falha**: ele sobe o WebSocket vazio em modo `NullCapture` para que clientes possam conectar e aguardar.

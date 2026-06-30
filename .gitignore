@@ -2,4 +2,6 @@
 release/
 dist/
 .DS_Store
+Backend/SDK/bin/
+node_modules
 

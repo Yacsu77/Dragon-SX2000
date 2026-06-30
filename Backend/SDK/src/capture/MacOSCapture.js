@@ -2,6 +2,7 @@
 
 const { spawn } = require('child_process');
 const BaseCapture = require('./BaseCapture');
+const { resolveNowPlayingCliBinary } = require('../utils/nowPlayingCli');
 
 /**
  * Captura via `nowplaying-cli` (https://github.com/kirtan-shah/nowplaying-cli)
@@ -17,7 +18,7 @@ class MacOSCapture extends BaseCapture {
     super(opts);
     this._timer = null;
     this._lastSignature = '';
-    this._binary = opts.binary || 'nowplaying-cli';
+    this._binary = resolveNowPlayingCliBinary(opts);
   }
 
   async start() {

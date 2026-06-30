@@ -6,10 +6,11 @@
   "scripts": {
     "start": "electron .",
     "icons:prepare": "node scripts/prepare-icons.js",
+    "prebuild:mac": "node scripts/fetch-nowplaying-cli.js --arch=arm64 && node scripts/fetch-nowplaying-cli.js --arch=x64 && npm install --prefix Backend/SDK",
     "pack": "npm run icons:prepare && electron-builder",
     "dist": "npm run icons:prepare && electron-builder --publish=never",
     "dist:win": "npm run icons:prepare && electron-builder --win --x64 --publish=never",
-    "dist:mac": "npm run icons:prepare && electron-builder --mac --x64 --publish=never",
+    "dist:mac": "npm run icons:prepare && npm run prebuild:mac && electron-builder --mac --arm64 --x64 --publish=never",
     "dist:linux": "npm run icons:prepare && electron-builder --linux --x64 --publish=never"
   },
   "repository": {
@@ -27,7 +28,7 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.7.2",
+    "electron": "^41.9.0",
     "electron-builder": "^24.13.3",
     "png-to-ico": "^2.1.8",
     "png2icons": "^2.0.1",
@@ -56,7 +57,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"
@@ -65,7 +68,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.icns"
@@ -75,11 +81,15 @@
       "target": [
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.png",

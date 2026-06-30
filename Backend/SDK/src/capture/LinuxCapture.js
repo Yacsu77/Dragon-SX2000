@@ -45,7 +45,6 @@ class LinuxCapture extends BaseCapture {
         await this._pollOnce();
       } catch (err) {
         this.logger?.warn('Erro ao consultar MPRIS:', err.message);
-        this.emit('error', err);
       } finally {
         if (this.running) {
           this._timer = setTimeout(tick, this.pollIntervalMs);

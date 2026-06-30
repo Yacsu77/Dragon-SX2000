@@ -2,53 +2,52 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const BaseController = require('./BaseController');
 
+const HELPER_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'windows-smtc-control.ps1');
+
 /**
- * Controlador de mídia para Windows.
+ * Controlador de mídia para Windows via SMTC (System Media Transport Controls).
  *
- * Estratégia: envia teclas multimídia globais via `keybd_event` (user32.dll).
- * Funciona com qualquer aplicativo que registre handler SMTC (Spotify, Chrome,
- * Edge, Firefox, Groove, players nativos, etc.) — exatamente os mesmos
- * que o capturador SMTC consegue ler.
- *
- * Implementação: spawna UM PowerShell de longa duração e envia comandos via
- * stdin. Eliminamos o cold start (~500ms) que aconteceria a cada comando.
- *
- * Vantagens vs. dependência nativa:
- *   - Zero deps adicionais (PowerShell vem com Windows)
- *   - Funciona em qualquer Windows 7+
- *   - Não precisa de toolchain de C++ ou rebuild para Electron
- *
- * Virtual-Key codes:
- *   0xB0 VK_MEDIA_NEXT_TRACK
- *   0xB1 VK_MEDIA_PREV_TRACK
- *   0xB2 VK_MEDIA_STOP
- *   0xB3 VK_MEDIA_PLAY_PAUSE
- *
- * Flags do keybd_event:
- *   0x0001 KEYEVENTF_EXTENDEDKEY
- *   0x0002 KEYEVENTF_KEYUP
+ * Usa TryPlayAsync / TrySkipNextAsync etc. — mesma API WinRT que o capturador
+ * SMTC lê — em vez de keybd_event, que não funciona de processos filhos
+ * do Electron em background.
  */
 class WindowsController extends BaseController {
   constructor(opts = {}) {
     super(opts);
     this._proc = null;
-    this._exitHandler = null;
     this._restarting = false;
+    this._scriptPath = opts.scriptPath || HELPER_SCRIPT;
+    this._pending = null;
+    this._stdoutBuffer = '';
+    this._onStdoutData = (chunk) => this._handleStdout(chunk);
   }
 
   async start() {
     if (this._proc) return;
-    this._spawnHelper();
-    this.ready = !!this._proc;
+    if (!fs.existsSync(this._scriptPath)) {
+      this.logger?.warn?.(`Script SMTC não encontrado: ${this._scriptPath}`);
+      this.ready = false;
+      return;
+    }
+    await this._spawnHelper();
   }
 
   async stop() {
     this.ready = false;
+    if (this._pending) {
+      this._pending.resolve({ ok: false, error: 'controller_stopped' });
+      this._pending = null;
+    }
     if (this._proc) {
       try {
-        this._proc.stdin.end();
+        if (this._proc.stdout) this._proc.stdout.off('data', this._onStdoutData);
+        if (this._proc.stdin && !this._proc.stdin.destroyed) {
+          this._proc.stdin.write('exit\n');
+          this._proc.stdin.end();
+        }
         this._proc.kill();
       } catch (_) { /* ignore */ }
       this._proc = null;
@@ -56,89 +55,108 @@ class WindowsController extends BaseController {
   }
 
   _spawnHelper() {
-    // PowerShell em modo "silencioso" e sem profile (mais rápido).
-    const args = [
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy', 'Bypass',
-      '-Command', '-',
-    ];
-
-    let proc;
-    try {
-      proc = spawn('powershell.exe', args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true,
-      });
-    } catch (err) {
-      this.logger?.error?.('Não foi possível iniciar PowerShell:', err.message);
-      return;
-    }
-
-    proc.on('error', (err) => {
-      this.logger?.warn?.('Erro no helper PowerShell:', err.message);
-    });
-
-    proc.stderr.on('data', (chunk) => {
-      const text = chunk.toString().trim();
-      if (text) this.logger?.debug?.('[helper stderr]', text);
-    });
-
-    proc.stdout.on('data', (chunk) => {
-      const text = chunk.toString().trim();
-      if (text) this.logger?.debug?.('[helper stdout]', text);
-    });
-
-    proc.on('exit', (code, signal) => {
-      this.logger?.warn?.(`Helper PowerShell encerrado (code=${code} signal=${signal})`);
-      this._proc = null;
-      // Auto-reinicia se a SDK ainda estiver ativa
-      if (this.ready && !this._restarting) {
-        this._restarting = true;
-        setTimeout(() => {
-          this._restarting = false;
-          if (this.ready) this._spawnHelper();
-        }, 500);
+    return new Promise((resolve) => {
+      let proc;
+      try {
+        proc = spawn('powershell.exe', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy', 'Bypass',
+          '-File', this._scriptPath,
+          '-Server',
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true,
+        });
+      } catch (err) {
+        this.logger?.error?.('Não foi possível iniciar helper SMTC:', err.message);
+        this.ready = false;
+        resolve(false);
+        return;
       }
+
+      let bootstrapped = false;
+      const bootTimeout = setTimeout(() => {
+        if (!bootstrapped) {
+          this.logger?.warn?.('Helper SMTC não respondeu a tempo');
+          this.ready = false;
+          resolve(false);
+        }
+      }, 15000);
+
+      proc.on('error', (err) => {
+        this.logger?.warn?.('Erro no helper SMTC:', err.message);
+      });
+
+      proc.stderr.on('data', (chunk) => {
+        const text = chunk.toString().trim();
+        if (text) this.logger?.debug?.('[SMTC stderr]', text);
+      });
+
+      proc.stdout.on('data', this._onStdoutData);
+
+      proc.on('exit', (code, signal) => {
+        this.logger?.warn?.(`Helper SMTC encerrado (code=${code} signal=${signal})`);
+        if (this._pending) {
+          this._pending.resolve({ ok: false, error: 'helper_exited' });
+          this._pending = null;
+        }
+        this._proc = null;
+        if (this.ready && !this._restarting) {
+          this._restarting = true;
+          setTimeout(async () => {
+            this._restarting = false;
+            if (this.ready) await this._spawnHelper();
+          }, 500);
+        }
+      });
+
+      this._proc = proc;
+      this._stdoutBuffer = '';
+
+      this._bootResolve = (ok) => {
+        if (bootstrapped) return;
+        bootstrapped = true;
+        clearTimeout(bootTimeout);
+        this.ready = ok;
+        if (ok) this.logger?.info?.('Helper SMTC (Windows) iniciado');
+        resolve(ok);
+      };
     });
+  }
 
-    // Compila a função `Send-MediaKey` uma vez na sessão e fica em loop lendo
-    // linhas do stdin. Cada linha é um nome de tecla.
-    const bootstrap = `
-$ErrorActionPreference = 'SilentlyContinue';
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public static class DragonMedia {
-    [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
-    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-    public static void Tap(byte vk) {
-        keybd_event(vk, 0, 0x0001, UIntPtr.Zero);
-        keybd_event(vk, 0, 0x0001 | 0x0002, UIntPtr.Zero);
-    }
-}
-"@ -ErrorAction SilentlyContinue;
-function Send-MediaKey([string]$name) {
-    switch ($name) {
-        'play_pause' { [DragonMedia]::Tap(0xB3) }
-        'play'       { [DragonMedia]::Tap(0xB3) }
-        'pause'      { [DragonMedia]::Tap(0xB3) }
-        'next'       { [DragonMedia]::Tap(0xB0) }
-        'prev'       { [DragonMedia]::Tap(0xB1) }
-        'stop'       { [DragonMedia]::Tap(0xB2) }
-    }
-    Write-Output "ok:$name"
-}
-Write-Output "ready"
-while ($line = [Console]::In.ReadLine()) {
-    if ($line -eq 'exit') { break }
-    Send-MediaKey -name $line
-}
-`.trim() + '\n';
+  _handleStdout(chunk) {
+    this._stdoutBuffer += chunk.toString();
+    const lines = this._stdoutBuffer.split(/\r?\n/);
+    this._stdoutBuffer = lines.pop() || '';
 
-    proc.stdin.write(bootstrap);
-    this._proc = proc;
-    this.logger?.info?.('Helper PowerShell de controle de mídia iniciado');
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      this.logger?.debug?.('[SMTC stdout]', line);
+
+      if (line === 'ready' && this._bootResolve) {
+        this._bootResolve(true);
+        this._bootResolve = null;
+        continue;
+      }
+
+      if (!this._pending) continue;
+
+      const { action } = this._pending;
+      if (line === `ok:${action}`) {
+        const { resolve } = this._pending;
+        this._pending = null;
+        clearTimeout(this._pendingTimer);
+        resolve({ ok: true, action });
+      } else if (line.startsWith(`fail:${action}`)) {
+        const errMsg = line.slice(`fail:${action}`.length).trim() || 'command_failed';
+        const { resolve } = this._pending;
+        this._pending = null;
+        clearTimeout(this._pendingTimer);
+        resolve({ ok: false, error: errMsg, action });
+      }
+    }
   }
 
   async send(action) {
@@ -147,20 +165,35 @@ while ($line = [Console]::In.ReadLine()) {
       this.logger?.warn?.(`comando inválido: '${action}'`);
       return { ok: false, error: 'invalid_action' };
     }
-    if (!this._proc || !this._proc.stdin || this._proc.stdin.destroyed) {
-      this.logger?.warn?.('Helper PowerShell não disponível, tentando reiniciar');
-      this._spawnHelper();
-      if (!this._proc) return { ok: false, error: 'helper_unavailable' };
+
+    if (this._pending) {
+      return { ok: false, error: 'command_in_progress' };
     }
 
-    try {
-      this._proc.stdin.write(`${norm}\n`);
-      this.logger?.info?.(`▶ enviando tecla multimídia: ${norm}`);
-      return { ok: true, action: norm };
-    } catch (err) {
-      this.logger?.warn?.('Falha ao enviar comando:', err.message);
-      return { ok: false, error: err.message };
+    if (!this.ready || !this._proc || !this._proc.stdin || this._proc.stdin.destroyed) {
+      this.logger?.warn?.('Helper SMTC não disponível, tentando reiniciar');
+      await this._spawnHelper();
+      if (!this.ready || !this._proc) return { ok: false, error: 'helper_unavailable' };
     }
+
+    return new Promise((resolve) => {
+      this._pending = { action: norm, resolve };
+      this._pendingTimer = setTimeout(() => {
+        if (this._pending && this._pending.action === norm) {
+          this._pending = null;
+          resolve({ ok: false, error: 'command_timeout', action: norm });
+        }
+      }, 10000);
+
+      try {
+        this._proc.stdin.write(`${norm}\n`);
+        this.logger?.info?.(`▶ executando '${norm}' via SMTC`);
+      } catch (err) {
+        clearTimeout(this._pendingTimer);
+        this._pending = null;
+        resolve({ ok: false, error: err.message, action: norm });
+      }
+    });
   }
 }
 

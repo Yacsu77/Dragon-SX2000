@@ -7,11 +7,12 @@
     "start": "electron .",
     "icons:prepare": "node scripts/prepare-icons.js",
     "prebuild:mac": "node scripts/fetch-nowplaying-cli.js --arch=arm64 && node scripts/fetch-nowplaying-cli.js --arch=x64 && npm install --prefix Backend/SDK",
+    "prebuild:linux": "npm install --prefix Backend/SDK",
     "pack": "npm run icons:prepare && electron-builder",
     "dist": "npm run icons:prepare && electron-builder --publish=never",
     "dist:win": "npm run icons:prepare && electron-builder --win --x64 --publish=never",
     "dist:mac": "npm run icons:prepare && npm run prebuild:mac && electron-builder --mac --arm64 --x64 --publish=never",
-    "dist:linux": "npm run icons:prepare && electron-builder --linux --x64 --publish=never"
+    "dist:linux": "npm run icons:prepare && npm run prebuild:linux && electron-builder --linux --x64 --publish=never"
   },
   "repository": {
     "type": "git",

@@ -21,6 +21,7 @@
   "author": "Dragon SX2000 Team",
   "license": "ISC",
   "dependencies": {
+    "dbus-next": "^0.10.2",
     "ws": "^8.18.0"
   },
   "optionalDependencies": {

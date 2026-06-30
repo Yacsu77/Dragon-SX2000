@@ -1,9 +1,12 @@
 'use strict';
 
 const dbus = require('dbus-next');
+const { Message } = dbus;
 
 const MPRIS_PREFIX = 'org.mpris.MediaPlayer2.';
+const ROOT_IFACE = 'org.mpris.MediaPlayer2';
 const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
+const PROPERTIES_IFACE = 'org.freedesktop.DBus.Properties';
 const PLAYER_PATH = '/org/mpris/MediaPlayer2';
 
 /**
@@ -44,19 +47,46 @@ class MprisClient {
     return names.filter((n) => n.startsWith(MPRIS_PREFIX)).sort();
   }
 
-  async _getPlayerProps(busName) {
+  /**
+   * Chama um método D-Bus diretamente.
+   * Necessário para org.freedesktop.DBus.Properties, que players MPRIS
+   * implementam mas não listam na introspecção XML.
+   */
+  async _callMethod(busName, iface, member, inSignature = '', body = []) {
     const bus = this.connect();
-    const obj = await bus.getProxyObject(busName, PLAYER_PATH);
-    const props = obj.getInterface('org.freedesktop.DBus.Properties');
+    const msg = new Message({
+      destination: busName,
+      path: PLAYER_PATH,
+      interface: iface,
+      member,
+      signature: inSignature,
+      body,
+    });
+    const reply = await bus.call(msg);
+    return reply.body;
+  }
+
+  async _getPlayerProperty(busName, propName) {
+    const body = await this._callMethod(
+      busName,
+      PROPERTIES_IFACE,
+      'Get',
+      'ss',
+      [PLAYER_IFACE, propName]
+    );
+    return unwrap(body[0]);
+  }
+
+  async _getPlayerProps(busName) {
     const [metadata, status, position] = await Promise.all([
-      props.Get(PLAYER_IFACE, 'Metadata'),
-      props.Get(PLAYER_IFACE, 'PlaybackStatus'),
-      props.Get(PLAYER_IFACE, 'Position').catch(() => 0),
+      this._getPlayerProperty(busName, 'Metadata'),
+      this._getPlayerProperty(busName, 'PlaybackStatus'),
+      this._getPlayerProperty(busName, 'Position').catch(() => 0),
     ]);
     return {
-      metadata: unwrap(metadata),
-      status: unwrap(status),
-      position: Number(unwrap(position) || 0),
+      metadata: metadata || {},
+      status: String(status || ''),
+      position: Number(position || 0),
     };
   }
 
@@ -93,7 +123,8 @@ class MprisClient {
     if (!busName) return null;
 
     const { metadata, status, position } = await this._getPlayerProps(busName);
-    if (status === 'Stopped' && !unwrap(metadata?.['xesam:title'])) {
+    const title = String(metadata['xesam:title'] || '');
+    if (status === 'Stopped' && !title) {
       return null;
     }
 
@@ -107,10 +138,7 @@ class MprisClient {
     const method = MPRIS_COMMANDS[action];
     if (!method) throw new Error('unsupported_action');
 
-    const bus = this.connect();
-    const obj = await bus.getProxyObject(busName, PLAYER_PATH);
-    const player = obj.getInterface(PLAYER_IFACE);
-    await player[method]();
+    await this._callMethod(busName, PLAYER_IFACE, method);
     return { busName, method };
   }
 }
@@ -125,8 +153,18 @@ const MPRIS_COMMANDS = {
 };
 
 function unwrap(value) {
-  if (value && typeof value === 'object' && 'value' in value && 'signature' in value) {
-    return value.value;
+  if (value == null) return value;
+  if (typeof value === 'bigint') return Number(value);
+  if (typeof value === 'object' && 'signature' in value && 'value' in value) {
+    return unwrap(value.value);
+  }
+  if (Array.isArray(value)) return value.map(unwrap);
+  if (typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = unwrap(v);
+    }
+    return out;
   }
   return value;
 }
@@ -138,14 +176,14 @@ function busNameToApp(busName) {
 
 function metadataToSnapshot(busName, metadata, status, positionUs) {
   const md = metadata || {};
-  const title = String(unwrap(md['xesam:title']) || '');
-  const artistRaw = unwrap(md['xesam:artist']);
+  const title = String(md['xesam:title'] || '');
+  const artistRaw = md['xesam:artist'];
   const artist = Array.isArray(artistRaw)
     ? artistRaw.map(String).join(', ')
     : String(artistRaw || '');
-  const album = String(unwrap(md['xesam:album']) || '');
-  const lengthUs = Number(unwrap(md['mpris:length']) || 0);
-  const cover = String(unwrap(md['xesam:artUrl']) || '');
+  const album = String(md['xesam:album'] || '');
+  const lengthUs = Number(md['mpris:length'] || 0);
+  const cover = String(md['xesam:artUrl'] || '');
   const paused = status !== 'Playing';
   const position = Math.max(0, Math.floor(positionUs / 1_000_000));
   const duration = Math.max(0, Math.floor(lengthUs / 1_000_000));

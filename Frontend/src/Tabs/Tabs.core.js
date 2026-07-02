@@ -159,6 +159,7 @@
     afterTabLayoutUpdate();
 
     const webview = document.createElement('webview');
+    webview.setAttribute('allowpopups', '');
     webview.src = url;
     webview.dataset.id = tabId;
     attachWebviewListeners(webview, tabId, titleSpan);
@@ -338,6 +339,7 @@
     if (iconSpan) iconSpan.textContent = hostnameIcon(url);
 
     const webview = document.createElement('webview');
+    webview.setAttribute('allowpopups', '');
     webview.src = url;
     webview.dataset.id = newTabId;
     webview.classList.add('active');

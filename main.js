@@ -142,6 +142,28 @@ function stopBackgroundServices() {
   stopApiDsx();
 }
 
+let mainWindow = null;
+
+function isAllowedNavigationUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function attachWebviewPopupHandler(win) {
+  win.webContents.on('did-attach-webview', (_event, guestWebContents) => {
+    guestWebContents.setWindowOpenHandler(({ url }) => {
+      if (isAllowedNavigationUrl(url) && !win.isDestroyed()) {
+        win.webContents.send('browser:open-url', url);
+      }
+      return { action: 'deny' };
+    });
+  });
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -151,6 +173,13 @@ function createWindow() {
       webviewTag: true,
       contextIsolation: true,
     },
+  });
+
+  mainWindow = win;
+  attachWebviewPopupHandler(win);
+
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
   });
 
   win.loadFile('Frontend/src/index.html');

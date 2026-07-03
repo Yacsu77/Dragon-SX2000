@@ -8,7 +8,7 @@
 #   powershell -File windows-smtc-control.ps1 -Server
 
 param(
-  [ValidateSet('play_pause', 'play', 'pause', 'next', 'prev', 'stop')]
+  [ValidateSet('play_pause', 'play', 'pause', 'next', 'prev', 'stop', 'volume_up', 'volume_down')]
   [string]$Action,
   [switch]$Server
 )
@@ -56,6 +56,8 @@ function Send-SmtcAction {
     'next'       { $result = Wait-IAsyncOperation ($session.TrySkipNextAsync()) ([bool]) }
     'prev'       { $result = Wait-IAsyncOperation ($session.TrySkipPreviousAsync()) ([bool]) }
     'stop'       { $result = Wait-IAsyncOperation ($session.TryStopAsync()) ([bool]) }
+    'volume_up'   { $result = Wait-IAsyncOperation ($session.TryChangeChannelVolumeUpAsync()) ([bool]) }
+    'volume_down' { $result = Wait-IAsyncOperation ($session.TryChangeChannelVolumeDownAsync()) ([bool]) }
     default      { throw "unsupported_action:$Name" }
   }
 

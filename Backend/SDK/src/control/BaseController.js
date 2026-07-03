@@ -12,6 +12,8 @@
  *   - `next`
  *   - `prev` (alias: `previous`)
  *   - `stop`
+ *   - `volume_up` (alias: `vol_up`)
+ *   - `volume_down` (alias: `vol_down`)
  */
 class BaseController {
   constructor({ logger } = {}) {
@@ -51,6 +53,8 @@ class BaseController {
     if (a === 'play') return 'play';
     if (a === 'pause') return 'pause';
     if (a === 'stop') return 'stop';
+    if (a === 'volume_up' || a === 'vol_up' || a === 'volume-up' || a === 'volumeup') return 'volume_up';
+    if (a === 'volume_down' || a === 'vol_down' || a === 'volume-down' || a === 'volumedown') return 'volume_down';
     return null;
   }
 }

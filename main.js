@@ -204,6 +204,60 @@ ipcMain.handle('files:pickFolder', async () => {
   return result.filePaths[0];
 });
 
+const WALLPAPER_DIR = () => path.join(app.getPath('userData'), 'wallpapers');
+const WALLPAPER_STATE_FILE = () => path.join(WALLPAPER_DIR(), 'state.json');
+
+async function ensureWallpaperDir() {
+  await fs.mkdir(WALLPAPER_DIR(), { recursive: true });
+}
+
+ipcMain.handle('wallpaper:readState', async () => {
+  try {
+    const raw = await fs.readFile(WALLPAPER_STATE_FILE(), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('wallpaper:saveState', async (_event, payload) => {
+  await ensureWallpaperDir();
+  await fs.writeFile(WALLPAPER_STATE_FILE(), JSON.stringify(payload), 'utf8');
+  return true;
+});
+
+ipcMain.handle('wallpaper:importFile', async (_event, { sourcePath, type }) => {
+  if (!sourcePath) throw new Error('sourcePath obrigatorio');
+  await ensureWallpaperDir();
+  const ext = path.extname(sourcePath) || (type === 'video' ? '.mp4' : '.jpg');
+  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${ext}`);
+  await fs.copyFile(sourcePath, destPath);
+  return destPath;
+});
+
+ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl }) => {
+  if (!dataUrl || !dataUrl.startsWith('data:')) throw new Error('dataUrl invalido');
+  await ensureWallpaperDir();
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error('dataUrl invalido');
+  const mime = match[1];
+  let ext = '.jpg';
+  if (mime.includes('png')) ext = '.png';
+  else if (mime.includes('webp')) ext = '.webp';
+  else if (mime.includes('gif')) ext = '.gif';
+  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${ext}`);
+  await fs.writeFile(destPath, Buffer.from(match[2], 'base64'));
+  return destPath;
+});
+
+ipcMain.handle('wallpaper:importBlob', async (_event, { buffer, ext }) => {
+  await ensureWallpaperDir();
+  const safeExt = ext && ext.startsWith('.') ? ext : '.mp4';
+  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${safeExt}`);
+  await fs.writeFile(destPath, Buffer.from(buffer));
+  return destPath;
+});
+
 app.whenReady().then(() => {
   startMediaSdk();
   startApiDsx();

@@ -10,6 +10,10 @@ async function initApp() {
     await window.Browser.init();
   }
 
+  if (window.CursorControll && typeof window.CursorControll.init === 'function') {
+    window.CursorControll.init();
+  }
+
   if (window.Tabline && typeof window.Tabline.init === 'function') {
     await window.Tabline.init();
   }

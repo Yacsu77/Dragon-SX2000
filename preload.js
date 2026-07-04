@@ -33,3 +33,8 @@ contextBridge.exposeInMainWorld('DragonBrowser', {
     return () => ipcRenderer.removeListener('browser:open-url', handler);
   },
 });
+
+contextBridge.exposeInMainWorld('DragonCursorControl', {
+  createWindow: (url) => ipcRenderer.invoke('cursor:create-window', { url }),
+  consumePendingUrl: () => ipcRenderer.invoke('cursor:consume-pending-url'),
+});

@@ -143,6 +143,7 @@ function stopBackgroundServices() {
 }
 
 let mainWindow = null;
+const pendingWindowUrls = new Map();
 
 function isAllowedNavigationUrl(url) {
   try {
@@ -164,7 +165,7 @@ function attachWebviewPopupHandler(win) {
   });
 }
 
-function createWindow() {
+function createBrowserWindow(pendingUrl = null) {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -175,15 +176,46 @@ function createWindow() {
     },
   });
 
-  mainWindow = win;
+  if (pendingUrl && isAllowedNavigationUrl(pendingUrl)) {
+    pendingWindowUrls.set(win.webContents.id, pendingUrl);
+  }
+
   attachWebviewPopupHandler(win);
 
   win.on('closed', () => {
+    pendingWindowUrls.delete(win.webContents.id);
     if (mainWindow === win) mainWindow = null;
   });
 
   win.loadFile('Frontend/src/index.html');
+  return win;
 }
+
+function createWindow() {
+  mainWindow = createBrowserWindow();
+}
+
+ipcMain.handle('cursor:create-window', async (_event, { url }) => {
+  if (!url || typeof url !== 'string' || !isAllowedNavigationUrl(url)) {
+    return { ok: false, error: 'invalid-url' };
+  }
+  try {
+    createBrowserWindow(url);
+    return { ok: true };
+  } catch (err) {
+    console.error('[CursorControll] falha ao criar janela:', err);
+    return { ok: false, error: 'window-failed' };
+  }
+});
+
+ipcMain.handle('cursor:consume-pending-url', (event) => {
+  const url = pendingWindowUrls.get(event.sender.id);
+  if (url) {
+    pendingWindowUrls.delete(event.sender.id);
+    return url;
+  }
+  return null;
+});
 
 ipcMain.handle('files:readDir', async (_event, dirPath) => {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });

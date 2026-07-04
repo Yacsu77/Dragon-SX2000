@@ -79,6 +79,29 @@
 
 ---
 
+### CursorControll e ações do mouse
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Menu de contexto** | Menu personalizado para páginas, links, textos selecionados, campos editáveis e abas |
+| **Ações de edição** | Copiar, colar, cortar e colar e ir em campos de texto via API do webview |
+| **Navegação** | Voltar, recarregar, abrir links (aba atual, nova aba, nova janela) |
+| **Abas** | Duplicar, fechar, copiar URL, silenciar/ativar som (`webview.setAudioMuted`) |
+| **Favoritos** | Adicionar/remover via `Favoritos.toggle()` reutilizando `localStorage` existente |
+| **Busca** | Pesquisar texto selecionado no Google em nova aba à direita |
+| **Autoscroll** | Botão do meio na página ativa rolagem automática com indicador visual |
+| **Fechar aba** | Botão do meio na barra de abas fecha a aba correspondente |
+| **Teclado** | Navegação por setas, Enter, Escape no menu |
+| **IPC** | `DragonCursorControl.createWindow()` para nova janela segura |
+| **Documentação** | `Frontend/src/CursorControll/CursorDocs.MD` |
+| **Testes** | `npm run test:cursor-controll` (lógica pura) |
+
+**Arquivos:** `Frontend/src/CursorControll/`, `Tabs.core.js`, `Favoritos.js`, `main.js`, `preload.js`
+
+**Pendente nesta versão:** tradução de texto (item exibido como "Em breve").
+
+---
+
 ### SDK — melhorias por plataforma
 
 | Plataforma | Melhoria |

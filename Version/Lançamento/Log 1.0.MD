@@ -63,7 +63,7 @@
 |---|---|---|
 | **Auto Tunes** | `settingsAUTO` | Posição, tamanho e estado ativo/inativo de cada widget |
 | **Factory** | `autotuneFactorySettings` | Cores, tipografia, CSS customizado por componente |
-| **Wallpaper** | `wallpaperState` | Imagem/vídeo, transformações (rotação, flip, posição) |
+| **Wallpaper** | `userData/wallpapers/state.json` + arquivo de mídia | Imagem/vídeo, transformações (rotação, flip, posição). Legado: `wallpaperState` em localStorage |
 | **Tema** | `themeMode` | Modo claro, escuro ou sistema |
 | **Tasklist** | `autotuneTasklistData` | Tarefas, tempo rastreado e tarefa ativa |
 | **Timer (Pomodoro)** | `autotunePomodoroSettings` | Duração de foco e pausa |

@@ -107,7 +107,7 @@ Não há distribuição de binários fora do Release.
 
 ---
 
-## Funcionalidades (v1.2)
+## Funcionalidades (v1.3)
 
 - **Home** com wallpaper visível e widgets AutoTune flutuantes
 - Sistema de **abas** com drag-and-drop, animações e visão geral estilo Safari
@@ -115,12 +115,13 @@ Não há distribuição de binários fora do Release.
 - Busca integrada com o **Google** na barra de endereço
 - **Favoritos** com persistência em localStorage
 - **AutoTune** — widgets flutuantes (Timer, Music, Clock, Share, Tasklist)
-- **Wallpaper** com imagem e vídeo
+- **AutoTune Music minimal** — player compacto no topo com volume integrado ao SDK
+- **Wallpaper** com imagem e vídeo — persistência em disco (`userData/wallpapers/`)
 - **Factory** de personalização visual por componente
-- **Dragon Media SDK** — now playing em tempo real via WebSocket
+- **Dragon Media SDK** — now playing, controles e volume em tempo real via WebSocket
 - **Atalhos globais** de teclado ([documentação](Frontend/src/shortcuts/README.md))
 
-> Changelog completo: [`Version/Lançamento/Log v1.2.MD`](Version/Lançamento/Log%20v1.2.MD)  
+> Changelog completo: [`Version/Lançamento/Log v1.3.MD`](Version/Lançamento/Log%20v1.3.MD)  
 > Documentação do Frontend: [`Version/Docs/Frontend/Inicial.MD`](Version/Docs/Frontend/Inicial.MD)
 
 ---

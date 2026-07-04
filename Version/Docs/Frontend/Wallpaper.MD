@@ -50,8 +50,22 @@ Link na Tabline: `href="#wallpaper-widget"` → hash navigation + lógica em `Wa
 |----------|-------------|
 | Layout do painel | `Wallpaper.html` + `UserINTer/.../Wallpaper/index.css` |
 | Upload / aplicar / persistência | `UserINTer/Tabline/idget/Wallpaper/index.js` |
+| IPC e pasta de mídia no disco | `main.js` (`wallpaper:*`) + `preload.js` (`DragonWallpaper`) |
 | Vídeo de fundo padrão | `core/background.html` → `<source src="...">` |
 | Adicionar barra de progresso no apply | incluir `#applyProgress*` no HTML (JS já suporta opcional) |
+
+---
+
+## Persistência (v1.3+)
+
+| Item | Detalhe |
+|------|---------|
+| **Pasta** | `{userData}/wallpapers/` |
+| **Mídia** | `wallpaper.{ext}` — cópia do arquivo aplicado (imagem ou vídeo) |
+| **Estado** | `state.json` — `{ type, dataUrl, transform }` |
+| **API renderer** | `window.DragonWallpaper.readState()` / `.saveState()` / `.importFile()` |
+| **Path do arquivo** | `DragonWallpaper.getFilePath(file)` via `webUtils.getPathForFile` |
+| **Legado** | `localStorage.wallpaperState` — lido na migração; removido ao salvar via disco |
 
 ---
 

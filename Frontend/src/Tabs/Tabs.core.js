@@ -121,6 +121,82 @@
     if (typeof window.trackWebviewHistory === 'function') {
       window.trackWebviewHistory(webview);
     }
+
+    if (window.CursorMouseEventService) {
+      window.CursorMouseEventService.attachWebviewEvents(webview);
+    }
+  }
+
+  function insertTabElements(tabButton, webview, referenceTabId) {
+    const tabsContainer = document.getElementById('tabs');
+    const browserContainer = document.getElementById('browser');
+
+    if (referenceTabId) {
+      const refTab = document.querySelector(`.tab[data-id="${referenceTabId}"]`);
+      const refWebview = document.querySelector(`webview[data-id="${referenceTabId}"]`);
+
+      if (refTab && refTab.parentNode === tabsContainer) {
+        tabsContainer.insertBefore(tabButton, refTab.nextSibling);
+      } else {
+        tabsContainer.appendChild(tabButton);
+      }
+
+      if (refWebview && browserContainer) {
+        browserContainer.insertBefore(webview, refWebview.nextSibling);
+      } else if (browserContainer) {
+        browserContainer.appendChild(webview);
+      }
+    } else {
+      tabsContainer.appendChild(tabButton);
+      browserContainer.appendChild(webview);
+    }
+  }
+
+  function createTabAfter(referenceTabId, url, title = null, icon = null, activate = true) {
+    state.tabCount += 1;
+    const tabId = `tab-${state.tabCount}`;
+    const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
+
+    const tabButton = document.createElement('div');
+    tabButton.classList.add('tab');
+    tabButton.dataset.id = tabId;
+
+    const closeBtn = document.createElement('span');
+    closeBtn.classList.add('tab-close');
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeTab(tabId);
+    };
+    tabButton.appendChild(closeBtn);
+
+    const iconSpan = document.createElement('span');
+    iconSpan.classList.add('tab-icon');
+    iconSpan.textContent = icon || hostnameIcon(url);
+    tabButton.appendChild(iconSpan);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.classList.add('tab-title');
+    titleSpan.textContent = displayTitle;
+    tabButton.appendChild(titleSpan);
+
+    tabButton.onclick = () => activateTab(tabId);
+
+    if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
+
+    const webview = document.createElement('webview');
+    webview.setAttribute('allowpopups', '');
+    webview.src = url;
+    webview.dataset.id = tabId;
+    attachWebviewListeners(webview, tabId, titleSpan);
+
+    insertTabElements(tabButton, webview, referenceTabId);
+    afterTabLayoutUpdate();
+
+    emitTabCreated(tabId, false);
+    if (activate) activateTab(tabId);
+    return tabId;
   }
 
   function createTab(url, title = null, icon = null) {
@@ -154,9 +230,7 @@
     tabButton.onclick = () => activateTab(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
-
-    document.getElementById('tabs').appendChild(tabButton);
-    afterTabLayoutUpdate();
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     const webview = document.createElement('webview');
     webview.setAttribute('allowpopups', '');
@@ -164,7 +238,8 @@
     webview.dataset.id = tabId;
     attachWebviewListeners(webview, tabId, titleSpan);
 
-    document.getElementById('browser').appendChild(webview);
+    insertTabElements(tabButton, webview, null);
+    afterTabLayoutUpdate();
     emitTabCreated(tabId, false);
     activateTab(tabId);
     return tabId;
@@ -264,6 +339,7 @@
     tabButton.onclick = () => activateHomeTab(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     document.getElementById('tabs').appendChild(tabButton);
     afterTabLayoutUpdate();
@@ -362,6 +438,7 @@
 
   window.TabsCore = {
     createTab,
+    createTabAfter,
     activateTab,
     closeTab,
     createNewTab,
@@ -372,6 +449,7 @@
   };
 
   window.createTab = createTab;
+  window.createTabAfter = createTabAfter;
   window.activateTab = activateTab;
   window.closeTab = closeTab;
   window.createNewTab = createNewTab;

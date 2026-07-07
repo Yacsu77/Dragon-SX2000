@@ -145,6 +145,11 @@ function stopBackgroundServices() {
 let mainWindow = null;
 const pendingWindowUrls = new Map();
 
+// Combos de atalho "globais" por janela host (webContents.id → Set<combo>).
+// São atalhos que precisam funcionar mesmo com o foco dentro de um site
+// (webview), como a paleta de busca (Ctrl+Space).
+const globalCombosByHost = new Map();
+
 function isAllowedNavigationUrl(url) {
   try {
     const parsed = new URL(url);
@@ -154,6 +159,27 @@ function isAllowedNavigationUrl(url) {
   }
 }
 
+/**
+ * Constrói o combo canônico a partir de um evento before-input-event.
+ * Deve espelhar `comboFromEvent` do ShortcutManager (renderer).
+ */
+function comboFromInput(input) {
+  const mods = [];
+  if (input.control) mods.push('Ctrl');
+  if (input.shift) mods.push('Shift');
+  if (input.alt) mods.push('Alt');
+  if (input.meta) mods.push('Meta');
+
+  let main = input.key;
+  if (main === ' ' || input.code === 'Space') main = 'Space';
+  else if (main && main.length === 1 && /[a-z]/i.test(main)) main = main.toUpperCase();
+  if (main === 'Esc') main = 'Escape';
+  if (main === 'Del') main = 'Delete';
+
+  if (!main) return '';
+  return [...mods, main].join('+');
+}
+
 function attachWebviewPopupHandler(win) {
   win.webContents.on('did-attach-webview', (_event, guestWebContents) => {
     guestWebContents.setWindowOpenHandler(({ url }) => {
@@ -161,6 +187,23 @@ function attachWebviewPopupHandler(win) {
         win.webContents.send('browser:open-url', url);
       }
       return { action: 'deny' };
+    });
+
+    // Intercepta atalhos globais mesmo quando o foco está dentro do site.
+    // Sem isso, o guest (site) consome a tecla e o listener global do renderer
+    // host nunca recebe o evento (ex.: Ctrl+Space navegando em uma página).
+    guestWebContents.on('before-input-event', (inputEvent, input) => {
+      if (input.type !== 'keyDown') return;
+      if (win.isDestroyed()) return;
+
+      const combos = globalCombosByHost.get(win.webContents.id);
+      if (!combos || combos.size === 0) return;
+
+      const combo = comboFromInput(input);
+      if (combo && combos.has(combo)) {
+        inputEvent.preventDefault();
+        win.webContents.send('shortcuts:global-combo', combo);
+      }
     });
   });
 }
@@ -184,6 +227,7 @@ function createBrowserWindow(pendingUrl = null) {
 
   win.on('closed', () => {
     pendingWindowUrls.delete(win.webContents.id);
+    globalCombosByHost.delete(win.webContents.id);
     if (mainWindow === win) mainWindow = null;
   });
 
@@ -215,6 +259,11 @@ ipcMain.handle('cursor:consume-pending-url', (event) => {
     return url;
   }
   return null;
+});
+
+ipcMain.on('shortcuts:set-global-combos', (event, combos) => {
+  const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string' && c) : [];
+  globalCombosByHost.set(event.sender.id, new Set(list));
 });
 
 ipcMain.handle('files:readDir', async (_event, dirPath) => {

@@ -183,6 +183,11 @@
         "Esc ou clique fora cancela sem buscar.",
       defaultKeys: "Ctrl+Space",
       category: "Navegação",
+      // Sempre disponível: dispara mesmo digitando em um input do app
+      // (allowInInputs) e também quando o foco está dentro de um site/webview
+      // (global — interceptado no processo principal e reenviado).
+      allowInInputs: true,
+      global: true,
       handler: () => toggle(),
     });
   }

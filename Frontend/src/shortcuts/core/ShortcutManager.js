@@ -75,6 +75,59 @@
     changeListeners.forEach((fn) => {
       try { fn(snapshot); } catch (_) { /* ignore */ }
     });
+    syncGlobalCombos();
+  }
+
+  /**
+   * Combos marcados como `global`, isto é, que devem funcionar mesmo quando o
+   * foco está dentro de um site (webview). Enviados ao processo principal, que
+   * os intercepta via before-input-event e reenvia para cá.
+   * @returns {string[]}
+   */
+  function getGlobalCombos() {
+    const combos = [];
+    for (const entry of registry.values()) {
+      if (entry.global && entry.keys) combos.push(entry.keys);
+    }
+    return combos;
+  }
+
+  function syncGlobalCombos() {
+    try {
+      if (window.DragonShortcuts && typeof window.DragonShortcuts.setGlobalCombos === "function") {
+        window.DragonShortcuts.setGlobalCombos(getGlobalCombos());
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  /**
+   * Dispara o handler do atalho cujo combo corresponde. Usado quando o combo
+   * chega do processo principal (tecla pressionada dentro de um webview),
+   * onde não há um KeyboardEvent real do host.
+   * @param {string} combo  Combo no formato canônico ("Ctrl+Space")
+   * @returns {boolean} true se algum handler foi disparado
+   */
+  function triggerCombo(combo) {
+    const normalized = normalizeCombo(combo);
+    if (!normalized) return false;
+
+    for (const entry of registry.values()) {
+      if (!entry.keys || entry.keys !== normalized) continue;
+
+      const syntheticEvent = {
+        preventDefault() {},
+        stopPropagation() {},
+        target: null,
+      };
+      const ctx = { combo: normalized, source: "webview" };
+      try {
+        entry.handler(syntheticEvent, ctx);
+      } catch (err) {
+        console.warn("[Shortcuts] handler throw (webview):", entry.id, err);
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -176,6 +229,7 @@
       keys: customKeys || defaultKeys,
       handler: entry.handler,
       allowInInputs: !!entry.allowInInputs,
+      global: !!entry.global,
       category: entry.category || "Geral",
     };
     registry.set(entry.id, stored);
@@ -277,6 +331,14 @@
     started = true;
     bootSnapshotPending = false;
     document.addEventListener("keydown", handleKeydown, true);
+
+    // Recebe combos globais capturados dentro de webviews (processo principal).
+    try {
+      if (window.DragonShortcuts && typeof window.DragonShortcuts.onGlobalCombo === "function") {
+        window.DragonShortcuts.onGlobalCombo((combo) => triggerCombo(combo));
+      }
+    } catch (_) { /* ignore */ }
+
     emitChange();
   }
 
@@ -302,5 +364,7 @@
     stop,
     normalizeCombo,
     comboFromEvent,
+    getGlobalCombos,
+    triggerCombo,
   };
 })();

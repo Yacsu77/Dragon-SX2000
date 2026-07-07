@@ -38,3 +38,19 @@ contextBridge.exposeInMainWorld('DragonCursorControl', {
   createWindow: (url) => ipcRenderer.invoke('cursor:create-window', { url }),
   consumePendingUrl: () => ipcRenderer.invoke('cursor:consume-pending-url'),
 });
+
+contextBridge.exposeInMainWorld('DragonShortcuts', {
+  // Informa ao processo principal quais combos devem ser capturados mesmo
+  // quando o foco está dentro de um site (webview).
+  setGlobalCombos: (combos) => {
+    const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];
+    ipcRenderer.send('shortcuts:set-global-combos', list);
+  },
+  // Recebe do main um combo global disparado dentro de um webview.
+  onGlobalCombo: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const handler = (_event, combo) => callback(combo);
+    ipcRenderer.on('shortcuts:global-combo', handler);
+    return () => ipcRenderer.removeListener('shortcuts:global-combo', handler);
+  },
+});

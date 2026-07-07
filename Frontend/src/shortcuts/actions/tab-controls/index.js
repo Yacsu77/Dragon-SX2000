@@ -69,6 +69,9 @@
       description: "Abre uma nova aba na página inicial.",
       defaultKeys: "Ctrl+T",
       category: "Abas",
+      // Sempre disponível: também dentro de inputs do app e de sites (webview).
+      allowInInputs: true,
+      global: true,
       handler: () => openNewTab(),
     });
 
@@ -78,6 +81,8 @@
       description: "Fecha a aba atualmente ativa.",
       defaultKeys: "Ctrl+W",
       category: "Abas",
+      allowInInputs: true,
+      global: true,
       handler: () => closeActiveTab(),
     });
 
@@ -87,8 +92,10 @@
       description: "Alterna para a próxima aba (com retorno ao início).",
       defaultKeys: "Ctrl+Tab",
       category: "Abas",
-      // allowInInputs: false (padrão) — Tab dentro de input deve funcionar
-      // como navegação de campo, não como troca de aba.
+      // allowInInputs: false (padrão) — Tab dentro de input do app deve
+      // funcionar como navegação de campo. Já `global` cobre a troca de aba
+      // quando o foco está dentro de um site (comportamento de navegador).
+      global: true,
       handler: () => cycleTab(1),
     });
 
@@ -98,6 +105,7 @@
       description: "Alterna para a aba anterior (com retorno ao fim).",
       defaultKeys: "Ctrl+Shift+Tab",
       category: "Abas",
+      global: true,
       handler: () => cycleTab(-1),
     });
   }

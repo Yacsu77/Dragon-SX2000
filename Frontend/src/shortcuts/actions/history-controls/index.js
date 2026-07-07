@@ -29,6 +29,9 @@
       description: 'Abre a tela completa de Histórico de Navegação.',
       defaultKeys: 'Ctrl+H',
       category: 'Navegação',
+      // Sempre disponível: também dentro de inputs do app e de sites (webview).
+      allowInInputs: true,
+      global: true,
       handler: () => openHistoryScreen(),
     });
   }

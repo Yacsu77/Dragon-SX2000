@@ -174,8 +174,10 @@
         case "minus":
           main = "Minus"; break;
         default:
+          // Botão extra de mouse: "mouse3" → "Mouse3"
+          if (/^mouse[0-9]+$/i.test(token)) main = "Mouse" + token.replace(/[^0-9]/g, "");
           // Capitaliza letras isoladas (a → A); preserva F-keys e setas como vêm
-          if (/^[a-z]$/i.test(token)) main = token.toUpperCase();
+          else if (/^[a-z]$/i.test(token)) main = token.toUpperCase();
           else main = token;
       }
     });
@@ -207,6 +209,25 @@
 
     if (!main) return "";
     return [...mods, main].join("+");
+  }
+
+  /**
+   * Constrói o combo canônico a partir de um evento de mouse, considerando
+   * apenas os botões extras (>= 3). Os botões esquerdo (0), central (1) e
+   * direito (2) — além do scroll — são reservados e nunca viram atalho.
+   * @param {MouseEvent} event
+   * @returns {string}
+   */
+  function comboFromMouseEvent(event) {
+    if (!event || typeof event.button !== "number" || event.button < 3) return "";
+
+    const mods = [];
+    if (event.ctrlKey) mods.push("Ctrl");
+    if (event.shiftKey) mods.push("Shift");
+    if (event.altKey) mods.push("Alt");
+    if (event.metaKey) mods.push("Meta");
+
+    return [...mods, `Mouse${event.button}`].join("+");
   }
 
   /**
@@ -298,17 +319,23 @@
     return SAFE_TAGS.has(target.tagName);
   }
 
-  function handleKeydown(event) {
-    const combo = comboFromEvent(event);
-    if (!combo) return;
+  /**
+   * Percorre o registry e dispara o primeiro atalho cujo combo corresponde.
+   * Compartilhado entre teclado e mouse (botões extras).
+   * @param {string} combo
+   * @param {Event} event
+   * @param {string} source  "keydown" | "mouse"
+   * @returns {boolean}
+   */
+  function dispatchCombo(combo, event, source) {
+    if (!combo) return false;
 
-    // Itera registry e dispara o primeiro match
     for (const entry of registry.values()) {
       if (!entry.keys) continue;
       if (entry.keys !== combo) continue;
       if (!entry.allowInInputs && isEditingTarget(event.target)) continue;
 
-      const ctx = { combo, source: "keydown" };
+      const ctx = { combo, source };
       let result;
       try {
         result = entry.handler(event, ctx);
@@ -319,11 +346,22 @@
       // Por padrão, atalhos consomem o evento. Handler pode retornar false
       // explicitamente para deixar passar.
       if (result !== false) {
-        event.preventDefault();
-        event.stopPropagation();
+        if (typeof event.preventDefault === "function") event.preventDefault();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
       }
-      return;
+      return true;
     }
+    return false;
+  }
+
+  function handleKeydown(event) {
+    dispatchCombo(comboFromEvent(event), event, "keydown");
+  }
+
+  // Botões extras do mouse (voltar/avançar/laterais). `auxclick` dispara para
+  // botões não primários; ignoramos < 3 dentro de comboFromMouseEvent.
+  function handleAuxClick(event) {
+    dispatchCombo(comboFromMouseEvent(event), event, "mouse");
   }
 
   function start() {
@@ -331,6 +369,7 @@
     started = true;
     bootSnapshotPending = false;
     document.addEventListener("keydown", handleKeydown, true);
+    document.addEventListener("auxclick", handleAuxClick, true);
 
     // Recebe combos globais capturados dentro de webviews (processo principal).
     try {
@@ -346,6 +385,7 @@
     if (!started) return;
     started = false;
     document.removeEventListener("keydown", handleKeydown, true);
+    document.removeEventListener("auxclick", handleAuxClick, true);
   }
 
   // Marca que estamos no fluxo de boot — durante o boot, varios `register`
@@ -364,6 +404,7 @@
     stop,
     normalizeCombo,
     comboFromEvent,
+    comboFromMouseEvent,
     getGlobalCombos,
     triggerCombo,
   };

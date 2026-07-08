@@ -8,7 +8,7 @@
     { id: 'editar', label: 'Editar', placeholder: 'Ferramentas de edição em breve.' },
     { id: 'historico', label: 'Histórico', preview: 'history' },
     { id: 'favoritos', label: 'Favoritos', action: 'favoritos' },
-    { id: 'atalhos', label: 'Atalhos', placeholder: 'Lista de atalhos personalizados em breve.' },
+    { id: 'atalhos', label: 'Atalhos', preview: 'shortcuts' },
     { id: 'sobre', label: 'Sobre', placeholder: 'Dragon SX2000 — Navegue com estilo e velocidade.' },
   ];
 
@@ -93,6 +93,15 @@
       return;
     }
 
+    if (item.preview === 'shortcuts' && window.MiniAtalhos) {
+      previewEl.innerHTML = '';
+      const panel = await window.MiniAtalhos.load();
+      if (activePreviewId === item.id && panel) {
+        previewEl.appendChild(panel);
+      }
+      return;
+    }
+
     showPlaceholder(item.placeholder || 'Em breve.');
   }
 
@@ -106,6 +115,14 @@
     if (item.id === 'favoritos') {
       if (window.Favoritos && typeof window.Favoritos.open === 'function') {
         window.Favoritos.open();
+        close();
+      }
+      return;
+    }
+
+    if (item.id === 'atalhos') {
+      if (window.AtalhosScreen && typeof window.AtalhosScreen.open === 'function') {
+        window.AtalhosScreen.open();
         close();
       }
     }

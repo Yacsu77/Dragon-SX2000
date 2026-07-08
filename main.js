@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
@@ -239,6 +239,20 @@ function createWindow() {
   mainWindow = createBrowserWindow();
 }
 
+/**
+ * No Windows/Linux o menu padrão do Electron registra aceleradores globais
+ * (Ctrl+R = Reload, Ctrl+Shift+R = Force Reload, Ctrl+W = Close Window) que
+ * seriam capturados ANTES do renderer, recarregando/fechando a janela inteira
+ * e conflitando com os atalhos do app. Removemos o menu para que o
+ * ShortcutManager seja a fonte única dos atalhos. (No macOS o menu usa Cmd,
+ * então mantemos o padrão para preservar Cmd+C/V/etc.)
+ */
+function setupApplicationMenu() {
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+  }
+}
+
 ipcMain.handle('cursor:create-window', async (_event, { url }) => {
   if (!url || typeof url !== 'string' || !isAllowedNavigationUrl(url)) {
     return { ok: false, error: 'invalid-url' };
@@ -340,6 +354,7 @@ ipcMain.handle('wallpaper:importBlob', async (_event, { buffer, ext }) => {
 });
 
 app.whenReady().then(() => {
+  setupApplicationMenu();
   startMediaSdk();
   startApiDsx();
   createWindow();

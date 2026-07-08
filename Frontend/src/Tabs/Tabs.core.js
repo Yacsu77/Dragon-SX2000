@@ -78,6 +78,9 @@
   }
 
   function finishActivateHomeTab(tab, tabId) {
+    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active', 'adjacent-to-active'));
+
     tab.classList.add('active');
 
     if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(tab);
@@ -87,6 +90,16 @@
 
     if (window.TabsVisibility) window.TabsVisibility.scheduleVisibilityUpdate();
     if (typeof window.updateNavigationButtons === 'function') window.updateNavigationButtons();
+  }
+
+  // Reafirma o botão de aba ativo ao fim da animação cosmética. A webview já
+  // foi ativada de forma instantânea, então isto só ajusta a barra de abas.
+  function restoreActiveTabButton(targetTab) {
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.classList.remove('active', 'adjacent-to-active');
+    });
+    targetTab.classList.add('active');
+    if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(targetTab);
   }
 
   function attachWebviewListeners(webview, tabId, titleSpan) {
@@ -260,25 +273,20 @@
     const targetWebview = document.querySelector(`webview[data-id="${tabId}"]`);
     if (!targetTab || !targetWebview) return;
 
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
+    // Troca de conteúdo IMEDIATA: alterna a webview visível agora, sem esperar
+    // a animação da barra de abas. Antes, a webview alvo só era ativada no
+    // onComplete (~250–400ms depois), deixando a área de conteúdo vazia nesse
+    // intervalo — o que causava o "flash" do fundo e a lentidão percebida.
+    finishActivateBrowserTab(targetTab, targetWebview, tabId);
 
-    if (currentIndex === -1 || currentIndex === targetIndex) {
-      finishActivateBrowserTab(targetTab, targetWebview, tabId);
-      return;
-    }
-
-    if (window.TabsAnim) {
+    // Animação apenas cosmética dos botões da barra; não bloqueia o conteúdo.
+    if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
       window.TabsAnim.animateTabTransition({
         currentIndex,
         targetIndex,
         tabs,
-        onComplete: () => finishActivateBrowserTab(targetTab, targetWebview, tabId),
+        onComplete: () => restoreActiveTabButton(targetTab),
       });
-    } else {
-      finishActivateBrowserTab(targetTab, targetWebview, tabId);
     }
   }
 
@@ -355,23 +363,20 @@
     const targetIndex = tabs.findIndex((tab) => tab.dataset.id === tabId);
     if (targetIndex === -1) return;
 
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
-
     const tab = tabs[targetIndex];
     if (!tab) return;
+
+    // Mostra a home imediatamente (evita a área de conteúdo vazia durante a
+    // animação). A animação da barra fica apenas cosmética.
+    finishActivateHomeTab(tab, tabId);
 
     if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
       window.TabsAnim.animateTabTransition({
         currentIndex,
         targetIndex,
         tabs,
-        onComplete: () => finishActivateHomeTab(tab, tabId),
+        onComplete: () => restoreActiveTabButton(tab),
       });
-    } else {
-      finishActivateHomeTab(tab, tabId);
     }
   }
 

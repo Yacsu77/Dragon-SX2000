@@ -95,6 +95,12 @@ window.ConfigOverview = { open(), close(), init(), renderGrid() }
 
 ---
 
+## Botão Editar (nav direita)
+
+O botão `#editarBtn` fica em `Top/Top.html` e é ligado em `Top/Top.js` (não em `TopActions/`), abrindo `EditarScreen` — ver [`Editar.MD`](./Editar.MD).
+
+---
+
 ## Como adicionar novo botão TopActions
 
 1. Adicionar `<button id="meuBtn">` em `Top/Top.html`

@@ -16,11 +16,11 @@ Barra de navegação: menu, voltar/avançar, barra de endereço. Orquestrada por
 Top/
 ├── Top.html          ← Markup da nav (montado em #topRoot pelo Shell)
 ├── Top.css           ← .nav-bar, .nav-btn, .nav-left/right/center
-├── Top.js            ← Orquestra init de todos os submódulos
+├── Top.js            ← Orquestra init + botão Editar
 ├── Menu/
 │   ├── Menu.html     ← Estrutura do painel menubar
 │   ├── Menu.css
-│   ├── Menu.js       ← Itens, preview, click Histórico/Favoritos
+│   ├── Menu.js       ← Itens, preview, click Histórico/Favoritos/Atalhos/Editar
 │   └── Menu.anim.js  ← Abrir/fechar, posicionamento
 ├── ButtonGo/
 │   ├── ButtonGo.css
@@ -28,7 +28,7 @@ Top/
 │   └── ButtonGo.anim.js ← Estado disabled/hover
 └── Search/
     ├── Search.css    ← .address-bar, .address-input
-    ├── Search.js     ← URL vs busca, updateAddressBar()
+    ├── Search.js     ← URL vs busca, updateAddressBar() (só webview ativa)
     └── Search.anim.js ← Focus mostra URL; blur mostra domínio
 ```
 
@@ -41,6 +41,8 @@ Top/
 | `#menuBtn` | Menu |
 | `#backBtn`, `#forwardBtn` | ButtonGo |
 | `#addressBar`, `#addressInput` | Search |
+| `#downloadBtn`, `#arquivosBtn`, `#newTabBtn`, `#configBtn` | TopActions |
+| `#editarBtn` | Tela Editar (`EditarScreen.open`) |
 
 ---
 
@@ -70,21 +72,26 @@ window.handleAddressBar, window.updateAddressBar, window.updateNavigationButtons
 
 ### Itens do menu
 
-Array `MENU_ITEMS` — cada item:
+Array `MENU_ITEMS`:
 
 ```js
-{ id: 'historico', label: 'Histórico', preview: 'history' }
+{ id: 'editar', label: 'Editar', placeholder: '…' }           // click → EditarScreen
+{ id: 'historico', label: 'Histórico', preview: 'history' }  // MiniHistorico + HistoryScreen
 { id: 'favoritos', label: 'Favoritos', action: 'favoritos' }
-{ id: 'editar', label: 'Editar', placeholder: '...' }
+{ id: 'atalhos', label: 'Atalhos', preview: 'shortcuts' }    // MiniAtalhos + AtalhosScreen
+{ id: 'sobre', label: 'Sobre', placeholder: '…' }
 ```
 
-| Campo | Efeito |
-|-------|--------|
-| `preview: 'history'` | Carrega `MiniHistorico` no painel lateral |
-| `action: 'favoritos'` | Click chama `Favoritos.open()` |
-| `placeholder` | Texto estático no preview |
+| Campo / id | Efeito |
+|------------|--------|
+| `preview: 'history'` | `MiniHistorico.load()` |
+| `preview: 'shortcuts'` | `MiniAtalhos.load()` |
+| `id: 'editar'` (click) | `EditarScreen.open()` |
+| `id: 'atalhos'` (click) | `AtalhosScreen.open()` |
+| `id: 'historico'` (click) | `HistoryScreen.open()` |
+| `action: 'favoritos'` | `Favoritos.open()` |
 
-**Como adicionar item:** incluir objeto em `MENU_ITEMS` + handler em `handleMenuClick()` se tiver ação.
+**Como adicionar item:** incluir objeto em `MENU_ITEMS` + handler em `handleMenuClick()` / `showPreview()`.
 
 ---
 
@@ -92,17 +99,22 @@ Array `MENU_ITEMS` — cada item:
 
 - URL com `http(s)://` ou domínio → `createTab(url)`
 - Texto com espaços → `performSearch()` (Google)
-- Atualiza barra ao navegar via `app:webview-navigated`
+- `updateAddressBar()`: sem webview ativa → `clearAddressBar()` (Home sempre limpa)
+- `onWebviewNavigated`: ignora se não for o `webview.active` (evita URL fantasma)
 
-**Mudar motor de busca:** editar `Home/HomeSearch/HomeSearch.js` → `performSearch()` (barra superior usa a mesma função global).
+**Mudar motor de busca:** `Home/HomeSearch/HomeSearch.js` → `performSearch()`.
 
 **Mudar placeholder:** `Top/Top.html` → `#addressInput`.
+
+**Prefetch ao digitar:** `js/connectionPrefetch.js` escuta `#addressInput` (feature padrão).
 
 ---
 
 ## ButtonGo/ButtonGo.js
 
-Chama `webview.goBack()` / `goForward()` no webview ativo. Estado dos botões sincronizado via `app:webview-navigated`.
+Chama `webview.goBack()` / `goForward()` no webview ativo. Estado sincronizado via `app:webview-navigated`.
+
+Usado também por `shortcuts/actions/navigation-controls/` (`nav-back` / `nav-forward`).
 
 **Mudar aparência disabled:** `ButtonGo.anim.js` → `setButtonState(btn, enabled)`.
 
@@ -112,6 +124,7 @@ Chama `webview.goBack()` / `goForward()` no webview ativo. Estado dos botões si
 
 ```
 ButtonGo → NavSearch → MainMenu → TopDownloads → TopArquivos → TopNewTab → ConfigOverview
+→ #editarBtn → EditarScreen.open()
 ```
 
-**Adicionar botão na nav:** editar `Top.html` + criar handler em `TopActions/` + registrar em `Top.js`.
+**Adicionar botão na nav:** editar `Top.html` + handler em `TopActions/` ou direto em `Top.js` + script em `index.html`.

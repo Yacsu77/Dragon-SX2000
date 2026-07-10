@@ -7,6 +7,7 @@
   const WIDGET_SCRIPTS = [
     '../../UserINTer/Tabline/idget/Wallpaper/index.js',
     '../../UserINTer/Tabline/idget/Tema/index.js',
+    '../../UserINTer/Tabline/idget/Customise/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Timer/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Share/index.js',

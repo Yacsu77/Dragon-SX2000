@@ -1,10 +1,401 @@
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #0b0f1a;
-  color: #e5e7eb;
+/* Painel Customise (overlay) — visual alinhado ao AutoTune, sem toggles */
+.customise-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 18, 0.55);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  transition: opacity 180ms ease;
 }
 
-.widget {
-  padding: 24px;
+.customise-overlay.is-open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.customise-shell {
+  position: relative;
+  width: min(420px, 92vw);
+  max-height: min(520px, 88vh);
+  background: rgba(16, 20, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  transform: translateY(18px) scale(0.98);
+  opacity: 0;
+  transition: transform 220ms ease, opacity 220ms ease;
+  overflow: auto;
+  padding: 22px 20px 18px;
+}
+
+.customise-overlay.is-open .customise-shell {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.customise-close {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customise-shell h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.customise-shell > p {
+  margin: 0 0 16px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.customise-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.customise-catalog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.customise-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customise-row-text strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.customise-row-text span {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.customise-row-factory-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(120, 138, 255, 0.16);
+  color: #dbe2ff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.customise-row-factory-btn:hover {
+  background: rgba(125, 142, 255, 0.32);
+  border-color: rgba(146, 164, 255, 0.46);
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px rgba(108, 129, 255, 0.36);
+}
+
+/* —— Customise Factory (modal estilo Factory) —— */
+.customise-factory-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top right, rgba(95, 24, 108, 0.35), rgba(3, 6, 16, 0.88) 48%);
+  backdrop-filter: blur(12px);
+}
+
+.customise-factory-overlay.is-open {
+  display: flex;
+}
+
+.customise-factory-modal {
+  width: min(920px, 96vw);
+  max-height: min(88vh, 820px);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(11, 15, 29, 0.98), rgba(6, 11, 24, 0.98));
+  border: 1px solid rgba(130, 149, 255, 0.22);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.customise-factory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.customise-factory-title-wrap h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
+
+.customise-factory-title-wrap p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.customise-factory-close-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.customise-factory-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.9fr);
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.customise-factory-controls {
+  padding: 16px 18px 20px;
+  overflow: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.customise-factory-panel {
+  margin-bottom: 16px;
+}
+
+.customise-factory-panel h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.customise-factory-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.customise-factory-field label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.customise-factory-field input[type="color"] {
+  width: 48px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.customise-factory-field input[type="range"] {
+  width: 100%;
+}
+
+.customise-factory-field-value {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.customise-factory-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customise-factory-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.customise-factory-item.is-off {
+  opacity: 0.45;
+}
+
+.customise-factory-item-handle {
+  cursor: grab;
+  opacity: 0.5;
+  font-size: 14px;
+  user-select: none;
+}
+
+.customise-factory-item-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  color: #c7d2fe;
+}
+
+.customise-factory-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.customise-factory-item-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.customise-factory-item-meta strong {
+  font-size: 12px;
+}
+
+.customise-factory-item-meta span {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.customise-factory-item-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customise-factory-item-toggle.is-on {
+  background: rgba(122, 140, 255, 0.28);
+  border-color: rgba(146, 164, 255, 0.45);
+}
+
+.customise-factory-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.customise-factory-preview {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.customise-factory-preview-header {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  opacity: 0.85;
+}
+
+.customise-factory-preview-stage {
+  flex: 1;
+  min-height: 280px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(122, 140, 255, 0.12), transparent 45%),
+    rgba(8, 10, 18, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.customise-factory-preview-radial {
+  width: var(--preview-size, 240px);
+  height: var(--preview-size, 240px);
+  position: relative;
+  --radial-color: #7a8cff;
+}
+
+.customise-factory-preview-radial svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.4));
+}
+
+.customise-factory-preview-radial .preview-wedge {
+  fill: color-mix(in srgb, var(--radial-color, #7a8cff) 18%, rgba(16, 20, 30, 0.92));
+  stroke: color-mix(in srgb, var(--radial-color, #7a8cff) 40%, transparent);
+  stroke-width: 1;
+}
+
+.customise-factory-preview-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.customise-factory-preview-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e5e7eb;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.customise-factory-preview-label svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 720px) {
+  .customise-factory-body {
+    grid-template-columns: 1fr;
+  }
+
+  .customise-factory-controls {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    max-height: 48vh;
+  }
 }

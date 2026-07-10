@@ -19,14 +19,17 @@ Guia de referência do código em `Frontend/src/` após a refatoração v1.2.
 | `Browser/` | [Browser.MD](./Browser.MD) |
 | `Favoritos/` | [Favoritos.MD](./Favoritos.MD) |
 | `Wallpaper/` | [Wallpaper.MD](./Wallpaper.MD) |
-| `js/` | [js.MD](./js.MD) |
+| `js/` + `settings/` | [js.MD](./js.MD) · [Editar.MD](./Editar.MD) |
 | `shortcuts/` | [shortcuts.MD](./shortcuts.MD) |
+| `Telas/Atalhos` + MiniAtalhos | [Atalhos.MD](./Atalhos.MD) |
+| `Telas/Editar` | [Editar.MD](./Editar.MD) |
 
 Documentação relacionada fora desta pasta:
 
 - AutoTune / Factory → [Autotune.md](../Autotune.md), [Factory.md](../Factory.md)
 - Regressão manual → [ChecklistRegressao.MD](../ChecklistRegressao.MD)
 - Histórico da refatoração → [TaskPlanejamento.MD](../TaskPlanejamento.MD)
+- Release notes → [Log v1.3.MD](../../Lançamento/Log%20v1.3.MD)
 
 ---
 
@@ -34,18 +37,28 @@ Documentação relacionada fora desta pasta:
 
 ```
 Frontend/src/
-├── index.html              ← Shell mínimo (~65 linhas)
+├── index.html              ← Shell mínimo
 ├── core/                   ← Bootstrap, CSS base, AppShell, montagem HTML
-├── Top/                    ← Barra superior (menu, voltar/avançar, endereço)
+├── Top/                    ← Barra superior (menu, voltar/avançar, endereço, Editar)
 ├── TopActions/             ← Botões direitos (Downloads, Arquivos, Nova aba, Config)
-├── Tabs/                   ← Sistema de abas + webviews
+├── Tabs/                   ← Sistema de abas + webviews (partition persistente)
 ├── Tabline/                ← Barra lateral de idgets
 ├── Home/                   ← Área da home tab (transparente / wallpaper)
-├── Browser/                ← Container webview + eventos de navegação
+├── Browser/                ← Container webview + eventos + modo perf-render-all
 ├── Favoritos/              ← CRUD de favoritos (localStorage)
 ├── Wallpaper/              ← Markup do painel Wallpaper (lógica em UserINTer/)
-├── js/                     ← Bootstrap (app.js), histórico, media bridge
-└── shortcuts/              ← Atalhos globais de teclado
+├── settings/               ← Preferências (perfSettings)
+├── js/                     ← Bootstrap, histórico, media bridge, connectionPrefetch
+└── shortcuts/              ← Atalhos globais (teclado + mouse + webview)
+
+Frontend/Telas/
+├── Historico-Navegação/ · Downloads/ · Arquivos/
+├── Atalhos/                ← Gestão de atalhos
+└── Editar/                 ← Preferências de desempenho
+
+Frontend/MiniTelas/
+├── MiniHistorico-Navegação/
+└── MiniAtalhos/
 ```
 
 ---
@@ -60,9 +73,9 @@ Frontend/src/
 | **Tabs** | CRUD de abas, webviews, drag, animações, visibilidade da barra |
 | **Tabline** | Idgets laterais; carrega scripts de `UserINTer/Tabline/idget/` |
 | **Home + Browser** | Área principal: wallpaper (home) ou webview (navegação) |
-| **Favoritos / Telas** | Features fullscreen (Favoritos em `src/`; Downloads/Arquivos em `Frontend/Telas/`) |
-| **js/** | Serviços transversais (histórico API, tracker, bootstrap) |
-| **shortcuts/** | Atalhos globais desacoplados por overlay |
+| **Favoritos / Telas** | Features fullscreen (Favoritos em `src/`; Downloads/Arquivos/Atalhos/Editar em `Frontend/Telas/`) |
+| **js/ + settings/** | Serviços transversais (histórico API, prefetch, preferências de desempenho) |
+| **shortcuts/** | Atalhos globais (teclado, mouse extras, sync com webviews) |
 
 ---
 
@@ -108,14 +121,17 @@ document.addEventListener('app:tab-changed', (e) => {
 ## Ordem de bootstrap (`js/app.js`)
 
 ```
-1. Shell.mountAll()     → background, top, tabs, wallpaper, autotune catalog
+1. Shell.mountAll()
 2. Browser.init()
-3. Tabline.init()       → tabline + scripts UserINTer (Wallpaper, Tema, AutoTune…)
-4. TopBar.init()        → Menu, ButtonGo, Search, TopActions
-5. Home.init()
-6. lucide.createIcons()
-7. AppShell.showHome()
-8. updateTabsBarVisibility()
+3. CursorControll.init()
+4. Tabline.init()
+5. TopBar.init()            → Menu, ButtonGo, Search, TopActions, #editarBtn
+6. ConnectionPrefetch.init()
+7. PerfSettings.init()
+8. Home.init()
+9. lucide.createIcons()
+10. AppShell.showHome()
+11. updateTabsBarVisibility()
 ```
 
 Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
@@ -134,8 +150,11 @@ Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
 | Esconder barra com 1 home tab | `Tabs/Tabs.visibility.js` |
 | Idgets laterais | `Tabline/Tabline.html`, `Tabline/Tabline.js` |
 | Botão Downloads / Arquivos / Config | `TopActions/<Nome>/` |
+| Preferências de desempenho | `Telas/Editar/` + `settings/perfSettings.js` |
+| Gestão de atalhos (UI) | `Telas/Atalhos/` |
 | Favoritos | `Favoritos/Favoritos.js` |
-| Atalhos de teclado | `shortcuts/actions/` ou `shortcuts/overlays/` |
+| Atalhos de teclado/mouse | `shortcuts/actions/` ou `shortcuts/overlays/` |
+| Prefetch ao digitar | `js/connectionPrefetch.js` |
 | Tema claro/escuro | `UserINTer/Tabline/idget/Tema/index.js` |
 | Widgets flutuantes | `UserINTer/Tabline/idget/AutoTune/` |
 

@@ -15,7 +15,7 @@ Container `#browser` onde webviews são inseridos por `Tabs.core.js`. Centraliza
 ```
 Browser/
 ├── Browser.html        ← <div class="browser-container" id="browser"> (fallback fetch)
-├── Browser.css         ← Layout flex; webview 100% altura
+├── Browser.css         ← Layout flex; fundo opaco; modo perf-render-all
 └── Browser.js          ← init(), setupWebviewNavigation()
 ```
 
@@ -40,17 +40,33 @@ window.setupWebviewNavigation  // legado
 
 Escutado por: `Top/ButtonGo`, `Top/Search`, `js/historyTracker.js`.
 
+> **Nota (v1.3):** `Top/Search` só aplica a URL se `detail.webview` for o `webview.active` — evita URL fantasma na Home.
+
 ---
 
-## Browser.css — layout crítico
+## Browser.css — layout e desempenho
 
 ```css
-.browser-container { flex: 1; min-height: 0; }
+.browser-container {
+  flex: 1; min-height: 0;
+  background: var(--content-bg); /* evita wallpaper “vazando” ao carregar */
+}
 .browser-container.active { display: flex; flex-direction: column; }
-webview.active { flex: 1; min-height: 0; }
+webview { display: none; background: var(--content-bg); }
+webview.active { display: flex; flex: 1; min-height: 0; }
 ```
 
-**Não envolver `#browser` em wrapper sem flex** — quebra altura do webview (bug conhecido pós-Fase 7).
+### Modo opcional `perf-render-all`
+
+Quando `body` tem a classe `perf-render-all` (`PerfSettings`):
+
+- Webviews inativos ficam `position: absolute; opacity: 0` (ainda renderizados)
+- Ativo: `opacity: 1; z-index: 1`
+- Troca de aba sem `display: none` → sem repaint; mais CPU/RAM
+
+Controlado pela Tela Editar — ver [`Editar.MD`](./Editar.MD).
+
+**Não envolver `#browser` em wrapper sem flex** — quebra altura do webview.
 
 ---
 
@@ -66,15 +82,16 @@ webview.active { flex: 1; min-height: 0; }
 
 ## Integração com Tabs
 
-`Tabs.core.js` → `attachWebviewListeners()`:
+`Tabs.core.js` → `buildWebview()` + `attachWebviewListeners()`:
 
 ```js
+const webview = buildWebview(url, tabId); // partition persist:dragon
 document.getElementById('browser').appendChild(webview);
 setupWebviewNavigation(webview);
 trackWebviewHistory(webview);
 ```
 
-**Mudar permissões webview:** atributos no `document.createElement('webview')` em `Tabs.core.js`.
+**Mudar permissões / partição:** `buildWebview()` em `Tabs.core.js`.
 
 ---
 

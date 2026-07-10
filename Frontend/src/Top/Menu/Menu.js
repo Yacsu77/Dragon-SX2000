@@ -5,7 +5,7 @@
   const TEMPLATE_PATH = 'Top/Menu/Menu.html';
 
   const MENU_ITEMS = [
-    { id: 'editar', label: 'Editar', placeholder: 'Ferramentas de edição em breve.' },
+    { id: 'editar', label: 'Editar', placeholder: 'Ajustes de desempenho e comportamento.' },
     { id: 'historico', label: 'Histórico', preview: 'history' },
     { id: 'favoritos', label: 'Favoritos', action: 'favoritos' },
     { id: 'atalhos', label: 'Atalhos', preview: 'shortcuts' },
@@ -106,6 +106,14 @@
   }
 
   function handleMenuClick(item) {
+    if (item.id === 'editar') {
+      if (window.EditarScreen && typeof window.EditarScreen.open === 'function') {
+        window.EditarScreen.open();
+        close();
+      }
+      return;
+    }
+
     if (item.id === 'historico') {
       if (window.HistoryScreen) window.HistoryScreen.open();
       close();

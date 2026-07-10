@@ -161,6 +161,14 @@ Ações duplicadas são filtradas por `id` em `contextMenuService`.
 
 ---
 
+## 8.1. Botões extras do mouse (voltar / laterais)
+
+Botões com índice **≥ 3** (ex.: voltar/avançar do mouse) **não** são tratados pelo CursorControll. Eles são atalhos mapeáveis via `ShortcutManager` (`comboFromMouseEvent` → `Mouse3`, `Mouse4`, …) e editáveis na Tela de Atalhos.
+
+Ver: [`shortcuts.MD`](../../../Version/Docs/Frontend/shortcuts.MD) · [`Atalhos.MD`](../../../Version/Docs/Frontend/Atalhos.MD).
+
+---
+
 ## 9. Fluxo de comunicação IPC
 
 | Canal | Direção | Uso |

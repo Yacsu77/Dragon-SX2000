@@ -1,6 +1,6 @@
 # DSX — Shortcuts
 
-Sistema de atalhos globais do navegador **DSX** (anteriormente Dragon SX2000). Centraliza registro, persistência de bindings customizados pelo usuário e a UI dos overlays acionados pelos atalhos.
+Sistema de atalhos globais do navegador **DSX**. Centraliza registro, persistência de bindings, atalhos **globais** (dentro de webviews), botões extras de mouse e a UI de gestão (`Telas/Atalhos`).
 
 ---
 
@@ -8,11 +8,10 @@ Sistema de atalhos globais do navegador **DSX** (anteriormente Dragon SX2000). C
 
 | | |
 |---|---|
-| **Versão disponível** | **v1.2.4** |
-| **Próximo lançamento** | **06/07/2026** |
-| **Executáveis** | Somente via [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+| **Versão do log** | **v1.3.0 Beta** |
+| **Executáveis** | [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
 
-Os instaladores (`.exe`, `.dmg`, `.deb`, `.AppImage`) são publicados automaticamente na branch `main` com o nome **DSX** — ex.: `DSX-1.2.4-win-x64.exe`. Não há distribuição de binários fora do Release.
+Documentação: [`Version/Docs/Frontend/shortcuts.MD`](../../../Version/Docs/Frontend/shortcuts.MD) · [`Atalhos.MD`](../../../Version/Docs/Frontend/Atalhos.MD) · [`Log v1.3.MD`](../../../Version/Lançamento/Log%20v1.3.MD)
 
 ---
 
@@ -20,59 +19,54 @@ Os instaladores (`.exe`, `.dmg`, `.deb`, `.AppImage`) são publicados automatica
 
 ```
 Frontend/src/shortcuts/
-├── README.md                          # Este arquivo
-├── index.js                           # Bootstrap: chama ShortcutManager.start()
+├── README.md
+├── index.js                           # Bootstrap: ShortcutManager.start()
 ├── core/
-│   └── ShortcutManager.js             # Registry, parse de combos, persistência, listener global
-├── overlays/                          # Atalhos COM UI flutuante
+│   └── ShortcutManager.js             # Registry, parse, teclado+mouse, sync global
+├── overlays/
 │   └── search-palette/                # Ctrl+Space
 │       ├── index.js
 │       └── index.css
-└── actions/                           # Atalhos SEM UI (apenas disparam ações)
+└── actions/
     ├── tab-controls/                  # Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab
-    │   └── index.js
-    └── history-controls/              # Atalhos de histórico
-        └── index.js
+    ├── history-controls/              # Ctrl+H
+    └── navigation-controls/           # nav-back, nav-forward, Ctrl+R
 ```
 
 Convenção:
-- `overlays/<nome>/` — atalhos que abrem uma camada visual (palette, painel, modal). Tem `index.js` + `index.css`.
-- `actions/<nome>/` — atalhos que apenas disparam uma função (abrir aba, fechar aba, ativar widget, etc.). Só `index.js`.
+- `overlays/<nome>/` — atalhos com UI flutuante (`index.js` + `index.css`)
+- `actions/<nome>/` — só disparam ação (`index.js`)
 
-Cada arquivo registra seu próprio atalho via `window.ShortcutManager.register({ ... })` no momento em que o script é carregado.
-
-Documentação geral do Frontend: [`Version/Docs/Frontend/Inicial.MD`](../../../Version/Docs/Frontend/Inicial.MD) · módulo shortcuts: [`Version/Docs/Frontend/shortcuts.MD`](../../../Version/Docs/Frontend/shortcuts.MD)
+Cada arquivo chama `window.ShortcutManager.register({ ... })` no load.
 
 ---
 
 ## Atalhos disponíveis
 
-| ID | Default | Categoria | O que faz |
-|----|---------|-----------|-----------|
-| `search-palette` | `Ctrl+Space` | Navegação | Abre a paleta de busca flutuante. Aceita texto (busca no Google) ou URL (abre nova aba). `Esc` ou clique fora cancela sem buscar. |
-| `tab-new` | `Ctrl+T` | Abas | Abre uma nova aba na página inicial. |
-| `tab-close` | `Ctrl+W` | Abas | Fecha a aba atualmente ativa. |
-| `tab-next` | `Ctrl+Tab` | Abas | Alterna para a próxima aba (com retorno ao início). |
-| `tab-prev` | `Ctrl+Shift+Tab` | Abas | Alterna para a aba anterior (com retorno ao fim). |
+| ID | Default | Categoria | Flags | O que faz |
+|----|---------|-----------|-------|-----------|
+| `search-palette` | `Ctrl+Space` | Navegação | `allowInInputs`, `global` | Paleta de busca flutuante |
+| `tab-new` | `Ctrl+T` | Abas | `allowInInputs`, `global` | Nova aba (home) |
+| `tab-close` | `Ctrl+W` | Abas | `allowInInputs`, `global` | Fecha aba ativa |
+| `tab-next` | `Ctrl+Tab` | Abas | `global` | Próxima aba |
+| `tab-prev` | `Ctrl+Shift+Tab` | Abas | `global` | Aba anterior |
+| `history-open` | `Ctrl+H` | Navegação | `allowInInputs`, `global` | Tela de histórico |
+| `nav-back` | *(vazio)* | Navegação | `allowInInputs`, `global` | Voltar — mapear na Tela de Atalhos |
+| `nav-forward` | *(vazio)* | Navegação | `allowInInputs`, `global` | Avançar — mapear na Tela de Atalhos |
+| `page-reload` | `Ctrl+R` | Navegação | `allowInInputs`, `global` | Recarrega a aba ativa |
 
-> Adicione novos atalhos aqui e mantenha esta tabela em sincronia com a próxima versão da settings page.
+> Bindings vazios (`""`) = atalho desabilitado até o usuário mapear.
 
 ---
 
-## Como funcionam os combos
+## Combos
 
-Formato canônico: modificadores em ordem fixa **`Ctrl+Shift+Alt+Meta+Tecla`**, separados por `+`.
+Formato canônico: **`Ctrl+Shift+Alt+Meta+Tecla`**.
 
-Exemplos válidos:
-- `Ctrl+Space`
-- `Ctrl+Shift+K`
-- `Alt+ArrowLeft`
-- `F5`
-- `Ctrl+Plus` / `Ctrl+Minus`
+Exemplos: `Ctrl+Space`, `Ctrl+Shift+K`, `Alt+ArrowLeft`, `F5`, `Ctrl+Plus`, `Mouse3`, `Ctrl+Mouse4`.
 
-O `ShortcutManager.normalizeCombo()` aceita variações (`ctrl+space`, `CTRL + space`, `control+space`) e devolve a forma canônica.
-
-Bindings vazios (`""`) significam "atalho desabilitado" — não dispara mais.
+- `normalizeCombo()` aceita variações (`ctrl+space`, `control+space`, `mouse3`).
+- Botões de mouse **≥ 3** viram `MouseN`. Esquerdo (0), central (1), direito (2) e scroll **não** são atalhos.
 
 ---
 
@@ -80,107 +74,83 @@ Bindings vazios (`""`) significam "atalho desabilitado" — não dispara mais.
 
 ```js
 ShortcutManager.register({
-  id:           "meu-atalho",          // único por shortcut
-  label:        "Nome amigável",        // aparece na settings page
-  description:  "Explicação completa.",
-  defaultKeys:  "Ctrl+Shift+K",        // combo no formato canônico
-  category:     "Navegação",            // agrupamento na UI
-  allowInInputs: false,                 // se true, dispara mesmo dentro de <input>
-  handler: (event, ctx) => {
-    // Disparado quando o combo é pressionado.
-    // Retornar `false` para deixar o evento passar (sem preventDefault).
-  },
+  id: "meu-atalho",
+  label: "Nome amigável",
+  description: "Explicação.",
+  defaultKeys: "Ctrl+Shift+K",
+  category: "Navegação",
+  allowInInputs: true,   // dispara em inputs
+  global: true,          // funciona dentro de sites (webview)
+  handler: (event, ctx) => { /* ctx.source: keydown | mouse | webview */ },
 });
 
-ShortcutManager.unregister("meu-atalho");
+ShortcutManager.getAll();
+ShortcutManager.setBinding(id, keys);
+ShortcutManager.resetBinding(id);
+ShortcutManager.onChange(fn);
 
-// Lista todos com bindings atuais (default ou customizado pelo usuário)
-ShortcutManager.getAll(); // → ShortcutEntry[]
-
-// Mudar binding (persistido em localStorage automaticamente)
-ShortcutManager.setBinding("meu-atalho", "Ctrl+K");
-ShortcutManager.resetBinding("meu-atalho"); // volta pro defaultKeys
-
-// Notificações de mudança de bindings (para a settings page)
-const off = ShortcutManager.onChange((shortcuts) => {
-  console.log("bindings atualizados:", shortcuts);
-});
-off(); // remove listener
-
-// Helpers de parse
 ShortcutManager.normalizeCombo("ctrl + space"); // → "Ctrl+Space"
-ShortcutManager.comboFromEvent(keyboardEvent);  // → "Ctrl+Space"
+ShortcutManager.comboFromEvent(keyboardEvent);
+ShortcutManager.comboFromMouseEvent(mouseEvent); // button < 3 → ""
+ShortcutManager.getGlobalCombos();
+ShortcutManager.triggerCombo("Ctrl+Space");
 ```
 
 ### Schema (`ShortcutEntry`)
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| `id` | `string` | Identificador único do atalho. |
-| `label` | `string` | Nome amigável exibido ao usuário. |
-| `description` | `string` | Texto explicativo (1–2 frases). |
-| `defaultKeys` | `string` | Combo canônico de fábrica. |
-| `keys` | `string` | Combo atual (default ou override do usuário). `""` = desabilitado. |
-| `handler` | `function(event, ctx)` | Callback executado ao disparar. |
-| `allowInInputs` | `boolean` | Se `true`, dispara mesmo com foco em `<input>/<textarea>/contenteditable`. |
-| `category` | `string` | Grupo na UI da settings page. |
+| `id` | `string` | Identificador único |
+| `label` / `description` | `string` | UI |
+| `defaultKeys` / `keys` | `string` | Combo; `""` = desabilitado |
+| `handler` | `function` | Callback |
+| `allowInInputs` | `boolean` | Dispara em campos editáveis |
+| `global` | `boolean` | Interceptado no main dentro de webviews |
+| `category` | `string` | Grupo na Tela de Atalhos |
+
+---
+
+## Atalhos globais (webview)
+
+1. `start()` / `emitChange()` → `DragonShortcuts.setGlobalCombos(getGlobalCombos())`
+2. Main guarda o set por janela (`shortcuts:set-global-combos`)
+3. Em cada webview anexado: `before-input-event` — se o combo for global, `preventDefault` + `shortcuts:global-combo`
+4. Renderer: `triggerCombo(combo)`
+
+Bridge: `preload.js` → `window.DragonShortcuts`.
+
+No Windows/Linux o menu padrão do Electron é removido (`Menu.setApplicationMenu(null)`) para não roubar `Ctrl+R` / `Ctrl+W`.
 
 ---
 
 ## Persistência
 
-Os overrides do usuário são gravados em `localStorage` na chave **`dragonsx.shortcuts.bindings`** como um objeto:
+Chave **`dragonsx.shortcuts.bindings`** em `localStorage`:
 
 ```json
-{
-  "search-palette": "Ctrl+K"
-}
+{ "search-palette": "Ctrl+K", "nav-back": "Mouse3" }
 ```
 
-Atalhos que estão no default não são salvos (mantém o storage limpo e permite alterar defaults no código sem prender o usuário a um valor antigo).
+Só overrides (diferentes do `defaultKeys`) são salvos.
+
+---
+
+## Tela de configuração (implementada)
+
+- **Tela cheia:** `Frontend/Telas/Atalhos/` — lista, Editar, captura teclado/mouse, conflito
+- **Mini preview:** `Frontend/MiniTelas/MiniAtalhos/` — 3 principais no menu
+- Entrada: Menu → Atalhos
+
+Ver [`Atalhos.MD`](../../../Version/Docs/Frontend/Atalhos.MD).
 
 ---
 
 ## Como adicionar um novo atalho
 
-1. **Crie a pasta do overlay** (se houver UI):
-
-   ```
-   shortcuts/overlays/meu-atalho/
-   ├── index.js
-   └── index.css
-   ```
-
-2. **No `index.js` do overlay**, registre o atalho:
-
-   ```js
-   (function () {
-     function open() { /* monta DOM, mostra overlay, foca input, etc. */ }
-
-     window.MeuAtalho = { open };
-
-     function tryRegister() {
-       if (!window.ShortcutManager) { setTimeout(tryRegister, 50); return; }
-       window.ShortcutManager.register({
-         id: "meu-atalho",
-         label: "Abrir meu atalho",
-         description: "O que esse atalho faz, em uma frase.",
-         defaultKeys: "Ctrl+Shift+K",
-         category: "Navegação",
-         handler: () => open(),
-       });
-     }
-     if (document.readyState === "loading") {
-       document.addEventListener("DOMContentLoaded", tryRegister);
-     } else {
-       tryRegister();
-     }
-   })();
-   ```
-
-3. **Inclua os arquivos no `Frontend/src/index.html`** (CSS no `<head>`, JS no fim do `<body>`, antes do `shortcuts/index.js`).
-
-4. **Atualize a tabela "Atalhos disponíveis"** acima.
+1. Pasta em `overlays/` ou `actions/`
+2. `register({ …, global: true })` se precisar funcionar em sites
+3. Script em `index.html` **antes** de `shortcuts/index.js`
+4. Atualizar a tabela acima
 
 Não edite `core/ShortcutManager.js` para adicionar atalhos — ele é genérico.
 
@@ -188,46 +158,17 @@ Não edite `core/ShortcutManager.js` para adicionar atalhos — ele é genérico
 
 ## Regras de UX
 
-- **Não disparar dentro de inputs**: o manager ignora atalhos quando o usuário está digitando, exceto se `allowInInputs: true`.
-- **Cancelamento sem efeito colateral**: overlays de "comando" (search palette, command palette futura, etc.) devem fechar via `Esc` ou clique no backdrop **sem** executar nenhuma ação.
-- **Toggle**: pressionar o atalho de novo enquanto o overlay está aberto deve fechar (já implementado no search-palette).
-- **Foco**: ao abrir, focar o primeiro elemento interativo. Ao fechar, devolver foco ao elemento que estava focado antes (ou ao body).
-- **z-index**: overlays de atalhos devem ficar acima de qualquer widget AutoTune. Use `z-index >= 9000`.
-
----
-
-## Settings page (próximo passo)
-
-Já temos toda a base para uma página de configuração de atalhos. O fluxo planejado:
-
-1. Adicionar uma entrada **"Atalhos"** ao painel lateral (`UserINTer/Tabline/`)
-2. Página em `UserINTer/Tabline/idget/Shortcuts/`:
-   - Lista todos os shortcuts via `ShortcutManager.getAll()`
-   - Agrupa por `category`
-   - Para cada item, mostra: label, description, current keys, defaultKeys
-   - Botão "Editar" → abre um capturador de teclas que escuta o próximo `keydown` e chama `setBinding(id, comboFromEvent(event))`
-   - Botão "Resetar" → `resetBinding(id)`
-   - Validação: avisar se o combo digitado já está em uso por outro shortcut (consultando `getAll()`)
-3. Integração: a página assina `ShortcutManager.onChange` para refletir mudanças vindas de outras telas (se houver).
-
-Schema do conflito a tratar:
-- Mesmo combo em mais de um shortcut → o primeiro registrado vence. A settings page deve avisar e oferecer trocar.
+- Sem `allowInInputs`, atalhos são ignorados em inputs (exceto globais vindos do webview via `triggerCombo`).
+- Overlays: Esc / backdrop cancelam sem ação; toggle no mesmo atalho.
+- z-index de overlays de atalho ≥ 9000.
 
 ---
 
 ## Debugging
 
 ```js
-// No DevTools, lista todos os atalhos com bindings atuais:
 console.table(window.ShortcutManager.getAll());
-
-// Forçar uma mudança:
-window.ShortcutManager.setBinding("search-palette", "Ctrl+K");
-
-// Resetar:
-window.ShortcutManager.resetBinding("search-palette");
-
-// Simular o disparo (chamada direta do handler do search-palette):
+window.ShortcutManager.setBinding("nav-back", "Mouse3");
 window.SearchPalette.toggle();
 ```
 

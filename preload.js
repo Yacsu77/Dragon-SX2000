@@ -46,10 +46,16 @@ contextBridge.exposeInMainWorld('DragonShortcuts', {
     const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];
     ipcRenderer.send('shortcuts:set-global-combos', list);
   },
+  // Combos de hold (keydown + keyup), ex.: Alt do menu radial.
+  setGlobalHoldCombos: (combos) => {
+    const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];
+    ipcRenderer.send('shortcuts:set-global-hold-combos', list);
+  },
   // Recebe do main um combo global disparado dentro de um webview.
+  // payload: string (legado) | { combo: string, phase: "down"|"up" }
   onGlobalCombo: (callback) => {
     if (typeof callback !== 'function') return () => {};
-    const handler = (_event, combo) => callback(combo);
+    const handler = (_event, payload) => callback(payload);
     ipcRenderer.on('shortcuts:global-combo', handler);
     return () => ipcRenderer.removeListener('shortcuts:global-combo', handler);
   },

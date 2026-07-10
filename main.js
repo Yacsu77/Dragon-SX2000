@@ -149,6 +149,8 @@ const pendingWindowUrls = new Map();
 // São atalhos que precisam funcionar mesmo com o foco dentro de um site
 // (webview), como a paleta de busca (Ctrl+Space).
 const globalCombosByHost = new Map();
+// Combos de hold (keydown + keyup), ex.: Alt do menu radial.
+const globalHoldCombosByHost = new Map();
 
 function isAllowedNavigationUrl(url) {
   try {
@@ -164,6 +166,26 @@ function isAllowedNavigationUrl(url) {
  * Deve espelhar `comboFromEvent` do ShortcutManager (renderer).
  */
 function comboFromInput(input) {
+  const keyName = input && input.key ? String(input.key) : '';
+  const bareModMap = {
+    Alt: 'Alt',
+    AltGraph: 'Alt',
+    Option: 'Alt',
+    Control: 'Ctrl',
+    Ctrl: 'Ctrl',
+    Shift: 'Shift',
+    Meta: 'Meta',
+  };
+  const bareMod = bareModMap[keyName];
+  if (bareMod) {
+    const otherDown =
+      (bareMod !== 'Ctrl' && input.control) ||
+      (bareMod !== 'Shift' && input.shift) ||
+      (bareMod !== 'Alt' && input.alt) ||
+      (bareMod !== 'Meta' && input.meta);
+    if (!otherDown) return bareMod;
+  }
+
   const mods = [];
   if (input.control) mods.push('Ctrl');
   if (input.shift) mods.push('Shift');
@@ -176,7 +198,7 @@ function comboFromInput(input) {
   if (main === 'Esc') main = 'Escape';
   if (main === 'Del') main = 'Delete';
 
-  if (!main) return '';
+  if (!main || bareModMap[main]) return '';
   return [...mods, main].join('+');
 }
 
@@ -193,16 +215,27 @@ function attachWebviewPopupHandler(win) {
     // Sem isso, o guest (site) consome a tecla e o listener global do renderer
     // host nunca recebe o evento (ex.: Ctrl+Space navegando em uma página).
     guestWebContents.on('before-input-event', (inputEvent, input) => {
-      if (input.type !== 'keyDown') return;
       if (win.isDestroyed()) return;
 
       const combos = globalCombosByHost.get(win.webContents.id);
-      if (!combos || combos.size === 0) return;
+      const holdCombos = globalHoldCombosByHost.get(win.webContents.id);
+      if ((!combos || combos.size === 0) && (!holdCombos || holdCombos.size === 0)) return;
 
       const combo = comboFromInput(input);
-      if (combo && combos.has(combo)) {
+      if (!combo) return;
+
+      const isHold = holdCombos && holdCombos.has(combo);
+      const isPress = combos && combos.has(combo);
+
+      if (input.type === 'keyDown' && (isPress || isHold)) {
         inputEvent.preventDefault();
-        win.webContents.send('shortcuts:global-combo', combo);
+        win.webContents.send('shortcuts:global-combo', { combo, phase: 'down' });
+        return;
+      }
+
+      if (input.type === 'keyUp' && isHold) {
+        inputEvent.preventDefault();
+        win.webContents.send('shortcuts:global-combo', { combo, phase: 'up' });
       }
     });
   });
@@ -228,6 +261,7 @@ function createBrowserWindow(pendingUrl = null) {
   win.on('closed', () => {
     pendingWindowUrls.delete(win.webContents.id);
     globalCombosByHost.delete(win.webContents.id);
+    globalHoldCombosByHost.delete(win.webContents.id);
     if (mainWindow === win) mainWindow = null;
   });
 
@@ -278,6 +312,11 @@ ipcMain.handle('cursor:consume-pending-url', (event) => {
 ipcMain.on('shortcuts:set-global-combos', (event, combos) => {
   const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string' && c) : [];
   globalCombosByHost.set(event.sender.id, new Set(list));
+});
+
+ipcMain.on('shortcuts:set-global-hold-combos', (event, combos) => {
+  const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string' && c) : [];
+  globalHoldCombosByHost.set(event.sender.id, new Set(list));
 });
 
 ipcMain.handle('files:readDir', async (_event, dirPath) => {

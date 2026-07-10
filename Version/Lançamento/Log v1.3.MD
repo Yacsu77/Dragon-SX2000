@@ -79,6 +79,74 @@
 
 ---
 
+### Barra de endereço — URL fantasma na aba Home
+
+| Item | Descrição |
+|---|---|
+| **Bug** | Na aba Home/principal, a barra de pesquisa às vezes exibia a URL da última aba aberta |
+| **Causa** | `onWebviewNavigated` atualizava a barra para **qualquer** webview (incluindo abas em segundo plano); `updateAddressBar` não limpava quando não havia webview ativa |
+| **Correção** | Só a webview `.active` atualiza a barra; na Home (sem webview ativa) a barra é sempre limpa |
+| **Arquivo** | `Frontend/src/Top/Search/Search.js` |
+
+---
+
+### Atalhos globais — disponíveis dentro de sites e inputs
+
+| Item | Descrição |
+|---|---|
+| **Problema** | `Ctrl+Space`, `Ctrl+T`, `Ctrl+W` e demais atalhos falhavam ao navegar em um site (foco no webview) ou ao digitar em inputs |
+| **Causa (webview)** | Teclas capturadas pelo processo do site; o listener do renderer host não recebia o evento |
+| **Causa (inputs)** | `ShortcutManager` bloqueava atalhos em `INPUT`/`TEXTAREA` sem `allowInInputs` |
+| **Solução** | Flag `global: true` + interceptação no main via `before-input-event` nos webviews; reenvio IPC `shortcuts:global-combo` |
+| **Bridge** | `window.DragonShortcuts` (`setGlobalCombos`, `onGlobalCombo`) em `preload.js` |
+| **Atalhos marcados** | Paleta (`Ctrl+Space`), abas (`Ctrl+T/W/Tab`), histórico (`Ctrl+H`), navegação (`Ctrl+R`, Voltar/Avançar) |
+
+**Arquivos:** `ShortcutManager.js`, `main.js`, `preload.js`, overlays/actions de shortcuts
+
+---
+
+### Tela de Atalhos + MiniAtalhos
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Tela cheia** | `Frontend/Telas/Atalhos/` — lista todos os atalhos por categoria, botão Editar, captura de nova combinação |
+| **Captura** | Retângulo central: teclado **ou** botão extra do mouse; conflito detectado; Aplicar / Remover / Restaurar padrão |
+| **Arquitetura** | Camadas SOLID: `Atalhos.format` · `Atalhos.render` · `Atalhos.capture` · `AtalhosScreen` (Facade) |
+| **Mini preview** | `Frontend/MiniTelas/MiniAtalhos/` — 3 atalhos principais (Paleta, Nova aba, Fechar aba) + “Ver todos” |
+| **Menu** | Item “Atalhos” no menu lateral: preview no hover, abre tela no clique |
+| **Persistência** | `ShortcutManager.setBinding` → `localStorage` (`dragonsx.shortcuts.bindings`) |
+
+---
+
+### Novos atalhos de navegação + mouse
+
+| ID | Default | Descrição |
+|---|---|---|
+| `nav-back` | *(sem tecla)* | Voltar — usuário mapeia (teclado ou mouse) |
+| `nav-forward` | *(sem tecla)* | Avançar — usuário mapeia |
+| `page-reload` | `Ctrl+R` | Recarrega a aba ativa |
+| **Mouse extras** | `Mouse3+` | Botões laterais (≥ 3) mapeáveis; esquerdo/central/direito/scroll reservados |
+| **Menu Electron** | Win/Linux | Menu padrão removido para não conflitar com `Ctrl+R` / `Ctrl+W` |
+
+**Arquivos:** `shortcuts/actions/navigation-controls/`, `ShortcutManager.js` (`comboFromMouseEvent`, `dispatchCombo`)
+
+---
+
+### Performance — troca de abas e carregamento
+
+| Item | Descrição |
+|---|---|
+| **Flash ao trocar aba** | Conteúdo era desativado antes da animação (~250–400 ms de fundo vazio); agora a webview troca **na hora** e a animação da barra é só cosmética |
+| **Flash ao abrir site** | `.browser-container` / `webview` sem fundo deixavam o wallpaper vazar; fundo opaco `--content-bg` |
+| **#1 Prefetch (padrão)** | `ConnectionPrefetch` — `dns-prefetch` + `preconnect` ao digitar na barra |
+| **#3 Cache persistente** | Webviews com `partition="persist:dragon"` (cache/cookies/conexões compartilhados) via `buildWebview()` |
+| **#2 Render-all (opcional)** | Preferência em `PerfSettings` + classe `body.perf-render-all`; abas inativas ficam empilhadas (troca instantânea; mais CPU/RAM) |
+| **Tela Editar** | Botão no canto superior direito (`#editarBtn`) + item do menu → `Frontend/Telas/Editar/` com toggle e aviso de recursos |
+
+**Arquivos:** `Tabs.core.js`, `Browser.css`, `variables.css`, `js/connectionPrefetch.js`, `settings/perfSettings.js`, `Telas/Editar/`
+
+---
+
 ### CursorControll e ações do mouse
 
 | Funcionalidade | Descrição |
@@ -120,6 +188,9 @@
 | **Wallpaper** | `userData/wallpapers/state.json` + arquivo de mídia | Tipo (imagem/vídeo), caminho persistente, transformações |
 | **Wallpaper (legado)** | `localStorage` → `wallpaperState` | Migrado na leitura; substituído ao aplicar novo wallpaper |
 | **AutoTune Music minimal** | `settingsAUTO.music` | `minimal`, `minimalOffsetX`, `minimalVolumeLevel` |
+| **Atalhos (bindings)** | `localStorage` → `dragonsx.shortcuts.bindings` | Combos customizados por id de atalho |
+| **Desempenho** | `localStorage` → `dragonsx.settings.perf` | `renderAllTabs` (manter abas renderizadas) |
+| **Sessão webview** | Electron `partition: persist:dragon` | Cache HTTP, cookies e conexões entre abas/sessões |
 | **Demais módulos** | Sem alteração em relação à v1.2 | Ver [`Log v1.2.MD`](Log%20v1.2.MD) e [`Log 1.0.MD`](Log%201.0.MD) |
 
 ---
@@ -128,7 +199,16 @@
 
 | Arquivo | Descrição |
 |---|---|
-| [`Wallpaper.MD`](../Docs/Frontend/Wallpaper.MD) | Atualizado — persistência em disco e API `DragonWallpaper` |
+| [`Wallpaper.MD`](../Docs/Frontend/Wallpaper.MD) | Persistência em disco e API `DragonWallpaper` |
+| [`shortcuts.MD`](../Docs/Frontend/shortcuts.MD) | Atalhos globais, mouse, navegação, tela de gestão |
+| [`Atalhos.MD`](../Docs/Frontend/Atalhos.MD) | Tela cheia + MiniAtalhos + captura de combos |
+| [`Editar.MD`](../Docs/Frontend/Editar.MD) | Preferências de desempenho (render-all) |
+| [`Tabs.MD`](../Docs/Frontend/Tabs.MD) | Troca instantânea, `buildWebview`, partição persistente |
+| [`Browser.MD`](../Docs/Frontend/Browser.MD) | Fundo opaco, modo `perf-render-all` |
+| [`Top.MD`](../Docs/Frontend/Top.MD) | Menu Atalhos/Editar, botão Editar, Search |
+| [`js.MD`](../Docs/Frontend/js.MD) | `ConnectionPrefetch`, boot com `PerfSettings` |
+| [`core.MD`](../Docs/Frontend/core.MD) | Token `--content-bg` |
+| [`Inicial.MD`](../Docs/Frontend/Inicial.MD) / [`index.MD`](../Docs/Frontend/index.MD) | Mapa e ordem de scripts atualizados |
 | [`Log v1.2.MD`](Log%20v1.2.MD) | Release anterior (refatoração modular Frontend) |
 | [`Log v1.1.MD`](Log%20v1.1.MD) | AutoTune Clock, Factory, histórico API-DSX |
 | [`Log 1.0.MD`](Log%201.0.MD) | Release beta inicial |

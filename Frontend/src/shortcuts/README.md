@@ -24,7 +24,10 @@ Frontend/src/shortcuts/
 ├── core/
 │   └── ShortcutManager.js             # Registry, parse, teclado+mouse, sync global
 ├── overlays/
-│   └── search-palette/                # Ctrl+Space
+│   ├── search-palette/                # Ctrl+Space
+│   │   ├── index.js
+│   │   └── index.css
+│   └── radial-menu/                   # Alt / Option (hold)
 │       ├── index.js
 │       └── index.css
 └── actions/
@@ -54,8 +57,10 @@ Cada arquivo chama `window.ShortcutManager.register({ ... })` no load.
 | `nav-back` | *(vazio)* | Navegação | `allowInInputs`, `global` | Voltar — mapear na Tela de Atalhos |
 | `nav-forward` | *(vazio)* | Navegação | `allowInInputs`, `global` | Avançar — mapear na Tela de Atalhos |
 | `page-reload` | `Ctrl+R` | Navegação | `allowInInputs`, `global` | Recarrega a aba ativa |
+| `radial-menu` | `Alt` (Option no Mac) | Navegação | `allowInInputs`, `global`, `hold` | Menu circular de idgets — segure Alt, solte para abrir |
 
 > Bindings vazios (`""`) = atalho desabilitado até o usuário mapear.
+> Atalhos `hold`: `keydown` abre (`phase: "down"`), `keyup` confirma (`phase: "up"`).
 
 ---
 
@@ -81,7 +86,8 @@ ShortcutManager.register({
   category: "Navegação",
   allowInInputs: true,   // dispara em inputs
   global: true,          // funciona dentro de sites (webview)
-  handler: (event, ctx) => { /* ctx.source: keydown | mouse | webview */ },
+  hold: true,            // keydown = down, keyup = up (ex.: Alt)
+  handler: (event, ctx) => { /* ctx.source, ctx.phase */ },
 });
 
 ShortcutManager.getAll();

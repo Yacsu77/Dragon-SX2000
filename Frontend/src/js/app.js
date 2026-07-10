@@ -20,6 +20,14 @@ async function initApp() {
 
   if (window.TopBar) window.TopBar.init();
 
+  if (window.ConnectionPrefetch && typeof window.ConnectionPrefetch.init === 'function') {
+    window.ConnectionPrefetch.init();
+  }
+
+  if (window.PerfSettings && typeof window.PerfSettings.init === 'function') {
+    window.PerfSettings.init();
+  }
+
   if (window.Home) await window.Home.init();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {

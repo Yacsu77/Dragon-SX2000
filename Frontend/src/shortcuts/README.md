@@ -9,7 +9,7 @@ Sistema de atalhos globais do navegador **DSX**. Centraliza registro, persistên
 | | |
 |---|---|
 | **Versão do log** | **v1.3.0 Beta** |
-| **Executáveis** | [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+| **Executáveis** | [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) — `DSX-1.3.0-*` |
 
 Documentação: [`Version/Docs/Frontend/shortcuts.MD`](../../../Version/Docs/Frontend/shortcuts.MD) · [`Atalhos.MD`](../../../Version/Docs/Frontend/Atalhos.MD) · [`Log v1.3.MD`](../../../Version/Lançamento/Log%20v1.3.MD)
 

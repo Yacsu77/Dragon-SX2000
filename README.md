@@ -5,11 +5,11 @@
 <h1 align="center">DSX</h1>
 
 <p align="center">
-  <strong>v1.2.4</strong>
+  <strong>v1.3.0 Beta</strong>
 </p>
 
 <p align="center">
-  <em>Próximo lançamento: 06/07/2026</em>
+  <em>Lançamento: Jul/2026</em>
 </p>
 
 <p align="center">
@@ -93,15 +93,15 @@ O **DSX** (sucessor do Dragon SX2000) é um navegador desktop **open source** pe
 
 | | |
 |---|---|
-| **Versão disponível** | **v1.2.4** |
-| **Próximo lançamento** | **06/07/2026** |
+| **Versão disponível** | **v1.3.0 Beta** |
+| **Lançamento** | **Jul/2026** |
 | **Executáveis** | Somente via [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
 
 Os instaladores são publicados na branch `main` com o prefixo **DSX**:
 
-- Windows: `DSX-1.2.4-win-x64.exe`
-- macOS: `DSX-1.2.4-mac-x64.dmg`
-- Linux: `DSX-1.2.4-linux-x64.deb` e `.AppImage`
+- Windows: `DSX-1.3.0-win-x64.exe`
+- macOS: `DSX-1.3.0-mac-x64.dmg` / `arm64`
+- Linux: `DSX-1.3.0-linux-x64.deb` e `.AppImage`
 
 Não há distribuição de binários fora do Release.
 
@@ -119,7 +119,9 @@ Não há distribuição de binários fora do Release.
 - **Wallpaper** com imagem e vídeo — persistência em disco (`userData/wallpapers/`)
 - **Factory** de personalização visual por componente
 - **Dragon Media SDK** — now playing, controles e volume em tempo real via WebSocket
-- **Atalhos globais** de teclado ([documentação](Frontend/src/shortcuts/README.md))
+- **Atalhos globais** de teclado e mouse ([documentação](Frontend/src/shortcuts/README.md)) — Tela de Atalhos, Ctrl+Space/T/W/H/R, botões extras
+- **Tela Editar** — opção de manter abas renderizadas (desempenho)
+- Prefetch de conexão, cache persistente de webviews e troca de aba sem flash
 
 > Changelog completo: [`Version/Lançamento/Log v1.3.MD`](Version/Lançamento/Log%20v1.3.MD)  
 > Documentação do Frontend: [`Version/Docs/Frontend/Inicial.MD`](Version/Docs/Frontend/Inicial.MD)

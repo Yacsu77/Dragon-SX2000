@@ -16,7 +16,7 @@ CSS base, montagem de fragmentos HTML, estado global home/navegador e agregador 
 |---------|--------|
 | `manifest.css` | Único `@import` de todos os CSS do Frontend (linkado no `index.html`) |
 | `reset.css` | Reset global (`*`, `body` flex column, `100vh`) |
-| `variables.css` | Tokens CSS (`:root`, `[data-theme="light"]`) |
+| `variables.css` | Tokens CSS (`:root`, `[data-theme="light"]`) — inclui `--content-bg` |
 | `background.css` | `.background`, `.background-video` (fixo atrás da UI) |
 | `shell.css` | Visibilidade inicial: esconde nav, tabs, home, browser até ativação |
 | `background.html` | Fragmento do vídeo de fundo |
@@ -58,7 +58,11 @@ window.showHome / window.showBrowser  // compatibilidade legada
 
 ### Alterar tema / cores globais
 
-Editar `variables.css` — tokens `--app-bg`, `--nav-bg`, `--app-text`, etc.
+Editar `variables.css` — tokens `--app-bg`, `--nav-bg`, `--app-text`, `--content-bg`, etc.
+
+| Token | Uso |
+|-------|-----|
+| `--content-bg` | Fundo opaco de `.browser-container` / `webview` enquanto o site carrega (evita wallpaper vazando) |
 
 Tema claro/escuro alternado pelo idget Tema (`UserINTer/Tabline/idget/Tema/`).
 

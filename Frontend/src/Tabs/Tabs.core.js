@@ -58,6 +58,18 @@
     }
   }
 
+  // Criação centralizada do <webview> (DRY). Usa uma sessão persistente
+  // compartilhada entre todas as abas: reaproveita cache HTTP, cookies e
+  // conexões, acelerando o carregamento — especialmente de sites pesados.
+  function buildWebview(url, tabId) {
+    const webview = document.createElement('webview');
+    webview.setAttribute('allowpopups', '');
+    webview.setAttribute('partition', 'persist:dragon');
+    webview.dataset.id = tabId;
+    webview.src = url;
+    return webview;
+  }
+
   function finishActivateBrowserTab(targetTab, targetWebview, tabId) {
     document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
 
@@ -198,10 +210,7 @@
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
-    const webview = document.createElement('webview');
-    webview.setAttribute('allowpopups', '');
-    webview.src = url;
-    webview.dataset.id = tabId;
+    const webview = buildWebview(url, tabId);
     attachWebviewListeners(webview, tabId, titleSpan);
 
     insertTabElements(tabButton, webview, referenceTabId);
@@ -245,10 +254,7 @@
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
-    const webview = document.createElement('webview');
-    webview.setAttribute('allowpopups', '');
-    webview.src = url;
-    webview.dataset.id = tabId;
+    const webview = buildWebview(url, tabId);
     attachWebviewListeners(webview, tabId, titleSpan);
 
     insertTabElements(tabButton, webview, null);
@@ -419,10 +425,7 @@
     const iconSpan = tab.querySelector('.tab-icon');
     if (iconSpan) iconSpan.textContent = hostnameIcon(url);
 
-    const webview = document.createElement('webview');
-    webview.setAttribute('allowpopups', '');
-    webview.src = url;
-    webview.dataset.id = newTabId;
+    const webview = buildWebview(url, newTabId);
     webview.classList.add('active');
     attachWebviewListeners(webview, newTabId, titleSpan);
 

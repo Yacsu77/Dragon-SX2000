@@ -13,15 +13,26 @@
   let overlayEl = null;
   let toggleEl = null;
   let warningEl = null;
+  let restoreToggleEl = null;
+  let restoreWarningEl = null;
   let isBuilt = false;
   let isOpen = false;
   let unsubscribe = null;
 
   function syncFromSettings() {
-    if (!toggleEl || !window.PerfSettings) return;
-    const on = window.PerfSettings.isRenderAllTabs();
-    toggleEl.checked = on;
-    if (warningEl) warningEl.hidden = !on;
+    if (!window.PerfSettings) return;
+
+    if (toggleEl) {
+      const on = window.PerfSettings.isRenderAllTabs();
+      toggleEl.checked = on;
+      if (warningEl) warningEl.hidden = !on;
+    }
+
+    if (restoreToggleEl && typeof window.PerfSettings.isRestoreSessionTabs === 'function') {
+      const on = window.PerfSettings.isRestoreSessionTabs();
+      restoreToggleEl.checked = on;
+      if (restoreWarningEl) restoreWarningEl.hidden = !on;
+    }
   }
 
   async function ensureBuilt() {
@@ -36,6 +47,8 @@
 
     toggleEl = overlayEl.querySelector('[data-role="toggle-render-all"]');
     warningEl = overlayEl.querySelector('[data-role="render-all-warning"]');
+    restoreToggleEl = overlayEl.querySelector('[data-role="toggle-restore-session"]');
+    restoreWarningEl = overlayEl.querySelector('[data-role="restore-session-warning"]');
 
     overlayEl.querySelector('[data-role="close"]').addEventListener('click', close);
     overlayEl.addEventListener('click', (e) => {
@@ -49,6 +62,16 @@
     if (toggleEl) {
       toggleEl.addEventListener('change', () => {
         if (window.PerfSettings) window.PerfSettings.setRenderAllTabs(toggleEl.checked);
+        if (warningEl) warningEl.hidden = !toggleEl.checked;
+      });
+    }
+
+    if (restoreToggleEl) {
+      restoreToggleEl.addEventListener('change', () => {
+        if (window.PerfSettings && typeof window.PerfSettings.setRestoreSessionTabs === 'function') {
+          window.PerfSettings.setRestoreSessionTabs(restoreToggleEl.checked);
+        }
+        if (restoreWarningEl) restoreWarningEl.hidden = !restoreToggleEl.checked;
       });
     }
 

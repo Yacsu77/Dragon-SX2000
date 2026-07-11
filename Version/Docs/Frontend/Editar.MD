@@ -6,9 +6,9 @@
 
 ## Responsabilidade
 
-Tela de ajustes acessível pelo botão **Editar** no canto superior direito da nav (`#editarBtn`) e pelo item “Editar” do menu principal. Hoje expõe a opção opcional de manter todas as abas renderizadas.
+Tela de ajustes acessível pelo botão **Editar** no canto superior direito da nav (`#editarBtn`) e pelo item “Editar” do menu principal. Expõe opções de desempenho (renderização de abas) e sessão (restaurar abas ao abrir).
 
-Persistência e aplicação da flag ficam em `Frontend/src/settings/perfSettings.js` — a tela só orquestra a UI.
+Persistência e aplicação das flags ficam em `Frontend/src/settings/perfSettings.js`; o snapshot das abas fica em `sessionTabs.js` — a tela só orquestra a UI.
 
 ---
 
@@ -32,7 +32,16 @@ window.PerfSettings = {
   init(),
   isRenderAllTabs(),      // boolean
   setRenderAllTabs(bool),
+  isRestoreSessionTabs(), // boolean
+  setRestoreSessionTabs(bool),
   onChange(fn),           // → unsubscribe
+}
+
+window.SessionTabs = {
+  init(),
+  saveNow(),
+  restore(),              // boolean
+  clear(),
 }
 ```
 
@@ -51,6 +60,19 @@ window.PerfSettings = {
 
 ---
 
+## Opção: Restaurar abas ao abrir
+
+| | |
+|--|--|
+| **Padrão** | Desligado |
+| **Flag** | `dragonsx.settings.perf` → `{ restoreSessionTabs }` |
+| **Snapshot** | `localStorage` → `dragonsx.session.tabs` |
+| **Módulo** | `Frontend/src/settings/sessionTabs.js` |
+| **Efeito** | Ao fechar, salva URL/título/ordem/aba ativa; ao abrir, recria as abas |
+| **Custo** | Mais CPU/RAM na inicialização (todas as abas carregam de uma vez) — aviso na UI |
+
+---
+
 ## Entrada na UI
 
 | Entrada | Wiring |
@@ -64,7 +86,7 @@ window.PerfSettings = {
 
 ## Boot
 
-`js/app.js` chama `PerfSettings.init()` após `TopBar.init()`, para aplicar a classe no body antes do uso.
+`js/app.js` chama `PerfSettings.init()` e `SessionTabs.init()` após `TopBar.init()`. Se `restoreSessionTabs` estiver ativo e houver snapshot, `SessionTabs.restore()` recria as abas; caso contrário, `AppShell.showHome()`.
 
 ---
 

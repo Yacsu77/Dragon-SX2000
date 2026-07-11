@@ -62,7 +62,14 @@
     const activeWebview = document.querySelector('webview.active');
     const addressInput = document.getElementById('addressInput');
 
-    if (!activeWebview || !addressInput) return;
+    if (!addressInput) return;
+
+    // Aba Home/principal (sem webview ativa): a barra deve ficar sempre
+    // limpa e disponível para pesquisa.
+    if (!activeWebview) {
+      clearAddressBar();
+      return;
+    }
 
     try {
       const url = activeWebview.getURL();
@@ -80,8 +87,15 @@
   }
 
   function onWebviewNavigated(e) {
-    const { url } = e.detail || {};
+    const { url, webview } = e.detail || {};
     if (!url || url === 'about:blank') return;
+
+    // Ignorar navegações de abas em segundo plano. Só a webview ativa pode
+    // atualizar a barra; caso contrário, a última aba aberta acabava
+    // sobrescrevendo a URL da aba Home/principal ao terminar de carregar.
+    const activeWebview = document.querySelector('webview.active');
+    if (!activeWebview) return;
+    if (webview && webview !== activeWebview) return;
 
     const addressInput = document.getElementById('addressInput');
     if (!addressInput) return;

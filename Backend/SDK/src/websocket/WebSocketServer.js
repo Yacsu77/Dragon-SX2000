@@ -146,7 +146,7 @@ class WebSocketServer {
   /**
    * Mensagens aceitas do cliente:
    *
-   *   { type: "command", action: "play_pause" | "play" | "pause" | "next" | "prev" | "stop", id?: string }
+   *   { type: "command", action: "play_pause" | "play" | "pause" | "next" | "prev" | "stop" | "volume_up" | "volume_down", id?: string }
    *
    * Resposta: `command_result` com `{ ok, action, error?, id? }`.
    */

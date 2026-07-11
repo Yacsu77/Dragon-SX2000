@@ -183,7 +183,7 @@
   }
 
   /**
-   * Envia um comando de mídia ao SDK (play/pause/next/prev/stop).
+   * Envia um comando de mídia ao SDK (play/pause/next/prev/stop/volume_up/volume_down).
    * Resolve com `{ ok, action, error? }` quando o servidor responder.
    * Timeout de 2s caso o SDK não responda.
    */

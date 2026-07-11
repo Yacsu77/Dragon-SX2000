@@ -5,6 +5,9 @@
   position: relative;
   display: none;
   z-index: 0;
+  /* Superfície opaca: enquanto o webview ainda não pintou (aba nova, clique em
+     link, busca), mostra uma cor neutra em vez do wallpaper atrás. */
+  background: var(--content-bg);
 }
 
 .browser-container.active {
@@ -17,8 +20,30 @@ webview {
   flex: 1;
   min-height: 0;
   display: none;
+  background: var(--content-bg);
 }
 
 webview.active {
   display: flex;
+}
+
+/* ─── Modo de desempenho (opcional): manter todas as abas renderizadas ─────
+ * Quando ativo (body.perf-render-all), os webviews inativos NÃO usam
+ * display:none — ficam empilhados e apenas transparentes/atrás, permanecendo
+ * pintados. A troca de aba vira um toggle instantâneo (sem repaint), ao custo
+ * de mais uso de CPU/GPU e RAM (todas as abas seguem renderizando).
+ */
+body.perf-render-all .browser-container.active webview {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.perf-render-all .browser-container.active webview.active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
 }

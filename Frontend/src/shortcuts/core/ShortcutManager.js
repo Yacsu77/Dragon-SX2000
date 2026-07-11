@@ -50,8 +50,20 @@
    * @property {string} keys            Combo atual (default ou customizado)
    * @property {(event: KeyboardEvent, ctx: object) => void | boolean} handler
    * @property {boolean} [allowInInputs] Se true, dispara mesmo dentro de input/textarea
+   * @property {boolean} [global]       Funciona dentro de webviews
+   * @property {boolean} [hold]         keydown = phase down, keyup = phase up (ex.: Alt)
    * @property {string} [category]      Categoria para agrupar na settings page
    */
+
+  const MODIFIER_KEY_TO_COMBO = {
+    Alt: "Alt",
+    AltGraph: "Alt",
+    Option: "Alt",
+    Control: "Ctrl",
+    Ctrl: "Ctrl",
+    Shift: "Shift",
+    Meta: "Meta",
+  };
 
   function loadBindings() {
     try {
@@ -75,6 +87,75 @@
     changeListeners.forEach((fn) => {
       try { fn(snapshot); } catch (_) { /* ignore */ }
     });
+    syncGlobalCombos();
+  }
+
+  /**
+   * Combos marcados como `global`, isto é, que devem funcionar mesmo quando o
+   * foco está dentro de um site (webview). Enviados ao processo principal, que
+   * os intercepta via before-input-event e reenvia para cá.
+   * @returns {string[]}
+   */
+  function getGlobalCombos() {
+    const combos = [];
+    for (const entry of registry.values()) {
+      if (entry.global && entry.keys) combos.push(entry.keys);
+    }
+    return combos;
+  }
+
+  function getGlobalHoldCombos() {
+    const combos = [];
+    for (const entry of registry.values()) {
+      if (entry.global && entry.hold && entry.keys) combos.push(entry.keys);
+    }
+    return combos;
+  }
+
+  function syncGlobalCombos() {
+    try {
+      if (window.DragonShortcuts && typeof window.DragonShortcuts.setGlobalCombos === "function") {
+        window.DragonShortcuts.setGlobalCombos(getGlobalCombos());
+      }
+      if (window.DragonShortcuts && typeof window.DragonShortcuts.setGlobalHoldCombos === "function") {
+        window.DragonShortcuts.setGlobalHoldCombos(getGlobalHoldCombos());
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  /**
+   * Dispara o handler do atalho cujo combo corresponde. Usado quando o combo
+   * chega do processo principal (tecla pressionada dentro de um webview),
+   * onde não há um KeyboardEvent real do host.
+   * @param {string} combo  Combo no formato canônico ("Ctrl+Space")
+   * @param {{ phase?: "down"|"up", source?: string }} [extra]
+   * @returns {boolean} true se algum handler foi disparado
+   */
+  function triggerCombo(combo, extra) {
+    const normalized = normalizeCombo(combo);
+    if (!normalized) return false;
+    const phase = extra && extra.phase === "up" ? "up" : "down";
+    const source = (extra && extra.source) || "webview";
+
+    for (const entry of registry.values()) {
+      if (!entry.keys || entry.keys !== normalized) continue;
+      if (phase === "up" && !entry.hold) continue;
+
+      const syntheticEvent = {
+        preventDefault() {},
+        stopPropagation() {},
+        target: null,
+        repeat: false,
+      };
+      const ctx = { combo: normalized, source, phase };
+      try {
+        entry.handler(syntheticEvent, ctx);
+      } catch (err) {
+        console.warn("[Shortcuts] handler throw (webview):", entry.id, err);
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -121,12 +202,18 @@
         case "minus":
           main = "Minus"; break;
         default:
+          // Botão extra de mouse: "mouse3" → "Mouse3"
+          if (/^mouse[0-9]+$/i.test(token)) main = "Mouse" + token.replace(/[^0-9]/g, "");
           // Capitaliza letras isoladas (a → A); preserva F-keys e setas como vêm
-          if (/^[a-z]$/i.test(token)) main = token.toUpperCase();
+          else if (/^[a-z]$/i.test(token)) main = token.toUpperCase();
           else main = token;
       }
     });
 
+    // Permite atalho só de modificador: "Alt", "Ctrl", "Shift", "Meta"
+    if (!main && mods.size === 1) {
+      return ORDERED_MODS.find((m) => mods.has(m)) || "";
+    }
     if (!main) return "";
     const orderedMods = ORDERED_MODS.filter((m) => mods.has(m));
     return [...orderedMods, main].join("+");
@@ -138,6 +225,18 @@
    * @returns {string}
    */
   function comboFromEvent(event) {
+    const keyName = event && event.key ? String(event.key) : "";
+    const bareMod = MODIFIER_KEY_TO_COMBO[keyName];
+    if (bareMod) {
+      // Tecla modificadora sozinha (Alt/Option no Mac, Ctrl, etc.)
+      const otherDown =
+        (bareMod !== "Ctrl" && event.ctrlKey) ||
+        (bareMod !== "Shift" && event.shiftKey) ||
+        (bareMod !== "Alt" && event.altKey) ||
+        (bareMod !== "Meta" && event.metaKey);
+      if (!otherDown) return bareMod;
+    }
+
     const mods = [];
     if (event.ctrlKey) mods.push("Ctrl");
     if (event.shiftKey) mods.push("Shift");
@@ -152,8 +251,27 @@
     if (main === "Esc") main = "Escape";
     if (main === "Del") main = "Delete";
 
-    if (!main) return "";
+    if (!main || MODIFIER_KEY_TO_COMBO[main]) return "";
     return [...mods, main].join("+");
+  }
+
+  /**
+   * Constrói o combo canônico a partir de um evento de mouse, considerando
+   * apenas os botões extras (>= 3). Os botões esquerdo (0), central (1) e
+   * direito (2) — além do scroll — são reservados e nunca viram atalho.
+   * @param {MouseEvent} event
+   * @returns {string}
+   */
+  function comboFromMouseEvent(event) {
+    if (!event || typeof event.button !== "number" || event.button < 3) return "";
+
+    const mods = [];
+    if (event.ctrlKey) mods.push("Ctrl");
+    if (event.shiftKey) mods.push("Shift");
+    if (event.altKey) mods.push("Alt");
+    if (event.metaKey) mods.push("Meta");
+
+    return [...mods, `Mouse${event.button}`].join("+");
   }
 
   /**
@@ -176,6 +294,8 @@
       keys: customKeys || defaultKeys,
       handler: entry.handler,
       allowInInputs: !!entry.allowInInputs,
+      global: !!entry.global,
+      hold: !!entry.hold,
       category: entry.category || "Geral",
     };
     registry.set(entry.id, stored);
@@ -244,17 +364,28 @@
     return SAFE_TAGS.has(target.tagName);
   }
 
-  function handleKeydown(event) {
-    const combo = comboFromEvent(event);
-    if (!combo) return;
+  /**
+   * Percorre o registry e dispara o primeiro atalho cujo combo corresponde.
+   * Compartilhado entre teclado e mouse (botões extras).
+   * @param {string} combo
+   * @param {Event} event
+   * @param {string} source  "keydown" | "keyup" | "mouse"
+   * @param {"down"|"up"} [phase]
+   * @returns {boolean}
+   */
+  function dispatchCombo(combo, event, source, phase) {
+    if (!combo) return false;
+    const resolvedPhase = phase === "up" ? "up" : "down";
 
-    // Itera registry e dispara o primeiro match
     for (const entry of registry.values()) {
       if (!entry.keys) continue;
       if (entry.keys !== combo) continue;
+      if (resolvedPhase === "up" && !entry.hold) continue;
       if (!entry.allowInInputs && isEditingTarget(event.target)) continue;
+      // Auto-repeat do SO não deve reabrir overlays de hold.
+      if (entry.hold && resolvedPhase === "down" && event && event.repeat) continue;
 
-      const ctx = { combo, source: "keydown" };
+      const ctx = { combo, source, phase: resolvedPhase };
       let result;
       try {
         result = entry.handler(event, ctx);
@@ -265,11 +396,26 @@
       // Por padrão, atalhos consomem o evento. Handler pode retornar false
       // explicitamente para deixar passar.
       if (result !== false) {
-        event.preventDefault();
-        event.stopPropagation();
+        if (typeof event.preventDefault === "function") event.preventDefault();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
       }
-      return;
+      return true;
     }
+    return false;
+  }
+
+  function handleKeydown(event) {
+    dispatchCombo(comboFromEvent(event), event, "keydown", "down");
+  }
+
+  function handleKeyup(event) {
+    dispatchCombo(comboFromEvent(event), event, "keyup", "up");
+  }
+
+  // Botões extras do mouse (voltar/avançar/laterais). `auxclick` dispara para
+  // botões não primários; ignoramos < 3 dentro de comboFromMouseEvent.
+  function handleAuxClick(event) {
+    dispatchCombo(comboFromMouseEvent(event), event, "mouse", "down");
   }
 
   function start() {
@@ -277,6 +423,22 @@
     started = true;
     bootSnapshotPending = false;
     document.addEventListener("keydown", handleKeydown, true);
+    document.addEventListener("keyup", handleKeyup, true);
+    document.addEventListener("auxclick", handleAuxClick, true);
+
+    // Recebe combos globais capturados dentro de webviews (processo principal).
+    try {
+      if (window.DragonShortcuts && typeof window.DragonShortcuts.onGlobalCombo === "function") {
+        window.DragonShortcuts.onGlobalCombo((payload) => {
+          if (payload && typeof payload === "object") {
+            triggerCombo(payload.combo, { phase: payload.phase, source: "webview" });
+          } else {
+            triggerCombo(payload);
+          }
+        });
+      }
+    } catch (_) { /* ignore */ }
+
     emitChange();
   }
 
@@ -284,6 +446,8 @@
     if (!started) return;
     started = false;
     document.removeEventListener("keydown", handleKeydown, true);
+    document.removeEventListener("keyup", handleKeyup, true);
+    document.removeEventListener("auxclick", handleAuxClick, true);
   }
 
   // Marca que estamos no fluxo de boot — durante o boot, varios `register`
@@ -302,5 +466,9 @@
     stop,
     normalizeCombo,
     comboFromEvent,
+    comboFromMouseEvent,
+    getGlobalCombos,
+    getGlobalHoldCombos,
+    triggerCombo,
   };
 })();

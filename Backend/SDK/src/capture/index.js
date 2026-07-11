@@ -4,6 +4,7 @@ const os = require('os');
 
 const WindowsCapture = require('./WindowsCapture');
 const MacOSCapture = require('./MacOSCapture');
+const LinuxCapture = require('./LinuxCapture');
 const NullCapture = require('./NullCapture');
 
 /**
@@ -11,7 +12,7 @@ const NullCapture = require('./NullCapture');
  *
  * @param {object} [opts]
  * @param {string} [opts.forcePlatform] Força uma plataforma específica
- *   ('win32' | 'darwin' | 'null'). Útil para testes.
+ *   ('win32' | 'darwin' | 'linux' | 'null'). Útil para testes.
  * @param {object} [opts.logger]
  * @param {number} [opts.pollIntervalMs]
  */
@@ -23,6 +24,8 @@ function createCaptureForPlatform(opts = {}) {
       return new WindowsCapture(opts);
     case 'darwin':
       return new MacOSCapture(opts);
+    case 'linux':
+      return new LinuxCapture(opts);
     case 'null':
     default:
       return new NullCapture(opts);
@@ -33,5 +36,6 @@ module.exports = {
   createCaptureForPlatform,
   WindowsCapture,
   MacOSCapture,
+  LinuxCapture,
   NullCapture,
 };

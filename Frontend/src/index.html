@@ -16,6 +16,7 @@
   <div class="browser-container" id="browser"></div>
   <div id="wallpaperRoot"></div>
   <div id="autotuneRoot"></div>
+  <div id="customiseRoot"></div>
 
   <script src="js/dragon-media-bridge.js"></script>
   <script src="core/AppShell.js"></script>
@@ -24,6 +25,33 @@
   <script src="Tabs/Tabs.reorder.js"></script>
   <script src="Tabs/Tabs.visibility.js"></script>
   <script src="Tabs/Tabs.core.js"></script>
+  <script src="CursorControll/types/cursorControll.types.js"></script>
+  <script src="CursorControll/services/logger.js"></script>
+  <script src="CursorControll/services/urlUtils.js"></script>
+  <script src="CursorControll/services/contextDetectionService.js"></script>
+  <script src="CursorControll/services/contextMenuService.js"></script>
+  <script src="CursorControll/services/middleMouseScrollService.js"></script>
+  <script src="CursorControll/actions/clipboardActions.js"></script>
+  <script src="CursorControll/actions/navigationActions.js"></script>
+  <script src="CursorControll/actions/tabActions.js"></script>
+  <script src="CursorControll/actions/favoriteActions.js"></script>
+  <script src="CursorControll/actions/linkActions.js"></script>
+  <script src="CursorControll/actions/searchActions.js"></script>
+  <script src="CursorControll/actions/translationActions.js"></script>
+  <script src="CursorControll/contexts/selectedTextContext.js"></script>
+  <script src="CursorControll/contexts/tabContext.js"></script>
+  <script src="CursorControll/contexts/textInputContext.js"></script>
+  <script src="CursorControll/contexts/pageContext.js"></script>
+  <script src="CursorControll/contexts/linkContext.js"></script>
+  <script src="CursorControll/components/CursorMenuItem.js"></script>
+  <script src="CursorControll/components/CursorMenuSeparator.js"></script>
+  <script src="CursorControll/components/CursorMenuGroup.js"></script>
+  <script src="CursorControll/components/CursorSubmenu.js"></script>
+  <script src="CursorControll/components/CursorContextMenu.js"></script>
+  <script src="CursorControll/hooks/useCursorContextMenu.js"></script>
+  <script src="CursorControll/hooks/useMiddleMouseScroll.js"></script>
+  <script src="CursorControll/services/mouseEventService.js"></script>
+  <script src="CursorControll/index.js"></script>
   <script src="Browser/Browser.js"></script>
   <script src="Home/HomeSearch/HomeSearch.anim.js"></script>
   <script src="Home/HomeSearch/HomeSearch.js"></script>
@@ -38,6 +66,12 @@
   <script src="../Telas/Historico-Navegação/Historico-Navegação.js"></script>
   <script src="../Telas/Downloads/Downloads.js"></script>
   <script src="../Telas/Arquivos/Arquivos.js"></script>
+  <script src="../Telas/Atalhos/Atalhos.format.js"></script>
+  <script src="../Telas/Atalhos/Atalhos.render.js"></script>
+  <script src="../Telas/Atalhos/Atalhos.capture.js"></script>
+  <script src="../Telas/Atalhos/Atalhos.js"></script>
+  <script src="../MiniTelas/MiniAtalhos/MiniAtalhos.js"></script>
+  <script src="../Telas/Editar/Editar.js"></script>
   <script src="Favoritos/constants.js"></script>
   <script src="Favoritos/Favoritos.anim.js"></script>
   <script src="Favoritos/Favoritos.js"></script>
@@ -55,11 +89,16 @@
   <script src="../../node_modules/lucide/dist/umd/lucide.min.js"></script>
   <script src="../../UserINTer/Factory/index.js"></script>
   <script src="core/Shell.js"></script>
+  <script src="settings/perfSettings.js"></script>
+  <script src="settings/sessionTabs.js"></script>
+  <script src="js/connectionPrefetch.js"></script>
   <script src="js/app.js"></script>
   <script src="shortcuts/core/ShortcutManager.js"></script>
   <script src="shortcuts/overlays/search-palette/index.js"></script>
+  <script src="shortcuts/overlays/radial-menu/index.js"></script>
   <script src="shortcuts/actions/tab-controls/index.js"></script>
   <script src="shortcuts/actions/history-controls/index.js"></script>
+  <script src="shortcuts/actions/navigation-controls/index.js"></script>
   <script src="shortcuts/index.js"></script>
 </body>
 </html>

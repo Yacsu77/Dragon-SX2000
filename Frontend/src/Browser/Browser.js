@@ -50,8 +50,28 @@
     isBuilt = true;
   }
 
+  function setupExternalLinkHandler() {
+    if (!window.DragonBrowser || typeof window.DragonBrowser.onOpenUrl !== 'function') return;
+
+    window.DragonBrowser.onOpenUrl((url) => {
+      if (!url || typeof url !== 'string') return;
+
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
+      } catch {
+        return;
+      }
+
+      if (typeof window.createTab === 'function') {
+        window.createTab(url);
+      }
+    });
+  }
+
   async function init() {
     await ensureBuilt();
+    setupExternalLinkHandler();
   }
 
   window.Browser = {

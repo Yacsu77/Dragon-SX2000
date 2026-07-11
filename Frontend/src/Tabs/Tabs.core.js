@@ -221,7 +221,7 @@
     return tabId;
   }
 
-  function createTab(url, title = null, icon = null) {
+  function createTab(url, title = null, icon = null, activate = true) {
     state.tabCount += 1;
     const tabId = `tab-${state.tabCount}`;
     const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
@@ -260,7 +260,7 @@
     insertTabElements(tabButton, webview, null);
     afterTabLayoutUpdate();
     emitTabCreated(tabId, false);
-    activateTab(tabId);
+    if (activate !== false) activateTab(tabId);
     return tabId;
   }
 
@@ -323,7 +323,7 @@
     }
   }
 
-  function createHomeTab() {
+  function createHomeTab(activate = true) {
     state.tabCount += 1;
     const tabId = `home-tab-${state.tabCount}`;
 
@@ -359,7 +359,7 @@
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, true);
-    activateHomeTab(tabId);
+    if (activate !== false) activateHomeTab(tabId);
     return tabId;
   }
 

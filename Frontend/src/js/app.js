@@ -28,13 +28,22 @@ async function initApp() {
     window.PerfSettings.init();
   }
 
+  if (window.SessionTabs && typeof window.SessionTabs.init === 'function') {
+    window.SessionTabs.init();
+  }
+
   if (window.Home) await window.Home.init();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
 
-  if (window.AppShell && typeof window.AppShell.showHome === 'function') {
+  let restored = false;
+  if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
+    restored = !!window.SessionTabs.restore();
+  }
+
+  if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
     window.AppShell.showHome();
   }
 

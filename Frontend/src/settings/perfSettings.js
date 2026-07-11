@@ -7,18 +7,25 @@
  * Opções:
  *   renderAllTabs (bool) — manter todas as abas renderizadas em segundo plano
  *     (troca instantânea, porém mais uso de CPU/GPU e RAM).
+ *   restoreSessionTabs (bool) — guardar abas abertas e restaurar no próximo boot
+ *     (mais CPU/RAM na abertura se houver muitas abas).
  *
  * API:
  *   PerfSettings.init()
  *   PerfSettings.isRenderAllTabs() → boolean
  *   PerfSettings.setRenderAllTabs(bool)
+ *   PerfSettings.isRestoreSessionTabs() → boolean
+ *   PerfSettings.setRestoreSessionTabs(bool)
  *   PerfSettings.onChange(fn) → unsubscribe
  */
 (function () {
   const STORAGE_KEY = 'dragonsx.settings.perf';
   const BODY_CLASS = 'perf-render-all';
 
-  const state = { renderAllTabs: false };
+  const state = {
+    renderAllTabs: false,
+    restoreSessionTabs: false,
+  };
   const listeners = new Set();
 
   function load() {
@@ -28,6 +35,7 @@
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         state.renderAllTabs = !!parsed.renderAllTabs;
+        state.restoreSessionTabs = !!parsed.restoreSessionTabs;
       }
     } catch (_) { /* ignore */ }
   }
@@ -63,6 +71,21 @@
     emit();
   }
 
+  function isRestoreSessionTabs() {
+    return state.restoreSessionTabs;
+  }
+
+  function setRestoreSessionTabs(value) {
+    const next = !!value;
+    if (next === state.restoreSessionTabs) return;
+    state.restoreSessionTabs = next;
+    save();
+    emit();
+    if (next && window.SessionTabs && typeof window.SessionTabs.saveNow === 'function') {
+      window.SessionTabs.saveNow();
+    }
+  }
+
   function onChange(fn) {
     if (typeof fn !== 'function') return () => {};
     listeners.add(fn);
@@ -74,5 +97,12 @@
     apply();
   }
 
-  window.PerfSettings = { init, isRenderAllTabs, setRenderAllTabs, onChange };
+  window.PerfSettings = {
+    init,
+    isRenderAllTabs,
+    setRenderAllTabs,
+    isRestoreSessionTabs,
+    setRestoreSessionTabs,
+    onChange,
+  };
 })();

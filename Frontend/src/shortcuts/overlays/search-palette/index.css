@@ -1,6 +1,11 @@
 /* Search Palette — overlay flutuante centralizado (Ctrl+Space) */
 
 .shortcut-search-palette {
+  --search-accent: #7a8cff;
+  --search-accent-rgb: 122, 140, 255;
+  --search-width: 640px;
+  --search-shell-bg: rgba(20, 22, 32, 0.92);
+
   position: fixed;
   inset: 0;
   z-index: 9000;
@@ -9,12 +14,14 @@
   justify-content: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 160ms ease;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 160ms ease;
 }
 
 .shortcut-search-palette.is-open {
   pointer-events: auto;
   opacity: 1;
+  visibility: visible;
 }
 
 /* Quando fechado, retira o input do tab order para não roubar foco da página */
@@ -34,8 +41,8 @@
 .shortcut-search-palette__shell {
   position: relative;
   margin-top: clamp(80px, 18vh, 200px);
-  width: min(640px, 92vw);
-  background: rgba(20, 22, 32, 0.92);
+  width: min(var(--search-width), 92vw);
+  background: var(--search-shell-bg);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
@@ -61,13 +68,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 10px 12px;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .shortcut-search-palette__form:focus-within {
-  border-color: rgba(122, 140, 255, 0.55);
+  border-color: rgba(var(--search-accent-rgb), 0.55);
   background: rgba(255, 255, 255, 0.07);
-  box-shadow: 0 0 0 4px rgba(122, 140, 255, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--search-accent-rgb), 0.12);
 }
 
 .shortcut-search-palette__icon {
@@ -95,8 +102,8 @@
 }
 
 .shortcut-search-palette__submit {
-  border: 1px solid rgba(122, 140, 255, 0.4);
-  background: rgba(122, 140, 255, 0.18);
+  border: 1px solid rgba(var(--search-accent-rgb), 0.4);
+  background: rgba(var(--search-accent-rgb), 0.18);
   color: #f1f1ff;
   font-size: 13px;
   font-weight: 600;
@@ -107,8 +114,8 @@
 }
 
 .shortcut-search-palette__submit:hover {
-  background: rgba(122, 140, 255, 0.28);
-  border-color: rgba(122, 140, 255, 0.6);
+  background: rgba(var(--search-accent-rgb), 0.28);
+  border-color: rgba(var(--search-accent-rgb), 0.6);
 }
 
 .shortcut-search-palette__submit:active {

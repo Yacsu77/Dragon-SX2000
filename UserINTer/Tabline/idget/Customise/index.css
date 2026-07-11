@@ -219,13 +219,77 @@
   opacity: 0.8;
 }
 
-.customise-factory-field input[type="color"] {
-  width: 48px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
+.customise-factory-field input[type="text"] {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.customise-factory-preview-stage--search {
+  align-items: flex-start;
+  padding-top: 48px;
+}
+
+.customise-factory-preview-search {
+  --search-accent: #7a8cff;
+  --search-accent-rgb: 122, 140, 255;
+  --search-width: 420px;
+  --search-shell-bg: rgba(20, 22, 32, 0.92);
+  width: min(var(--search-width), 100%);
+}
+
+.customise-factory-preview-search-shell {
+  background: var(--search-shell-bg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.customise-factory-preview-search-form {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(var(--search-accent-rgb), 0.45);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 0 0 3px rgba(var(--search-accent-rgb), 0.12);
+}
+
+.customise-factory-preview-search-icon {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.customise-factory-preview-search-placeholder {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customise-factory-preview-search-btn {
+  border: 1px solid rgba(var(--search-accent-rgb), 0.45);
+  background: rgba(var(--search-accent-rgb), 0.2);
+  color: #f1f1ff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+
+.customise-factory-preview-search-hint {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .customise-factory-field input[type="range"] {

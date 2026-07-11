@@ -10,10 +10,17 @@
 
   const STORE_KEY = "customiseSettings";
   const RADIAL_KEY = "customise-radial-menu";
+  const SEARCH_KEY = "customise-search-palette";
   const DEFAULT_RADIAL = {
     color: "#7a8cff",
     size: 280,
     items: ["wallpaper", "tema", "autotune", "customise", "donate"],
+  };
+  const DEFAULT_SEARCH = {
+    color: "#7a8cff",
+    width: 640,
+    backgroundOpacity: 92,
+    placeholder: "Pesquisar na web ou colar URL…",
   };
 
   /** Fallback local — não depende do RadialMenu já ter carregado. */
@@ -62,6 +69,22 @@
           : DEFAULT_RADIAL.items.slice(),
       };
     }
+    if (key === SEARCH_KEY) {
+      const current = store[key];
+      if (!current || typeof current !== "object") return { ...DEFAULT_SEARCH };
+      return {
+        color: typeof current.color === "string" ? current.color : DEFAULT_SEARCH.color,
+        width: Number(current.width) > 0 ? Number(current.width) : DEFAULT_SEARCH.width,
+        backgroundOpacity:
+          Number(current.backgroundOpacity) >= 0
+            ? Number(current.backgroundOpacity)
+            : DEFAULT_SEARCH.backgroundOpacity,
+        placeholder:
+          typeof current.placeholder === "string" && current.placeholder.trim()
+            ? current.placeholder.trim()
+            : DEFAULT_SEARCH.placeholder,
+      };
+    }
     return store[key] || {};
   }
 
@@ -73,6 +96,9 @@
     } catch (_) { /* ignore */ }
     if (key === RADIAL_KEY && window.RadialMenu && typeof window.RadialMenu.reload === "function") {
       window.RadialMenu.reload();
+    }
+    if (key === SEARCH_KEY && window.SearchPalette && typeof window.SearchPalette.reload === "function") {
+      window.SearchPalette.reload();
     }
   }
 
@@ -239,7 +265,7 @@
         size: draft.size,
         items: draft.items.slice(),
       });
-      paintPreview(body);
+      paintRadialPreview(body);
       if (refreshList) renderItemsList(listEl);
     }
 
@@ -254,7 +280,7 @@
     });
 
     renderItemsList(listEl);
-    paintPreview(body);
+    paintRadialPreview(body);
 
     function renderItemsList(container) {
       const catalog = getCatalog();
@@ -329,7 +355,7 @@
     }
   }
 
-  function paintPreview(body) {
+  function paintRadialPreview(body) {
     const preview = body.querySelector('[data-role="preview-radial"]');
     if (!preview || !draft) return;
     const catalog = getCatalog();
@@ -377,6 +403,121 @@
     }
   }
 
+  function parseHexColor(input) {
+    if (!input || !input.startsWith("#")) return { r: 122, g: 140, b: 255 };
+    const hex = input.replace("#", "");
+    const full = hex.length === 3 ? hex.split("").map((ch) => ch + ch).join("") : hex;
+    const value = parseInt(full, 16);
+    if (Number.isNaN(value)) return { r: 122, g: 140, b: 255 };
+    return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  }
+
+  function paintSearchPreview(body) {
+    const preview = body.querySelector('[data-role="preview-search"]');
+    if (!preview || !draft) return;
+    const rgb = parseHexColor(draft.color);
+    const opacity = Math.max(0, Math.min(100, Number(draft.backgroundOpacity))) / 100;
+    const width = Math.min(520, Number(draft.width) || 640);
+    preview.style.setProperty("--search-accent", draft.color || DEFAULT_SEARCH.color);
+    preview.style.setProperty("--search-accent-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+    preview.style.setProperty("--search-width", `${width}px`);
+    preview.style.setProperty("--search-shell-bg", `rgba(20, 22, 32, ${opacity})`);
+    const placeholderEl = preview.querySelector('[data-role="preview-placeholder"]');
+    if (placeholderEl) {
+      placeholderEl.textContent = draft.placeholder || DEFAULT_SEARCH.placeholder;
+    }
+  }
+
+  function renderSearchFactory(body, infoEl) {
+    draft = getRecord(SEARCH_KEY);
+    infoEl.textContent = "Search Palette — aparência da barra (Ctrl+Espaço)";
+
+    const safePlaceholder = String(draft.placeholder || DEFAULT_SEARCH.placeholder)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+
+    body.innerHTML = `
+      <div class="customise-factory-controls">
+        <section class="customise-factory-panel">
+          <h4>Aparência</h4>
+          <div class="customise-factory-field">
+            <label for="customiseSearchColor">Cor de destaque</label>
+            <input id="customiseSearchColor" type="color" value="${draft.color}" />
+          </div>
+          <div class="customise-factory-field">
+            <label for="customiseSearchWidth">Largura</label>
+            <input id="customiseSearchWidth" type="range" min="420" max="760" value="${draft.width}" />
+            <span class="customise-factory-field-value" data-role="width-label">${draft.width}px</span>
+          </div>
+          <div class="customise-factory-field">
+            <label for="customiseSearchOpacity">Opacidade do fundo</label>
+            <input id="customiseSearchOpacity" type="range" min="40" max="100" value="${draft.backgroundOpacity}" />
+            <span class="customise-factory-field-value" data-role="opacity-label">${draft.backgroundOpacity}%</span>
+          </div>
+          <div class="customise-factory-field">
+            <label for="customiseSearchPlaceholder">Placeholder</label>
+            <input id="customiseSearchPlaceholder" type="text" value="${safePlaceholder}" maxlength="80" />
+          </div>
+          <p class="customise-factory-hint">Atalho padrão: Ctrl + Espaço. Alterações aplicam na próxima abertura da paleta.</p>
+        </section>
+      </div>
+      <div class="customise-factory-preview">
+        <div class="customise-factory-preview-header">Preview em tempo real</div>
+        <div class="customise-factory-preview-stage customise-factory-preview-stage--search">
+          <div class="customise-factory-preview-search" data-role="preview-search">
+            <div class="customise-factory-preview-search-shell">
+              <div class="customise-factory-preview-search-form">
+                <span class="customise-factory-preview-search-icon" aria-hidden="true">⌕</span>
+                <span class="customise-factory-preview-search-placeholder" data-role="preview-placeholder">${safePlaceholder}</span>
+                <span class="customise-factory-preview-search-btn">Buscar</span>
+              </div>
+              <div class="customise-factory-preview-search-hint">Enter para buscar · Esc para fechar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const colorInput = body.querySelector("#customiseSearchColor");
+    const widthInput = body.querySelector("#customiseSearchWidth");
+    const opacityInput = body.querySelector("#customiseSearchOpacity");
+    const placeholderInput = body.querySelector("#customiseSearchPlaceholder");
+    const widthLabel = body.querySelector('[data-role="width-label"]');
+    const opacityLabel = body.querySelector('[data-role="opacity-label"]');
+
+    function persist() {
+      updateRecord(SEARCH_KEY, {
+        color: draft.color,
+        width: draft.width,
+        backgroundOpacity: draft.backgroundOpacity,
+        placeholder: draft.placeholder,
+      });
+      paintSearchPreview(body);
+    }
+
+    colorInput.addEventListener("input", () => {
+      draft.color = colorInput.value;
+      persist();
+    });
+    widthInput.addEventListener("input", () => {
+      draft.width = Number(widthInput.value);
+      widthLabel.textContent = `${draft.width}px`;
+      persist();
+    });
+    opacityInput.addEventListener("input", () => {
+      draft.backgroundOpacity = Number(opacityInput.value);
+      opacityLabel.textContent = `${draft.backgroundOpacity}%`;
+      persist();
+    });
+    placeholderInput.addEventListener("input", () => {
+      draft.placeholder = placeholderInput.value.trim() || DEFAULT_SEARCH.placeholder;
+      persist();
+    });
+
+    paintSearchPreview(body);
+  }
+
   function openFactory({ key, label } = {}) {
     ensureFactoryOverlay();
     factoryKey = key || RADIAL_KEY;
@@ -387,6 +528,8 @@
 
     if (factoryKey === RADIAL_KEY) {
       renderRadialFactory(body, infoEl);
+    } else if (factoryKey === SEARCH_KEY) {
+      renderSearchFactory(body, infoEl);
     } else {
       body.innerHTML = `<div class="customise-factory-controls"><p class="customise-factory-hint">Editor ainda não disponível para este objeto.</p></div>`;
     }

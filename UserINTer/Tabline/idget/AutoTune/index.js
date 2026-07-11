@@ -83,6 +83,15 @@
             h: data[t].h,
             active: data[t].active !== false
           };
+          if (t === "music" && data[t].minimal === true) {
+            out[t].minimal = true;
+          }
+          if (t === "music" && typeof data[t].minimalOffsetX === "number") {
+            out[t].minimalOffsetX = data[t].minimalOffsetX;
+          }
+          if (t === "music" && typeof data[t].minimalVolumeLevel === "number") {
+            out[t].minimalVolumeLevel = data[t].minimalVolumeLevel;
+          }
         }
       });
       return out;
@@ -245,7 +254,7 @@
     root.querySelectorAll(".floating-widget").forEach((node) => {
       const t = node.dataset.widgetType;
       if (!t || !state.hasOwnProperty(t)) return;
-      state[t] = {
+      const entry = {
         id: node.dataset.widgetId,
         x: parseFloat(node.style.left) || 0,
         y: parseFloat(node.style.top) || 0,
@@ -253,6 +262,13 @@
         h: node.offsetHeight,
         active: true
       };
+      if (t === "music" && state.music && state.music.minimal === true) {
+        entry.minimal = true;
+      }
+      if (t === "music" && typeof state.music?.minimalOffsetX === "number") {
+        entry.minimalOffsetX = state.music.minimalOffsetX;
+      }
+      state[t] = entry;
     });
     saveSettings(state);
   }
@@ -684,6 +700,8 @@
     } else {
       const el = root.querySelector(`.floating-widget[data-widget-type="${type}"]`);
       if (el) {
+        const prevMinimal = type === "music" ? settings[type]?.minimal : undefined;
+        const prevOffset = type === "music" ? settings[type]?.minimalOffsetX : undefined;
         settings[type] = {
           id: el.dataset.widgetId,
           x: parseFloat(el.style.left) || 0,
@@ -692,6 +710,12 @@
           h: el.offsetHeight,
           active: false
         };
+        if (type === "music" && prevMinimal === true) {
+          settings[type].minimal = true;
+        }
+        if (type === "music" && typeof prevOffset === "number") {
+          settings[type].minimalOffsetX = prevOffset;
+        }
         el.remove();
         saveSettings(settings);
       } else if (settings[type]) {
@@ -700,6 +724,10 @@
       }
     }
     syncPanelToggles();
+    syncMusicWidgetPresentation(root);
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
+      window.AutoTuneMusicMinimal.sync();
+    }
   }
 
   function syncPanelToggles() {
@@ -730,7 +758,10 @@
       }
     });
     window.addEventListener("hashchange", () => {
-      if (window.location.hash === "#autotune-widget") syncPanelToggles();
+      if (window.location.hash === "#autotune-widget") {
+        syncPanelToggles();
+        syncMusicMinimalPanel();
+      }
     });
   }
 
@@ -752,6 +783,63 @@
     root.classList.toggle("floating-cosmetics--hidden", !visible);
   };
 
+  function isMusicMinimalEnabled() {
+    const settings = loadSettings();
+    return !!(settings.music && settings.music.minimal === true);
+  }
+
+  function setMusicMinimalEnabled(enabled, root) {
+    const settings = loadSettings();
+    if (!settings.music) {
+      settings.music = { id: "music-minimal", active: false, minimal: !!enabled };
+    } else {
+      settings.music = { ...settings.music, minimal: !!enabled };
+    }
+    saveSettings(settings);
+    syncMusicMinimalPanel();
+    syncMusicWidgetPresentation(root);
+    if (window.AutoTuneMusicMinimal) {
+      window.AutoTuneMusicMinimal.setEnabled(!!enabled);
+    }
+  }
+
+  /**
+   * Alterna visibilidade entre o widget Music flutuante e o modo minimalista.
+   * Quando minimal está ativo, o card flutuante fica oculto.
+   */
+  window.syncMusicWidgetPresentation = function syncMusicWidgetPresentation(rootEl) {
+    const root = rootEl || document.getElementById("floating-cosmetics-root");
+    if (!root) return;
+    const musicEl = root.querySelector('.floating-widget[data-widget-type="music"]');
+    if (!musicEl) return;
+    const minimalOn = isMusicMinimalEnabled();
+    const active = hasActiveMedia();
+    if (minimalOn) {
+      musicEl.style.display = "none";
+    } else {
+      musicEl.style.display = active ? "" : "none";
+    }
+  };
+
+  function syncMusicMinimalPanel() {
+    const on = isMusicMinimalEnabled();
+    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
+      input.checked = on;
+    });
+    document.querySelectorAll('[data-autotune-panel-label="music-minimal"]').forEach((label) => {
+      label.textContent = on ? "On" : "Off";
+    });
+  }
+
+  function initMusicMinimalToggle(root) {
+    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
+      input.addEventListener("change", () => {
+        setMusicMinimalEnabled(input.checked, root);
+      });
+    });
+    syncMusicMinimalPanel();
+  }
+
   function hasActiveMedia() {
     return !!(window.DragonMedia && window.DragonMedia.snapshot && window.DragonMedia.snapshot.title);
   }
@@ -766,8 +854,16 @@
     if (!root) return;
     const active = hasActiveMedia();
     root.querySelectorAll(".floating-widget--media-gated").forEach((el) => {
+      if (el.dataset.widgetType === "music" && isMusicMinimalEnabled()) {
+        el.style.display = "none";
+        return;
+      }
       el.style.display = active ? "" : "none";
     });
+    syncMusicWidgetPresentation(root);
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
+      window.AutoTuneMusicMinimal.sync();
+    }
   }
 
   function bindMediaGating() {
@@ -787,7 +883,12 @@
     removeFusion(root);
     restore(root);
     initPanelToggles(root);
+    initMusicMinimalToggle(root);
     syncPanelToggles();
+    syncMusicMinimalPanel();
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
+      window.AutoTuneMusicMinimal.mount(root);
+    }
     syncVisibilityFromHome();
     syncMediaGatedVisibility();
     bindMediaGating();

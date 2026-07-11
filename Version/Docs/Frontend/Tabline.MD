@@ -56,7 +56,7 @@ Array `WIDGET_SCRIPTS` (ordem importa):
 |------|------------|------|
 | Wallpaper | `wallpaper` | Link `#wallpaper-widget` |
 | Tema | `tema` | `#temaTabBtn` — ciclo claro/escuro/sistema |
-| Customise | `customise` | Placeholder |
+| Customise | `customise` | Catálogo de personalização (Radial Menu + Factory) |
 | Donate | `donate` | Placeholder |
 | AutoTune | `autotune` | Link `#autotune-widget` |
 

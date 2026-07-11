@@ -69,12 +69,25 @@ Estado mínimo compartilhado. **Não** colocar lógica aqui.
 
 | Função | Comportamento |
 |--------|---------------|
+| `buildWebview(url, tabId)` | Helper DRY: cria `<webview>` com `allowpopups` + `partition="persist:dragon"` |
 | `createTab(url, title, icon)` | Nova aba + webview + ativa |
 | `createHomeTab()` | Aba "New Tab" sem webview; ativa home |
-| `activateTab(tabId)` | Mostra webview; chama `showBrowser()` |
-| `activateHomeTab(tabId)` | Chama `showHome()` |
+| `activateTab(tabId)` | Troca o conteúdo **na hora**; animação da barra é cosmética |
+| `activateHomeTab(tabId)` | Idem: `showHome()` imediato; animação só na barra |
 | `closeTab(tabId)` | Remove aba e webview; se última, `showHome()` |
 | `convertHomeTabToNormalTab(tabId, url, title)` | Home tab vira aba normal com URL (busca) |
+
+### Troca de aba (v1.3)
+
+Antes, `activateTab` desativava todos os webviews e só ativava o destino no `onComplete` da animação (~250–400 ms de área vazia / wallpaper).
+
+Agora:
+1. `finishActivateBrowserTab` / `finishActivateHomeTab` rodam **imediatamente**
+2. `TabsAnim.animateTabTransition` anima só os botões; `onComplete` → `restoreActiveTabButton`
+
+### Partição persistente
+
+Todos os webviews usam `partition="persist:dragon"` (via `buildWebview`): cache HTTP, cookies e conexões compartilhados entre abas e sessões — acelera sites pesados.
 
 Webviews appendados em `#browser`. Listeners: favicon, título, `setupWebviewNavigation`, `trackWebviewHistory`.
 
@@ -88,11 +101,11 @@ Webviews appendados em `#browser`. Listeners: favicon, título, `setupWebviewNav
 
 ## Tabs.anim.js
 
-`animateTabTransition({ currentIndex, targetIndex, tabs, onComplete })` — animação liquid glass ao trocar aba distante.
+`animateTabTransition({ currentIndex, targetIndex, tabs, onComplete })` — animação liquid glass na **barra** (não bloqueia o conteúdo).
 
-**Mudar duração/curva:** editar keyframes e timeouts em `Tabs.anim.js`.
+**Mudar duração/curva:** `totalDuration` / easing em `Tabs.anim.js`.
 
-**Desativar animação:** em `activateTab` / `activateHomeTab`, chamar `finishActivate*` direto sem `TabsAnim.animateTabTransition`.
+**Desativar animação:** em `activateTab` / `activateHomeTab`, omitir a chamada a `TabsAnim.animateTabTransition`.
 
 ---
 
@@ -132,4 +145,8 @@ Abas criadas dinamicamente dentro de `#tabs`.
 
 ## Atalhos relacionados
 
-`shortcuts/actions/tab-controls/` → Ctrl+T, Ctrl+W, Ctrl+Tab.
+`shortcuts/actions/tab-controls/` → Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab (todos `global`).
+
+## Desempenho opcional
+
+Com `body.perf-render-all` (Tela Editar), webviews inativos permanecem pintados — ver [`Editar.MD`](./Editar.MD) e [`Browser.MD`](./Browser.MD).

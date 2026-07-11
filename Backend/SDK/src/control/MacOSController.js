@@ -1,5 +1,6 @@
 'use strict';
 
+const { spawn } = require('child_process');
 const BaseController = require('./BaseController');
 const {
   resolveNowPlayingCliBinary,
@@ -36,6 +37,21 @@ class MacOSController extends BaseController {
     this.logger?.info?.(`Controlador macOS iniciado (${this._binary})`);
   }
 
+  async _adjustSystemVolume(delta) {
+    const step = Math.abs(delta);
+    const script = delta > 0
+      ? `set volume output volume (output volume of (get volume settings) + ${step})`
+      : `set volume output volume (output volume of (get volume settings) - ${step})`;
+    return new Promise((resolve, reject) => {
+      const proc = spawn('osascript', ['-e', script]);
+      proc.on('error', reject);
+      proc.on('exit', (code) => {
+        if (code !== 0) return reject(new Error(`osascript exit ${code}`));
+        resolve();
+      });
+    });
+  }
+
   async send(action) {
     const norm = this._normalize(action);
     if (!norm) {
@@ -45,6 +61,18 @@ class MacOSController extends BaseController {
     if (!this.ready) {
       this.logger?.warn?.(`controlador indisponível, comando ignorado: '${norm}'`);
       return { ok: false, error: 'controller_not_ready' };
+    }
+
+    if (norm === 'volume_up' || norm === 'volume_down') {
+      const delta = norm === 'volume_up' ? 6 : -6;
+      this.logger?.info?.(`▶ ajustando volume do sistema (${delta > 0 ? '+' : ''}${delta})`);
+      try {
+        await this._adjustSystemVolume(delta);
+        return { ok: true, action: norm };
+      } catch (err) {
+        this.logger?.warn?.('falha ao ajustar volume:', err.message);
+        return { ok: false, error: err.message, action: norm };
+      }
     }
 
     const cliCmd = this._mapToCliCommand(norm);

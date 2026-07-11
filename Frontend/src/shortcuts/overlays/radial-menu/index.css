@@ -1,0 +1,135 @@
+/**
+ * Radial Menu — overlay circular (inspirado em Animate UI Radial Menu).
+ * z-index ≥ 9000 (convenção de overlays de atalho).
+ */
+.shortcut-radial-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.shortcut-radial-menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  /* Captura o ponteiro mesmo sobre webviews enquanto o Alt está pressionado */
+  pointer-events: auto;
+}
+
+.shortcut-radial-menu__stage {
+  position: absolute;
+  width: var(--radial-size, 280px);
+  height: var(--radial-size, 280px);
+  transform: translate(-50%, -50%) scale(0.55);
+  opacity: 0;
+  transition:
+    transform 280ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 180ms ease;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.45));
+}
+
+.shortcut-radial-menu.is-open .shortcut-radial-menu__stage {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.shortcut-radial-menu__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.shortcut-radial-menu__wedge {
+  fill: color-mix(in srgb, var(--radial-color, #7a8cff) 14%, rgba(16, 20, 30, 0.92));
+  stroke: color-mix(in srgb, var(--radial-color, #7a8cff) 35%, transparent);
+  stroke-width: 1;
+  transition: fill 80ms ease, stroke 80ms ease, filter 80ms ease;
+}
+
+.shortcut-radial-menu__wedge.is-active {
+  fill: color-mix(in srgb, var(--radial-color, #7a8cff) 42%, rgba(20, 24, 40, 0.95));
+  stroke: color-mix(in srgb, var(--radial-color, #7a8cff) 70%, white);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--radial-color, #7a8cff) 55%, transparent));
+}
+
+.shortcut-radial-menu__ring {
+  fill: color-mix(in srgb, var(--radial-color, #7a8cff) 18%, rgba(12, 14, 22, 0.9));
+  stroke: none;
+  transition: fill 80ms ease;
+}
+
+.shortcut-radial-menu__ring.is-active {
+  fill: color-mix(in srgb, var(--radial-color, #7a8cff) 48%, rgba(18, 22, 36, 0.95));
+}
+
+.shortcut-radial-menu__hub {
+  fill: rgba(10, 12, 20, 0.88);
+  stroke: color-mix(in srgb, var(--radial-color, #7a8cff) 40%, transparent);
+  stroke-width: 1.5;
+}
+
+.shortcut-radial-menu__items {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shortcut-radial-menu__item {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+  color: rgba(229, 231, 235, 0.78);
+  white-space: nowrap;
+  transition: color 80ms ease, transform 80ms ease;
+  max-width: 110px;
+}
+
+.shortcut-radial-menu__item.is-active {
+  color: #fff;
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.shortcut-radial-menu__item-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shortcut-radial-menu__item-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.shortcut-radial-menu__item-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcut-radial-menu__hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--radial-color, #7a8cff) 70%, white);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}

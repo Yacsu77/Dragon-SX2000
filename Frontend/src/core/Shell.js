@@ -8,6 +8,7 @@
     { mountId: 'tabsRoot', path: 'Tabs/Tabs.html' },
     { mountId: 'wallpaperRoot', path: 'Wallpaper/Wallpaper.html' },
     { mountId: 'autotuneRoot', path: '../../UserINTer/Tabline/idget/AutoTune/catalog.html' },
+    { mountId: 'customiseRoot', path: '../../UserINTer/Tabline/idget/Customise/catalog.html' },
   ];
 
   let mounted = false;

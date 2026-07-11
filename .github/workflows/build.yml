@@ -47,6 +47,45 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify package version and critical app files
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const pkg = require('./package.json');
+            if (pkg.version !== '1.3.0') {
+              console.error('Expected package.json version 1.3.0, got', pkg.version);
+              process.exit(1);
+            }
+            if (pkg.build.productName !== 'DSX') {
+              console.error('Expected productName DSX, got', pkg.build.productName);
+              process.exit(1);
+            }
+            const required = [
+              'main.js',
+              'preload.js',
+              'Frontend/src/index.html',
+              'Frontend/src/settings/perfSettings.js',
+              'Frontend/src/js/connectionPrefetch.js',
+              'Frontend/src/shortcuts/actions/navigation-controls/index.js',
+              'Frontend/Telas/Atalhos/Atalhos.js',
+              'Frontend/Telas/Atalhos/Atalhos.html',
+              'Frontend/Telas/Atalhos/Atalhos.css',
+              'Frontend/Telas/Editar/Editar.js',
+              'Frontend/Telas/Editar/Editar.html',
+              'Frontend/MiniTelas/MiniAtalhos/MiniAtalhos.js',
+              'Frontend/src/Browser/Browser.css',
+              'Frontend/src/Tabs/Tabs.core.js',
+            ];
+            const missing = required.filter((f) => !fs.existsSync(path.join(process.cwd(), f)));
+            if (missing.length) {
+              console.error('Missing build-critical files:', missing.join(', '));
+              process.exit(1);
+            }
+            console.log('DSX v' + pkg.version + ' — productName=' + pkg.build.productName);
+            console.log('Critical files OK (' + required.length + ')');
+          "
+
       - name: Prepare platform icons from Image/Icons
         run: npm run icons:prepare
 

@@ -58,6 +58,18 @@
     }
   }
 
+  // Criação centralizada do <webview> (DRY). Usa uma sessão persistente
+  // compartilhada entre todas as abas: reaproveita cache HTTP, cookies e
+  // conexões, acelerando o carregamento — especialmente de sites pesados.
+  function buildWebview(url, tabId) {
+    const webview = document.createElement('webview');
+    webview.setAttribute('allowpopups', '');
+    webview.setAttribute('partition', 'persist:dragon');
+    webview.dataset.id = tabId;
+    webview.src = url;
+    return webview;
+  }
+
   function finishActivateBrowserTab(targetTab, targetWebview, tabId) {
     document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
 
@@ -78,6 +90,9 @@
   }
 
   function finishActivateHomeTab(tab, tabId) {
+    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active', 'adjacent-to-active'));
+
     tab.classList.add('active');
 
     if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(tab);
@@ -87,6 +102,16 @@
 
     if (window.TabsVisibility) window.TabsVisibility.scheduleVisibilityUpdate();
     if (typeof window.updateNavigationButtons === 'function') window.updateNavigationButtons();
+  }
+
+  // Reafirma o botão de aba ativo ao fim da animação cosmética. A webview já
+  // foi ativada de forma instantânea, então isto só ajusta a barra de abas.
+  function restoreActiveTabButton(targetTab) {
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.classList.remove('active', 'adjacent-to-active');
+    });
+    targetTab.classList.add('active');
+    if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(targetTab);
   }
 
   function attachWebviewListeners(webview, tabId, titleSpan) {
@@ -121,9 +146,38 @@
     if (typeof window.trackWebviewHistory === 'function') {
       window.trackWebviewHistory(webview);
     }
+
+    if (window.CursorMouseEventService) {
+      window.CursorMouseEventService.attachWebviewEvents(webview);
+    }
   }
 
-  function createTab(url, title = null, icon = null) {
+  function insertTabElements(tabButton, webview, referenceTabId) {
+    const tabsContainer = document.getElementById('tabs');
+    const browserContainer = document.getElementById('browser');
+
+    if (referenceTabId) {
+      const refTab = document.querySelector(`.tab[data-id="${referenceTabId}"]`);
+      const refWebview = document.querySelector(`webview[data-id="${referenceTabId}"]`);
+
+      if (refTab && refTab.parentNode === tabsContainer) {
+        tabsContainer.insertBefore(tabButton, refTab.nextSibling);
+      } else {
+        tabsContainer.appendChild(tabButton);
+      }
+
+      if (refWebview && browserContainer) {
+        browserContainer.insertBefore(webview, refWebview.nextSibling);
+      } else if (browserContainer) {
+        browserContainer.appendChild(webview);
+      }
+    } else {
+      tabsContainer.appendChild(tabButton);
+      browserContainer.appendChild(webview);
+    }
+  }
+
+  function createTabAfter(referenceTabId, url, title = null, icon = null, activate = true) {
     state.tabCount += 1;
     const tabId = `tab-${state.tabCount}`;
     const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
@@ -154,18 +208,59 @@
     tabButton.onclick = () => activateTab(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
-    document.getElementById('tabs').appendChild(tabButton);
-    afterTabLayoutUpdate();
-
-    const webview = document.createElement('webview');
-    webview.src = url;
-    webview.dataset.id = tabId;
+    const webview = buildWebview(url, tabId);
     attachWebviewListeners(webview, tabId, titleSpan);
 
-    document.getElementById('browser').appendChild(webview);
+    insertTabElements(tabButton, webview, referenceTabId);
+    afterTabLayoutUpdate();
+
     emitTabCreated(tabId, false);
-    activateTab(tabId);
+    if (activate) activateTab(tabId);
+    return tabId;
+  }
+
+  function createTab(url, title = null, icon = null, activate = true) {
+    state.tabCount += 1;
+    const tabId = `tab-${state.tabCount}`;
+    const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
+
+    const tabButton = document.createElement('div');
+    tabButton.classList.add('tab');
+    tabButton.dataset.id = tabId;
+
+    const closeBtn = document.createElement('span');
+    closeBtn.classList.add('tab-close');
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeTab(tabId);
+    };
+    tabButton.appendChild(closeBtn);
+
+    const iconSpan = document.createElement('span');
+    iconSpan.classList.add('tab-icon');
+    iconSpan.textContent = icon || hostnameIcon(url);
+    tabButton.appendChild(iconSpan);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.classList.add('tab-title');
+    titleSpan.textContent = displayTitle;
+    tabButton.appendChild(titleSpan);
+
+    tabButton.onclick = () => activateTab(tabId);
+
+    if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
+
+    const webview = buildWebview(url, tabId);
+    attachWebviewListeners(webview, tabId, titleSpan);
+
+    insertTabElements(tabButton, webview, null);
+    afterTabLayoutUpdate();
+    emitTabCreated(tabId, false);
+    if (activate !== false) activateTab(tabId);
     return tabId;
   }
 
@@ -184,25 +279,20 @@
     const targetWebview = document.querySelector(`webview[data-id="${tabId}"]`);
     if (!targetTab || !targetWebview) return;
 
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
+    // Troca de conteúdo IMEDIATA: alterna a webview visível agora, sem esperar
+    // a animação da barra de abas. Antes, a webview alvo só era ativada no
+    // onComplete (~250–400ms depois), deixando a área de conteúdo vazia nesse
+    // intervalo — o que causava o "flash" do fundo e a lentidão percebida.
+    finishActivateBrowserTab(targetTab, targetWebview, tabId);
 
-    if (currentIndex === -1 || currentIndex === targetIndex) {
-      finishActivateBrowserTab(targetTab, targetWebview, tabId);
-      return;
-    }
-
-    if (window.TabsAnim) {
+    // Animação apenas cosmética dos botões da barra; não bloqueia o conteúdo.
+    if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
       window.TabsAnim.animateTabTransition({
         currentIndex,
         targetIndex,
         tabs,
-        onComplete: () => finishActivateBrowserTab(targetTab, targetWebview, tabId),
+        onComplete: () => restoreActiveTabButton(targetTab),
       });
-    } else {
-      finishActivateBrowserTab(targetTab, targetWebview, tabId);
     }
   }
 
@@ -233,7 +323,7 @@
     }
   }
 
-  function createHomeTab() {
+  function createHomeTab(activate = true) {
     state.tabCount += 1;
     const tabId = `home-tab-${state.tabCount}`;
 
@@ -263,12 +353,13 @@
     tabButton.onclick = () => activateHomeTab(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
+    if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     document.getElementById('tabs').appendChild(tabButton);
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, true);
-    activateHomeTab(tabId);
+    if (activate !== false) activateHomeTab(tabId);
     return tabId;
   }
 
@@ -278,23 +369,20 @@
     const targetIndex = tabs.findIndex((tab) => tab.dataset.id === tabId);
     if (targetIndex === -1) return;
 
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
-
     const tab = tabs[targetIndex];
     if (!tab) return;
+
+    // Mostra a home imediatamente (evita a área de conteúdo vazia durante a
+    // animação). A animação da barra fica apenas cosmética.
+    finishActivateHomeTab(tab, tabId);
 
     if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
       window.TabsAnim.animateTabTransition({
         currentIndex,
         targetIndex,
         tabs,
-        onComplete: () => finishActivateHomeTab(tab, tabId),
+        onComplete: () => restoreActiveTabButton(tab),
       });
-    } else {
-      finishActivateHomeTab(tab, tabId);
     }
   }
 
@@ -337,9 +425,7 @@
     const iconSpan = tab.querySelector('.tab-icon');
     if (iconSpan) iconSpan.textContent = hostnameIcon(url);
 
-    const webview = document.createElement('webview');
-    webview.src = url;
-    webview.dataset.id = newTabId;
+    const webview = buildWebview(url, newTabId);
     webview.classList.add('active');
     attachWebviewListeners(webview, newTabId, titleSpan);
 
@@ -360,6 +446,7 @@
 
   window.TabsCore = {
     createTab,
+    createTabAfter,
     activateTab,
     closeTab,
     createNewTab,
@@ -370,6 +457,7 @@
   };
 
   window.createTab = createTab;
+  window.createTabAfter = createTabAfter;
   window.activateTab = activateTab;
   window.closeTab = closeTab;
   window.createNewTab = createNewTab;

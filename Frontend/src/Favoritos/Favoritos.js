@@ -36,6 +36,45 @@
     return `https://${trimmed}`;
   }
 
+  function isFavorite(url) {
+    if (!url) return false;
+    const normalized = normalizeUrl(url);
+    return loadAll().some((item) => {
+      try {
+        return new URL(normalizeUrl(item.url)).href === new URL(normalized).href;
+      } catch {
+        return item.url === url;
+      }
+    });
+  }
+
+  function removeByUrl(url) {
+    if (!url) return false;
+    const normalized = normalizeUrl(url);
+    const items = loadAll().filter((item) => {
+      try {
+        return new URL(normalizeUrl(item.url)).href !== new URL(normalized).href;
+      } catch {
+        return item.url !== url;
+      }
+    });
+    saveAll(items);
+    return true;
+  }
+
+  function toggle(title, url) {
+    const normalized = normalizeUrl(url);
+    if (!normalized) return { isFavorite: false };
+
+    if (isFavorite(normalized)) {
+      removeByUrl(normalized);
+      return { isFavorite: false };
+    }
+
+    add(title || normalized, normalized);
+    return { isFavorite: true };
+  }
+
   function faviconFor(url) {
     try {
       const { origin } = new URL(url);
@@ -187,6 +226,9 @@
     close,
     loadPreview,
     loadAll,
+    isFavorite,
+    removeByUrl,
+    toggle,
     add(title, url) {
       const items = loadAll();
       items.unshift({

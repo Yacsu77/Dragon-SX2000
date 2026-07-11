@@ -10,11 +10,27 @@ async function initApp() {
     await window.Browser.init();
   }
 
+  if (window.CursorControll && typeof window.CursorControll.init === 'function') {
+    window.CursorControll.init();
+  }
+
   if (window.Tabline && typeof window.Tabline.init === 'function') {
     await window.Tabline.init();
   }
 
   if (window.TopBar) window.TopBar.init();
+
+  if (window.ConnectionPrefetch && typeof window.ConnectionPrefetch.init === 'function') {
+    window.ConnectionPrefetch.init();
+  }
+
+  if (window.PerfSettings && typeof window.PerfSettings.init === 'function') {
+    window.PerfSettings.init();
+  }
+
+  if (window.SessionTabs && typeof window.SessionTabs.init === 'function') {
+    window.SessionTabs.init();
+  }
 
   if (window.Home) await window.Home.init();
 
@@ -22,7 +38,12 @@ async function initApp() {
     window.lucide.createIcons();
   }
 
-  if (window.AppShell && typeof window.AppShell.showHome === 'function') {
+  let restored = false;
+  if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
+    restored = !!window.SessionTabs.restore();
+  }
+
+  if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
     window.AppShell.showHome();
   }
 

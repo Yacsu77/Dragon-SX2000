@@ -1,0 +1,315 @@
+/* ─── Tela cheia de Atalhos ─────────────────────────────────────────────── */
+.atalhos-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.atalhos-screen-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.atalhos-screen {
+  position: relative;
+  width: min(860px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 18, 28, 0.94);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.atalhos-screen__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.atalhos-screen__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.atalhos-screen__subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(156, 163, 175, 0.95);
+  max-width: 560px;
+}
+
+.atalhos-screen__close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 140ms ease;
+  flex-shrink: 0;
+}
+
+.atalhos-screen__close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.atalhos-screen__body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 16px 20px;
+}
+
+/* ─── Grupos e linhas ───────────────────────────────────────────────────── */
+.atalhos-group {
+  padding: 8px;
+}
+
+.atalhos-group__title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(156, 163, 175, 0.95);
+  padding: 12px 8px 6px;
+}
+
+.atalhos-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  transition: background 140ms ease;
+}
+
+.atalhos-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.atalhos-row__info {
+  min-width: 0;
+}
+
+.atalhos-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.atalhos-row__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(156, 163, 175, 0.9);
+}
+
+.atalhos-row__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.atalhos-row__keys {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.atalhos-row__keys--empty {
+  border-style: dashed;
+  color: rgba(156, 163, 175, 0.8);
+  font-weight: 500;
+}
+
+.atalhos-row__edit {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(159, 176, 255, 0.35);
+  background: rgba(159, 176, 255, 0.15);
+  color: #c7d2fe;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.atalhos-row__edit:hover {
+  background: rgba(159, 176, 255, 0.28);
+  color: #eef2ff;
+}
+
+.atalhos-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: rgba(156, 163, 175, 0.95);
+  font-size: 14px;
+}
+
+/* ─── Retângulo de captura ──────────────────────────────────────────────── */
+.atalhos-capture {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 140ms ease, visibility 140ms ease;
+}
+
+.atalhos-capture.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.atalhos-capture__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.atalhos-capture__card {
+  position: relative;
+  width: min(440px, calc(100% - 32px));
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 22, 32, 0.98);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.atalhos-capture__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.atalhos-capture__current {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(156, 163, 175, 0.95);
+}
+
+.atalhos-capture__box {
+  margin-top: 16px;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 2px dashed rgba(159, 176, 255, 0.4);
+  background: rgba(159, 176, 255, 0.06);
+  outline: none;
+  cursor: default;
+}
+
+.atalhos-capture__box:focus {
+  border-color: rgba(159, 176, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(159, 176, 255, 0.12);
+}
+
+.atalhos-capture__hint {
+  font-size: 12px;
+  color: rgba(156, 163, 175, 0.9);
+}
+
+.atalhos-capture__preview {
+  font-size: 18px;
+  font-weight: 700;
+  color: #eef2ff;
+  min-height: 22px;
+}
+
+.atalhos-capture__preview.is-partial {
+  color: rgba(199, 210, 254, 0.7);
+  font-weight: 600;
+}
+
+.atalhos-capture__warn {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.atalhos-capture__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.atalhos-capture__spacer {
+  flex: 1;
+}
+
+.atalhos-capture__btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease, opacity 140ms ease;
+}
+
+.atalhos-capture__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.atalhos-capture__btn--ghost {
+  background: transparent;
+}
+
+.atalhos-capture__btn--primary {
+  border-color: rgba(159, 176, 255, 0.45);
+  background: rgba(159, 176, 255, 0.22);
+  color: #eef2ff;
+}
+
+.atalhos-capture__btn--primary:hover:not(:disabled) {
+  background: rgba(159, 176, 255, 0.34);
+}
+
+.atalhos-capture__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

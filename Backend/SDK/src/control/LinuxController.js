@@ -1,5 +1,6 @@
 'use strict';
 
+const { spawn } = require('child_process');
 const BaseController = require('./BaseController');
 const { MprisClient } = require('../utils/mpris');
 
@@ -42,6 +43,18 @@ class LinuxController extends BaseController {
       return { ok: false, error: 'controller_not_ready' };
     }
 
+    if (norm === 'volume_up' || norm === 'volume_down') {
+      const delta = norm === 'volume_up' ? '+5%' : '-5%';
+      this.logger?.info?.(`▶ ajustando volume do sistema (${delta}) via pactl`);
+      try {
+        await this._adjustSystemVolume(delta);
+        return { ok: true, action: norm };
+      } catch (err) {
+        this.logger?.warn?.(`falha ao ajustar volume:`, err.message);
+        return { ok: false, error: err.message, action: norm };
+      }
+    }
+
     this.logger?.info?.(`▶ executando '${norm}' via MPRIS`);
     try {
       const { busName, method } = await this._mpris.sendCommand(norm);
@@ -51,6 +64,17 @@ class LinuxController extends BaseController {
       this.logger?.warn?.(`falha ao executar '${norm}':`, err.message);
       return { ok: false, error: err.message, action: norm };
     }
+  }
+
+  _adjustSystemVolume(delta) {
+    return new Promise((resolve, reject) => {
+      const proc = spawn('pactl', ['set-sink-volume', '@DEFAULT_SINK@', delta]);
+      proc.on('error', reject);
+      proc.on('exit', (code) => {
+        if (code !== 0) return reject(new Error(`pactl exit ${code}`));
+        resolve();
+      });
+    });
   }
 }
 

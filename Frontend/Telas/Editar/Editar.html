@@ -1,0 +1,67 @@
+<div class="editar-screen" data-role="editar-screen">
+  <header class="editar-screen__header">
+    <div class="editar-screen__header-text">
+      <h1 class="editar-screen__title">Editar</h1>
+      <p class="editar-screen__subtitle">Ajustes de desempenho e comportamento do navegador.</p>
+    </div>
+    <button type="button" class="editar-screen__close" data-role="close" aria-label="Fechar">×</button>
+  </header>
+
+  <div class="editar-screen__body">
+    <section class="editar-group">
+      <h2 class="editar-group__title">Desempenho</h2>
+
+      <div class="editar-option">
+        <div class="editar-option__info">
+          <div class="editar-option__label">Manter todas as abas renderizadas</div>
+          <div class="editar-option__desc">
+            Deixa as abas em segundo plano sempre renderizadas, tornando a troca
+            entre elas instantânea (sem recarregar a imagem da página).
+          </div>
+        </div>
+        <label class="editar-switch">
+          <input type="checkbox" data-role="toggle-render-all" />
+          <span class="editar-switch__track"><span class="editar-switch__thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="editar-warning" data-role="render-all-warning" hidden>
+        <span class="editar-warning__icon" aria-hidden="true">⚠️</span>
+        <span>
+          <strong>Uso maior de recursos.</strong> Com esta opção ativa, todas as
+          abas continuam consumindo <strong>CPU/GPU e memória RAM</strong> mesmo
+          em segundo plano. Prefira desativá-la se tiver muitas abas abertas ou
+          um computador mais modesto.
+        </span>
+      </div>
+    </section>
+
+    <section class="editar-group">
+      <h2 class="editar-group__title">Sessão</h2>
+
+      <div class="editar-option">
+        <div class="editar-option__info">
+          <div class="editar-option__label">Restaurar abas ao abrir</div>
+          <div class="editar-option__desc">
+            Guarda as abas abertas antes de fechar o navegador e as reabre
+            automaticamente na próxima inicialização.
+          </div>
+        </div>
+        <label class="editar-switch">
+          <input type="checkbox" data-role="toggle-restore-session" />
+          <span class="editar-switch__track"><span class="editar-switch__thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="editar-warning" data-role="restore-session-warning" hidden>
+        <span class="editar-warning__icon" aria-hidden="true">⚠️</span>
+        <span>
+          <strong>Uso maior de CPU e memória.</strong> Ao reabrir o programa,
+          todas as abas salvas são carregadas de uma vez — quanto mais abas,
+          maior o consumo de <strong>CPU e RAM</strong> na inicialização.
+          Desative se notar lentidão ao abrir o DSX.
+        </span>
+      </div>
+    </section>
+  </div>
+</div>

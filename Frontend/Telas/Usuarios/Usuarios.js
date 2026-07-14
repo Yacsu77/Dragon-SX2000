@@ -1,63 +1,63 @@
 /**
- * Gate de usuários estilo Netflix — perfil grande, senha ao subir, + para criar.
- * Template embutido (sem fetch file://) para evitar falha no Electron.
+ * Gate de usuários — login/cadastro separados, senha inline, delete, fundo parallax.
  */
 (function () {
   const AVATAR_COLORS = ['#e50914', '#1a6cff', '#2ecc71', '#f39c12', '#9b59b6', '#16a085', '#e67e22'];
 
   const GATE_HTML = `
+    <div class="user-gate-bg" aria-hidden="true">
+      <div class="user-gate-bg__layer user-gate-bg__layer--a"></div>
+      <div class="user-gate-bg__layer user-gate-bg__layer--b"></div>
+      <div class="user-gate-bg__layer user-gate-bg__layer--c"></div>
+      <div class="user-gate-bg__glow"></div>
+    </div>
+
     <div class="user-gate" data-role="user-gate">
       <div class="user-gate__brand" data-role="brand">DSX</div>
-      <h1 class="user-gate__title" data-role="title">Quem está navegando?</h1>
-      <p class="user-gate__status" data-role="status" hidden></p>
 
-      <div class="user-gate__profiles" data-role="profiles"></div>
+      <section class="user-gate__view" data-role="view-select">
+        <h1 class="user-gate__title">Quem está navegando?</h1>
+        <p class="user-gate__status" data-role="status" hidden></p>
+        <div class="user-gate__profiles" data-role="profiles"></div>
+      </section>
 
-      <div class="user-gate__stage" data-role="stage" hidden>
-        <button type="button" class="user-gate__back" data-role="back" aria-label="Voltar">←</button>
-        <div class="user-gate__stage-card" data-role="stage-card">
-          <div class="user-gate__tile-face" data-role="stage-face"></div>
-          <p class="user-gate__tile-nick" data-role="stage-nick"></p>
-        </div>
-
-        <form class="user-gate__password" data-role="unlock-form" hidden>
-          <input
-            type="password"
-            name="password"
-            autocomplete="current-password"
-            placeholder="Senha"
-            required
-            data-role="unlock-input"
-          />
-          <button type="submit" class="user-gate__enter">Entrar</button>
-          <p class="user-gate__error" data-role="unlock-error" hidden></p>
-        </form>
-
-        <form class="user-gate__create" data-role="create-form" hidden>
+      <section class="user-gate__view" data-role="view-register" hidden>
+        <button type="button" class="user-gate__back" data-role="back-register" aria-label="Voltar">←</button>
+        <h1 class="user-gate__title">Criar perfil</h1>
+        <form class="user-gate__register" data-role="create-form">
+          <button type="button" class="user-gate__photo-pick" data-role="photo-pick" aria-label="Escolher foto">
+            <div class="user-gate__photo-preview" data-role="photo-preview">+</div>
+            <span>Adicionar foto</span>
+          </button>
+          <input type="file" name="photo" accept="image/*" hidden data-role="photo-input" />
           <label>
             Nickname
             <input type="text" name="nickname" maxlength="32" required autocomplete="username" placeholder="Seu apelido" />
           </label>
           <label>
-            Senha (opcional)
+            Senha <span class="user-gate__optional">(opcional)</span>
             <input type="password" name="password" autocomplete="new-password" placeholder="Vazio = acesso livre" />
-          </label>
-          <label>
-            Foto (opcional)
-            <input type="file" name="photo" accept="image/*" />
           </label>
           <button type="submit" class="user-gate__enter">Criar perfil</button>
           <p class="user-gate__error" data-role="form-error" hidden></p>
         </form>
-      </div>
+      </section>
+    </div>
+
+    <div class="user-boot-loader" data-role="boot-loader" hidden>
+      <div class="user-boot-loader__orb"></div>
+      <div class="user-boot-loader__brand">DSX</div>
+      <p class="user-boot-loader__text" data-role="boot-loader-text">Carregando seu espaço…</p>
     </div>
   `;
 
   let overlayEl = null;
   let isBuilt = false;
   let unlockTarget = null;
+  let unlockTileEl = null;
   let resolveGate = null;
   let currentUsers = [];
+  let pendingPhotoDataUrl = null;
 
   function colorFor(name) {
     let hash = 0;
@@ -83,8 +83,7 @@
       faceEl.appendChild(img);
       return;
     }
-    const initial = (user?.nickname || '+').slice(0, 1).toUpperCase();
-    faceEl.textContent = initial;
+    faceEl.textContent = (user?.nickname || '+').slice(0, 1).toUpperCase();
     if (user?.nickname) faceEl.style.background = colorFor(user.nickname);
   }
 
@@ -97,13 +96,12 @@
     overlayEl.innerHTML = GATE_HTML.trim();
     document.body.appendChild(overlayEl);
 
-    const unlockForm = overlayEl.querySelector('[data-role="unlock-form"]');
-    const createForm = overlayEl.querySelector('[data-role="create-form"]');
-    const backBtn = overlayEl.querySelector('[data-role="back"]');
-
-    if (backBtn) backBtn.addEventListener('click', leaveStage);
-    if (unlockForm) unlockForm.addEventListener('submit', onUnlockSubmit);
-    if (createForm) createForm.addEventListener('submit', onCreateSubmit);
+    overlayEl.querySelector('[data-role="back-register"]').addEventListener('click', showSelectView);
+    overlayEl.querySelector('[data-role="create-form"]').addEventListener('submit', onCreateSubmit);
+    overlayEl.querySelector('[data-role="photo-pick"]').addEventListener('click', () => {
+      overlayEl.querySelector('[data-role="photo-input"]').click();
+    });
+    overlayEl.querySelector('[data-role="photo-input"]').addEventListener('change', onPhotoPick);
 
     isBuilt = true;
   }
@@ -120,79 +118,94 @@
     el.textContent = text;
   }
 
-  function leaveStage() {
-    unlockTarget = null;
-    overlayEl.classList.remove('is-staged');
-    const stage = overlayEl.querySelector('[data-role="stage"]');
-    if (stage) stage.hidden = true;
-    const unlockForm = overlayEl.querySelector('[data-role="unlock-form"]');
-    const createForm = overlayEl.querySelector('[data-role="create-form"]');
-    if (unlockForm) unlockForm.hidden = true;
-    if (createForm) createForm.hidden = true;
-    const unlockError = overlayEl.querySelector('[data-role="unlock-error"]');
-    const formError = overlayEl.querySelector('[data-role="form-error"]');
-    if (unlockError) unlockError.hidden = true;
-    if (formError) formError.hidden = true;
+  function showSelectView() {
+    clearUnlockInline();
+    pendingPhotoDataUrl = null;
+    overlayEl.classList.remove('is-register');
+    overlayEl.querySelector('[data-role="view-select"]').hidden = false;
+    overlayEl.querySelector('[data-role="view-register"]').hidden = true;
   }
 
-  function enterStage({ mode, user }) {
-    const stage = overlayEl.querySelector('[data-role="stage"]');
-    const face = overlayEl.querySelector('[data-role="stage-face"]');
-    const nick = overlayEl.querySelector('[data-role="stage-nick"]');
-    const unlockForm = overlayEl.querySelector('[data-role="unlock-form"]');
-    const createForm = overlayEl.querySelector('[data-role="create-form"]');
+  function showRegisterView() {
+    clearUnlockInline();
+    pendingPhotoDataUrl = null;
+    overlayEl.classList.add('is-register');
+    overlayEl.querySelector('[data-role="view-select"]').hidden = true;
+    const register = overlayEl.querySelector('[data-role="view-register"]');
+    register.hidden = false;
+    const form = overlayEl.querySelector('[data-role="create-form"]');
+    form.reset();
+    const preview = overlayEl.querySelector('[data-role="photo-preview"]');
+    preview.innerHTML = '+';
+    preview.style.background = '';
+    overlayEl.querySelector('[data-role="form-error"]').hidden = true;
+    setTimeout(() => form.querySelector('input[name="nickname"]')?.focus(), 80);
+  }
 
-    if (!stage || !face || !nick) return;
-
-    stage.hidden = false;
-    overlayEl.classList.add('is-staged');
-
-    if (mode === 'unlock' && user) {
-      unlockTarget = user;
-      fillFace(face, user);
-      nick.textContent = user.nickname;
-      if (createForm) createForm.hidden = true;
-      if (unlockForm) {
-        unlockForm.hidden = false;
-        unlockForm.reset();
-        const input = unlockForm.querySelector('[data-role="unlock-input"]');
-        setTimeout(() => input && input.focus(), 220);
-      }
-      return;
-    }
-
+  function clearUnlockInline() {
     unlockTarget = null;
-    fillFace(face, { nickname: '+' });
-    face.textContent = '+';
-    face.style.background = 'rgba(255,255,255,0.04)';
-    nick.textContent = 'Novo perfil';
-    if (unlockForm) unlockForm.hidden = true;
-    if (createForm) {
-      createForm.hidden = false;
-      createForm.reset();
-      const input = createForm.querySelector('input[name="nickname"]');
-      setTimeout(() => input && input.focus(), 220);
+    if (unlockTileEl) {
+      unlockTileEl.classList.remove('is-unlocking');
+      const form = unlockTileEl.querySelector('[data-role="inline-unlock"]');
+      if (form) form.remove();
+      unlockTileEl = null;
     }
+    overlayEl.classList.remove('is-unlocking');
+    overlayEl.querySelectorAll('.user-gate__tile.is-dimmed').forEach((el) => {
+      el.classList.remove('is-dimmed');
+    });
+  }
+
+  function startUnlockInline(user, tileEl) {
+    clearUnlockInline();
+    unlockTarget = user;
+    unlockTileEl = tileEl;
+    overlayEl.classList.add('is-unlocking');
+
+    overlayEl.querySelectorAll('.user-gate__tile').forEach((el) => {
+      if (el !== tileEl) el.classList.add('is-dimmed');
+    });
+    tileEl.classList.add('is-unlocking');
+
+    const form = document.createElement('form');
+    form.className = 'user-gate__inline-unlock';
+    form.setAttribute('data-role', 'inline-unlock');
+    form.innerHTML = `
+      <input type="password" name="password" autocomplete="current-password" placeholder="Senha" required />
+      <button type="submit" class="user-gate__enter user-gate__enter--compact">Entrar</button>
+      <p class="user-gate__error" data-role="unlock-error" hidden></p>
+    `;
+    form.addEventListener('submit', onUnlockSubmit);
+    tileEl.appendChild(form);
+    setTimeout(() => form.querySelector('input[name="password"]')?.focus(), 180);
   }
 
   function renderProfiles(users) {
     const grid = overlayEl.querySelector('[data-role="profiles"]');
     if (!grid) return;
+    clearUnlockInline();
     grid.innerHTML = '';
     currentUsers = users.slice();
 
     users.forEach((user) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'user-gate__tile';
-      btn.innerHTML = `
-        <div class="user-gate__tile-face" data-role="face"></div>
-        <p class="user-gate__tile-nick"></p>
+      const wrap = document.createElement('div');
+      wrap.className = 'user-gate__tile';
+      wrap.dataset.userId = user.id;
+      wrap.innerHTML = `
+        <button type="button" class="user-gate__tile-main" data-role="pick">
+          <div class="user-gate__tile-face" data-role="face"></div>
+          <p class="user-gate__tile-nick"></p>
+        </button>
+        <button type="button" class="user-gate__delete" data-role="delete" aria-label="Excluir usuário" title="Excluir">×</button>
       `;
-      btn.querySelector('.user-gate__tile-nick').textContent = user.nickname;
-      fillFace(btn.querySelector('[data-role="face"]'), user);
-      btn.addEventListener('click', () => onPickUser(user));
-      grid.appendChild(btn);
+      wrap.querySelector('.user-gate__tile-nick').textContent = user.nickname;
+      fillFace(wrap.querySelector('[data-role="face"]'), user);
+      wrap.querySelector('[data-role="pick"]').addEventListener('click', () => onPickUser(user, wrap));
+      wrap.querySelector('[data-role="delete"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        onDeleteUser(user);
+      });
+      grid.appendChild(wrap);
     });
 
     const addBtn = document.createElement('button');
@@ -203,13 +216,13 @@
       <div class="user-gate__tile-face">+</div>
       <p class="user-gate__tile-nick">${users.length ? 'Adicionar' : 'Criar perfil'}</p>
     `;
-    addBtn.addEventListener('click', () => enterStage({ mode: 'create' }));
+    addBtn.addEventListener('click', showRegisterView);
     grid.appendChild(addBtn);
   }
 
-  async function onPickUser(user) {
+  async function onPickUser(user, tileEl) {
     if (user.has_password) {
-      enterStage({ mode: 'unlock', user });
+      startUnlockInline(user, tileEl);
       return;
     }
     try {
@@ -223,9 +236,10 @@
 
   async function onUnlockSubmit(e) {
     e.preventDefault();
-    const unlockError = overlayEl.querySelector('[data-role="unlock-error"]');
+    const form = e.target;
+    const unlockError = form.querySelector('[data-role="unlock-error"]');
     if (unlockError) unlockError.hidden = true;
-    const password = new FormData(e.target).get('password');
+    const password = new FormData(form).get('password');
     try {
       await window.UserSession.selectUser(unlockTarget, password);
       finish();
@@ -234,6 +248,21 @@
         unlockError.textContent = err.message || 'Senha incorreta';
         unlockError.hidden = false;
       }
+    }
+  }
+
+  async function onDeleteUser(user) {
+    const ok = window.confirm(
+      `Excluir o perfil "${user.nickname}"?\n\nIsso apaga histórico, favoritos, downloads, senhas e personalizações desse usuário.`
+    );
+    if (!ok) return;
+    try {
+      await window.UserSession.deleteUserCascade(user.id);
+      const users = await window.UsersApi.list();
+      updateUsers(users, users.length ? '' : 'Toque no + para criar o primeiro perfil');
+      showSelectView();
+    } catch (err) {
+      setStatus(err.message || 'Não foi possível excluir o usuário');
     }
   }
 
@@ -247,6 +276,22 @@
     });
   }
 
+  async function onPhotoPick(e) {
+    const file = e.target.files && e.target.files[0];
+    const preview = overlayEl.querySelector('[data-role="photo-preview"]');
+    if (!file) {
+      pendingPhotoDataUrl = null;
+      preview.innerHTML = '+';
+      return;
+    }
+    pendingPhotoDataUrl = await fileToDataUrl(file);
+    preview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = pendingPhotoDataUrl;
+    img.alt = '';
+    preview.appendChild(img);
+  }
+
   async function onCreateSubmit(e) {
     e.preventDefault();
     const formError = overlayEl.querySelector('[data-role="form-error"]');
@@ -254,7 +299,6 @@
     const fd = new FormData(e.target);
     const nickname = String(fd.get('nickname') || '').trim();
     const password = String(fd.get('password') || '');
-    const photoFile = fd.get('photo');
 
     try {
       const user = await window.UserSession.createAndSelect({
@@ -263,9 +307,8 @@
         photo_path: null,
       });
 
-      if (photoFile && photoFile.size && window.DragonUser?.saveAvatarDataUrl) {
-        const dataUrl = await fileToDataUrl(photoFile);
-        const photo_path = await window.DragonUser.saveAvatarDataUrl(user.id, dataUrl);
+      if (pendingPhotoDataUrl && window.DragonUser?.saveAvatarDataUrl) {
+        const photo_path = await window.DragonUser.saveAvatarDataUrl(user.id, pendingPhotoDataUrl);
         const updated = await window.UsersApi.update(user.id, { photo_path });
         await window.UserSession.setActiveUser(updated, { reason: 'photo' });
       }
@@ -280,7 +323,8 @@
   }
 
   function finish() {
-    close();
+    clearUnlockInline();
+    showBootLoader('Carregando seu espaço…');
     if (resolveGate) {
       const done = resolveGate;
       resolveGate = null;
@@ -288,31 +332,45 @@
     }
   }
 
+  function showBootLoader(text) {
+    ensureBuilt();
+    const loader = overlayEl.querySelector('[data-role="boot-loader"]');
+    const label = overlayEl.querySelector('[data-role="boot-loader-text"]');
+    if (label && text) label.textContent = text;
+    if (loader) loader.hidden = false;
+    overlayEl.classList.add('is-booting');
+    overlayEl.classList.add('is-open');
+    overlayEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideBootLoader() {
+    if (!overlayEl) return;
+    const loader = overlayEl.querySelector('[data-role="boot-loader"]');
+    if (loader) loader.hidden = true;
+    overlayEl.classList.remove('is-booting');
+  }
+
   async function open(options = {}) {
     ensureBuilt();
-    leaveStage();
-
-    const title = overlayEl.querySelector('[data-role="title"]');
-    if (title) {
-      title.textContent = options.onboarding ? 'Crie seu perfil' : 'Quem está navegando?';
-    }
+    hideBootLoader();
+    showSelectView();
 
     overlayEl.classList.add('is-open');
     overlayEl.setAttribute('aria-hidden', 'false');
 
     if (options.loading) {
-      setStatus(options.statusText || 'Preparando perfis…');
+      showBootLoader(options.statusText || 'Preparando perfis…');
       renderProfiles([]);
     } else {
       const users = options.users || [];
       setStatus(users.length ? '' : 'Toque no + para criar o primeiro perfil');
-      if (title && !users.length) title.textContent = 'Quem está navegando?';
       renderProfiles(users);
+      if (!users.length && options.onboarding) {
+        // Mantém select com +; não força register automático.
+      }
     }
 
-    if (options.error) {
-      setStatus(options.error);
-    }
+    if (options.error) setStatus(options.error);
 
     return new Promise((resolve) => {
       resolveGate = resolve;
@@ -321,21 +379,34 @@
 
   function updateUsers(users, message) {
     if (!overlayEl) return;
+    hideBootLoader();
+    showSelectView();
     setStatus(message || (users.length ? '' : 'Toque no + para criar o primeiro perfil'));
     renderProfiles(users || []);
   }
 
   function close() {
     if (!overlayEl) return;
-    leaveStage();
-    overlayEl.classList.remove('is-open');
+    clearUnlockInline();
+    hideBootLoader();
+    overlayEl.classList.remove('is-open', 'is-register', 'is-unlocking');
     overlayEl.setAttribute('aria-hidden', 'true');
   }
 
   async function openSwitcher() {
     const users = await window.UsersApi.list();
-    return open({ onboarding: false, users });
+    const user = await open({ onboarding: false, users });
+    close();
+    return user;
   }
 
-  window.UserGate = { open, close, openSwitcher, updateUsers, ensureBuilt };
+  window.UserGate = {
+    open,
+    close,
+    openSwitcher,
+    updateUsers,
+    ensureBuilt,
+    showBootLoader,
+    hideBootLoader,
+  };
 })();

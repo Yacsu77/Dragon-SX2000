@@ -58,13 +58,16 @@
     }
   }
 
-  // Criação centralizada do <webview> (DRY). Usa uma sessão persistente
-  // compartilhada entre todas as abas: reaproveita cache HTTP, cookies e
-  // conexões, acelerando o carregamento — especialmente de sites pesados.
+  // Criação centralizada do <webview> (DRY). Partition por usuário
+  // (`persist:dragon-{userId}`) isola cookies/cache entre perfis.
   function buildWebview(url, tabId) {
     const webview = document.createElement('webview');
     webview.setAttribute('allowpopups', '');
-    webview.setAttribute('partition', 'persist:dragon');
+    const partition =
+      (window.UserSession && typeof window.UserSession.getPartition === 'function'
+        ? window.UserSession.getPartition()
+        : null) || 'persist:dragon-pending';
+    webview.setAttribute('partition', partition);
     webview.dataset.id = tabId;
     webview.src = url;
     return webview;

@@ -5,11 +5,14 @@ function validateCreateHistory(data) {
     throw new ApiError('Dados inválidos', 400);
   }
 
-  const { url, title, favicon_url, transition_type, referrer_url, profile_id, typed_count } = data;
+  const { url, title, favicon_url, transition_type, referrer_url, profile_id, user_id, typed_count } =
+    data;
 
   if (!url || typeof url !== 'string' || url.trim() === '') {
     throw new ApiError('O campo url é obrigatório', 400);
   }
+
+  const resolvedUserId = user_id || profile_id || null;
 
   return {
     url: url.trim(),
@@ -17,13 +20,16 @@ function validateCreateHistory(data) {
     favicon_url: favicon_url || null,
     transition_type: transition_type || 'link',
     referrer_url: referrer_url || null,
-    profile_id: profile_id || null,
+    profile_id: resolvedUserId,
+    user_id: resolvedUserId,
     typed_count: typeof typed_count === 'number' ? typed_count : 0,
   };
 }
 
 function formatHistoryResponse(row) {
   if (!row) return null;
+
+  const userId = row.user_id || row.profile_id || null;
 
   return {
     id: row.id,
@@ -36,7 +42,8 @@ function formatHistoryResponse(row) {
     favicon_url: row.favicon_url,
     transition_type: row.transition_type,
     referrer_url: row.referrer_url,
-    profile_id: row.profile_id,
+    profile_id: userId,
+    user_id: userId,
   };
 }
 

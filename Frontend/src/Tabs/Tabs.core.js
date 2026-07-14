@@ -214,9 +214,9 @@
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     const webview = buildWebview(url, tabId);
-    attachWebviewListeners(webview, tabId, titleSpan);
-
+    // Precisa estar no DOM antes de listeners/activate chamarem APIs do guest.
     insertTabElements(tabButton, webview, referenceTabId);
+    attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, false);
@@ -258,9 +258,8 @@
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     const webview = buildWebview(url, tabId);
-    attachWebviewListeners(webview, tabId, titleSpan);
-
     insertTabElements(tabButton, webview, null);
+    attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
     emitTabCreated(tabId, false);
     if (activate !== false) activateTab(tabId);
@@ -430,9 +429,8 @@
 
     const webview = buildWebview(url, newTabId);
     webview.classList.add('active');
-    attachWebviewListeners(webview, newTabId, titleSpan);
-
     document.getElementById('browser').appendChild(webview);
+    attachWebviewListeners(webview, newTabId, titleSpan);
 
     emitTabCreated(newTabId, false);
     emitTabChanged(newTabId, false);

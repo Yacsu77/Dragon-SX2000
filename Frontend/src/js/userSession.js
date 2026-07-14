@@ -130,18 +130,27 @@
     return selectUser(user, password);
   }
 
+  async function deleteUserCascade(userId) {
+    if (!userId) return null;
+    const wasActive = activeUser?.id === userId;
+    await window.UsersApi.remove(userId);
+    if (window.UserStorage) window.UserStorage.clearUserNamespace(userId);
+    if (window.DragonUser && typeof window.DragonUser.deleteUserData === 'function') {
+      await window.DragonUser.deleteUserData(userId);
+    }
+    if (wasActive) {
+      activeUser = null;
+      localStorage.removeItem(ACTIVE_META_KEY);
+      clearVaultToken();
+      await notifyMainActiveUser(null);
+    }
+    return { id: userId, deleted: true };
+  }
+
   async function deleteActiveUserCascade() {
     const id = getActiveUserId();
-    if (!id) return;
-    await window.UsersApi.remove(id);
-    if (window.UserStorage) window.UserStorage.clearUserNamespace(id);
-    if (window.DragonUser && typeof window.DragonUser.deleteUserData === 'function') {
-      await window.DragonUser.deleteUserData(id);
-    }
-    activeUser = null;
-    localStorage.removeItem(ACTIVE_META_KEY);
-    clearVaultToken();
-    await notifyMainActiveUser(null);
+    if (!id) return null;
+    return deleteUserCascade(id);
   }
 
   window.UserSession = {
@@ -156,6 +165,7 @@
     selectUser,
     createAndSelect,
     switchUser,
+    deleteUserCascade,
     deleteActiveUserCascade,
     lockVaultOnSwitch,
     isBootResolved: () => bootResolved,

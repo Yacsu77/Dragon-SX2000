@@ -745,10 +745,20 @@
     boot();
   }
 
+  function reloadFromStorage() {
+    removeLegacyStyleNodes();
+    applyAllPersisted();
+  }
+
+  document.addEventListener("user:changed", () => {
+    reloadFromStorage();
+  });
+
   window.AutoTuneFactory = {
     open: openFactory,
     close: closeFactory,
     applyAllPersisted,
-    applyPersistedToElement
+    applyPersistedToElement,
+    reloadFromStorage
   };
 })();

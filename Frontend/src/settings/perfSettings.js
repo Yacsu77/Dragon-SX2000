@@ -30,7 +30,7 @@
 
   function load() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -42,7 +42,7 @@
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(state)) : localStorage.setItem(STORAGE_KEY, JSON.stringify(state)));
     } catch (_) { /* ignore */ }
   }
 
@@ -105,4 +105,10 @@
     setRestoreSessionTabs,
     onChange,
   };
+
+  document.addEventListener('user:changed', () => {
+    load();
+    apply();
+    emit();
+  });
 })();

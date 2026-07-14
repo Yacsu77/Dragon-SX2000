@@ -609,6 +609,16 @@
     return document.querySelector('.side-tabs .tab-item[data-idget="customise"]') != null;
   }
 
+  function reloadFromStorage() {
+    // Preferências são lidas via UserStorage a cada getRecord/readStore.
+    // Dispara evento para overlays (radial/search) recarregarem o namespace ativo.
+    document.dispatchEvent(new CustomEvent("customise:reloaded"));
+  }
+
+  document.addEventListener("user:changed", () => {
+    reloadFromStorage();
+  });
+
   window.Customise = {
     open: openCatalog,
     close: closeCatalog,
@@ -616,6 +626,7 @@
     closeFactory,
     getRecord,
     updateRecord,
+    reloadFromStorage,
   };
 
   function boot() {

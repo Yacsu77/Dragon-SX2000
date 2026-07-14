@@ -2,9 +2,12 @@
  * Rastreia navegação nos webviews e persiste na API-DSX.
  */
 (function () {
-  const PROFILE_ID = 'default';
   const DEBOUNCE_MS = 1500;
   const lastRecorded = new Map();
+
+  function activeUserId() {
+    return window.UserSession?.getActiveUserId?.() || null;
+  }
 
   function shouldSkipUrl(url) {
     if (!url) return true;
@@ -24,6 +27,8 @@
 
   async function recordVisit(webview) {
     if (!window.HistoryApi || !webview) return;
+    const userId = activeUserId();
+    if (!userId) return;
 
     let url;
     let title;
@@ -38,9 +43,10 @@
     if (shouldSkipUrl(url)) return;
 
     const now = Date.now();
-    const lastTime = lastRecorded.get(url);
+    const debounceKey = `${userId}:${url}`;
+    const lastTime = lastRecorded.get(debounceKey);
     if (lastTime && now - lastTime < DEBOUNCE_MS) return;
-    lastRecorded.set(url, now);
+    lastRecorded.set(debounceKey, now);
 
     const transitionType = getTransitionType();
     let faviconUrl = null;
@@ -58,7 +64,7 @@
         title: title || url,
         favicon_url: faviconUrl,
         transition_type: transitionType,
-        profile_id: PROFILE_ID,
+        user_id: userId,
         typed_count: transitionType === 'typed' ? 1 : 0,
       });
     } catch (err) {

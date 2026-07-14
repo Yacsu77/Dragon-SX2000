@@ -168,7 +168,8 @@ async function saveState() {
   if (window.DragonWallpaper) {
     try {
       await window.DragonWallpaper.saveState(payload);
-      localStorage.removeItem("wallpaperState");
+      if (window.UserStorage) window.UserStorage.removeItem("wallpaperState");
+      else localStorage.removeItem("wallpaperState");
       if (persistedPath) {
         currentDataUrl = persistedPath;
         currentFilePath = currentType === "video" ? persistedPath : currentFilePath;
@@ -181,8 +182,13 @@ async function saveState() {
   }
 
   try {
-    localStorage.removeItem("wallpaperState");
-    localStorage.setItem("wallpaperState", JSON.stringify(payload));
+    if (window.UserStorage) {
+      window.UserStorage.removeItem("wallpaperState");
+      window.UserStorage.setItem("wallpaperState", JSON.stringify(payload));
+    } else {
+      localStorage.removeItem("wallpaperState");
+      localStorage.setItem("wallpaperState", JSON.stringify(payload));
+    }
     return true;
   } catch (error) {
     setStatus("Nao foi possivel salvar o wallpaper. Armazenamento cheio.");
@@ -240,7 +246,9 @@ async function loadState() {
   }
 
   if (!payload) {
-    const saved = localStorage.getItem("wallpaperState");
+    const saved = window.UserStorage
+      ? window.UserStorage.getItem("wallpaperState")
+      : localStorage.getItem("wallpaperState");
     if (!saved) return;
     try {
       payload = JSON.parse(saved);
@@ -256,6 +264,36 @@ async function loadState() {
     // ignore invalid storage
   }
 }
+
+async function clearBackgroundPreview() {
+  if (previewLayer) previewLayer.innerHTML = "";
+  currentMedia = null;
+  currentDataUrl = null;
+  currentFilePath = null;
+  const background = document.querySelector(".background");
+  const backgroundVideo = document.querySelector(".background-video");
+  if (background) {
+    background.style.backgroundImage = "none";
+  }
+  if (backgroundVideo) {
+    backgroundVideo.pause();
+    backgroundVideo.style.display = "none";
+    const source = backgroundVideo.querySelector("source");
+    if (source) source.src = "";
+  }
+}
+
+async function reloadForUser() {
+  await clearBackgroundPreview();
+  await loadState();
+}
+
+window.WallpaperUserReload = reloadForUser;
+
+document.addEventListener("user:changed", () => {
+  reloadForUser();
+});
+
 
 function setProgress(value) {
   if (!progress || !progressBar || !progressValue) return;

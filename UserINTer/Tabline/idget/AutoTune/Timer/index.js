@@ -10,7 +10,7 @@ window.AutoTuneWidgets = window.AutoTuneWidgets || {};
 
   function loadSettings() {
     try {
-      const raw = localStorage.getItem(POMODORO_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(POMODORO_KEY) : localStorage.getItem(POMODORO_KEY));
       if (!raw) return { ...DEFAULTS };
       const parsed = JSON.parse(raw);
       return {
@@ -23,13 +23,12 @@ window.AutoTuneWidgets = window.AutoTuneWidgets || {};
   }
 
   function saveSettings(settings) {
-    localStorage.setItem(
-      POMODORO_KEY,
-      JSON.stringify({
-        workMinutes: clampMinutes(settings.workMinutes),
-        breakMinutes: clampMinutes(settings.breakMinutes)
-      })
-    );
+    const payload = JSON.stringify({
+      workMinutes: clampMinutes(settings.workMinutes),
+      breakMinutes: clampMinutes(settings.breakMinutes)
+    });
+    if (window.UserStorage) window.UserStorage.setItem(POMODORO_KEY, payload);
+    else localStorage.setItem(POMODORO_KEY, payload);
   }
 
   function formatClock(ms) {

@@ -17,7 +17,7 @@
 
   function readMusicSettings() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       if (!raw) return {};
       const data = JSON.parse(raw);
       return (data && data.music && typeof data.music === "object") ? data.music : {};
@@ -28,13 +28,13 @@
 
   function patchMusicSettings(patch) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       const data = raw ? JSON.parse(raw) : {};
       if (!data.music || typeof data.music !== "object") {
         data.music = { id: "music-minimal", active: false };
       }
       data.music = { ...data.music, ...patch };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(data)) : localStorage.setItem(STORAGE_KEY, JSON.stringify(data)));
     } catch {
       /* ignore */
     }

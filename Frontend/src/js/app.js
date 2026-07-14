@@ -27,12 +27,16 @@ async function reloadForActiveUser() {
 
   if (window.WallpaperUserReload) {
     await window.WallpaperUserReload();
-  } else if (window.DragonWallpaper && typeof window.DragonWallpaper.reloadForUser === 'function') {
-    await window.DragonWallpaper.reloadForUser();
   }
 
   if (window.AutoTune && typeof window.AutoTune.reloadFromStorage === 'function') {
     window.AutoTune.reloadFromStorage();
+  } else if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === 'function') {
+    window.AutoTuneFactory.reloadFromStorage();
+  }
+
+  if (window.Customise && typeof window.Customise.reloadFromStorage === 'function') {
+    window.Customise.reloadFromStorage();
   }
 
   if (window.Favoritos && typeof window.Favoritos.reload === 'function') {
@@ -58,7 +62,6 @@ async function reloadForActiveUser() {
 window.reloadForActiveUser = reloadForActiveUser;
 
 async function waitForUserSelection(bootPromise) {
-  // Mostra o gate imediatamente (evita tela preta enquanto a API sobe).
   const gatePromise = window.UserGate.open({
     loading: true,
     statusText: 'Preparando perfis…',
@@ -73,7 +76,6 @@ async function waitForUserSelection(bootPromise) {
       [],
       'Não foi possível conectar à API local. Aguarde e toque no + quando estiver pronto, ou reinicie o app.'
     );
-    // Ainda permite criar usuário quando a API voltar — polling leve
     const recovered = await recoverBoot();
     boot = recovered;
   }
@@ -101,22 +103,9 @@ async function recoverBoot() {
   return { needsOnboarding: true, needsSwitcher: false, users: [] };
 }
 
-async function initApp() {
-  if (!window.UserSession || !window.UserGate) {
-    console.error('[initApp] UserSession/UserGate indisponíveis');
-    document.body.insertAdjacentHTML(
-      'afterbegin',
-      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#141414;color:#fff;font-family:sans-serif;z-index:999999">Falha ao iniciar DSX. Recarregue o app.</div>'
-    );
-    return;
-  }
-
-  const bootPromise = window.UserSession.resolveForBoot();
-  await waitForUserSelection(bootPromise);
-
-  if (!window.UserSession.getActiveUserId()) {
-    console.error('[initApp] Nenhum usuário ativo após o gate');
-    return;
+async function mountWorkspace() {
+  if (window.UserGate && typeof window.UserGate.showBootLoader === 'function') {
+    window.UserGate.showBootLoader('Carregando seu espaço…');
   }
 
   if (window.Shell && typeof window.Shell.mountAll === 'function') {
@@ -168,6 +157,32 @@ async function initApp() {
     setTimeout(() => updateTabsBarVisibility(), 100);
   }
 
+  if (window.UserGate) {
+    if (typeof window.UserGate.hideBootLoader === 'function') window.UserGate.hideBootLoader();
+    window.UserGate.close();
+  }
+}
+
+async function initApp() {
+  if (!window.UserSession || !window.UserGate) {
+    console.error('[initApp] UserSession/UserGate indisponíveis');
+    document.body.insertAdjacentHTML(
+      'afterbegin',
+      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#07090d;color:#fff;font-family:sans-serif;z-index:999999">Falha ao iniciar DSX. Recarregue o app.</div>'
+    );
+    return;
+  }
+
+  const bootPromise = window.UserSession.resolveForBoot();
+  await waitForUserSelection(bootPromise);
+
+  if (!window.UserSession.getActiveUserId()) {
+    console.error('[initApp] Nenhum usuário ativo após o gate');
+    return;
+  }
+
+  await mountWorkspace();
+
   document.addEventListener('user:changed', async (event) => {
     const previousUserId = event.detail?.previousUserId;
     const reason = event.detail?.reason;
@@ -185,7 +200,7 @@ if (document.readyState === 'loading') {
       console.error(err);
       document.body.insertAdjacentHTML(
         'afterbegin',
-        `<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#141414;color:#fff;font-family:sans-serif;z-index:999999;padding:24px;text-align:center">${
+        `<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#07090d;color:#fff;font-family:sans-serif;z-index:999999;padding:24px;text-align:center">${
           (err && err.message) || 'Erro ao iniciar'
         }</div>`
       );

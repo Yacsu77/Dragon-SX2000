@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const http = require('http');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const fs = require('fs').promises;
 
 let mediaSdkProcess = null;
@@ -66,29 +66,115 @@ function stopMediaSdk() {
  * A API roda em processo separado para:
  *   - Não bloquear o renderer do Electron
  *   - Permitir crashes/restart isolados
- *   - Servir histórico de navegação em http://localhost:3333
+ *   - Servir histórico/usuários em http://localhost:3333
  */
-function isApiDsxRunning() {
+function httpGetJson(urlPath, timeoutMs = 1500) {
   return new Promise((resolve) => {
-    const req = http.get('http://127.0.0.1:3333/health', (res) => {
-      resolve(res.statusCode === 200);
-      res.resume();
+    const req = http.get(`http://127.0.0.1:3333${urlPath}`, (res) => {
+      let body = '';
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        let json = null;
+        try {
+          json = JSON.parse(body);
+        } catch {
+          json = null;
+        }
+        resolve({ status: res.statusCode, json });
+      });
     });
 
-    req.on('error', () => resolve(false));
-    req.setTimeout(1500, () => {
+    req.on('error', () => resolve(null));
+    req.setTimeout(timeoutMs, () => {
       req.destroy();
-      resolve(false);
+      resolve(null);
     });
   });
 }
 
-async function startApiDsx() {
-  if (apiDsxProcess) return;
+/** @returns {'ready'|'stale'|'down'} */
+async function probeApiDsx() {
+  const ready = await httpGetJson('/ready');
+  if (ready && ready.status === 200 && ready.json?.success && ready.json?.features?.includes?.('users')) {
+    return 'ready';
+  }
 
-  if (await isApiDsxRunning()) {
-    console.log('[API-DSX] já em execução em http://localhost:3333');
+  // Fallback: API nova pode não ter cacheado /ready, mas /users existe.
+  const users = await httpGetJson('/users');
+  if (users && users.status === 200 && users.json?.success === true) {
+    return 'ready';
+  }
+
+  const health = await httpGetJson('/health');
+  if (health && health.status === 200) {
+    return 'stale';
+  }
+
+  return 'down';
+}
+
+function freePort3333() {
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      execFile(
+        'cmd',
+        ['/c', 'for /f "tokens=5" %a in (\'netstat -ano ^| findstr :3333 ^| findstr LISTENING\') do taskkill /F /PID %a'],
+        { windowsHide: true },
+        () => resolve()
+      );
+      return;
+    }
+
+    execFile('lsof', ['-ti', 'tcp:3333'], (err, stdout) => {
+      if (err || !stdout) {
+        resolve();
+        return;
+      }
+      const pids = String(stdout)
+        .split(/\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!pids.length) {
+        resolve();
+        return;
+      }
+      execFile('kill', ['-TERM', ...pids], () => {
+        setTimeout(() => {
+          execFile('kill', ['-KILL', ...pids], () => resolve());
+        }, 400);
+      });
+    });
+  });
+}
+
+async function waitForApiReady(timeoutMs = 20000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const status = await probeApiDsx();
+    if (status === 'ready') return true;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return false;
+}
+
+async function startApiDsx() {
+  if (apiDsxProcess) {
+    await waitForApiReady(15000);
     return;
+  }
+
+  const status = await probeApiDsx();
+  if (status === 'ready') {
+    console.log('[API-DSX] já em execução (pronta) em http://localhost:3333');
+    return;
+  }
+
+  if (status === 'stale') {
+    console.warn('[API-DSX] instância antiga detectada (sem /users). Reiniciando…');
+    await freePort3333();
+    await new Promise((r) => setTimeout(r, 500));
   }
 
   const apiEntry = path.join(__dirname, 'Backend', 'API-DSX', 'app.js');
@@ -126,6 +212,13 @@ async function startApiDsx() {
   } catch (err) {
     console.error('[API-DSX] exceção ao iniciar:', err);
     apiDsxProcess = null;
+  }
+
+  const ready = await waitForApiReady(20000);
+  if (ready) {
+    console.log('[API-DSX] pronta em http://localhost:3333');
+  } else {
+    console.warn('[API-DSX] ainda não respondeu /ready a tempo');
   }
 }
 
@@ -338,16 +431,66 @@ ipcMain.handle('files:pickFolder', async () => {
   return result.filePaths[0];
 });
 
-const WALLPAPER_DIR = () => path.join(app.getPath('userData'), 'wallpapers');
-const WALLPAPER_STATE_FILE = () => path.join(WALLPAPER_DIR(), 'state.json');
+const WALLPAPER_DIR = (userId) => {
+  if (userId) return path.join(app.getPath('userData'), 'users', userId, 'wallpaper');
+  return path.join(app.getPath('userData'), 'wallpapers');
+};
+const WALLPAPER_STATE_FILE = (userId) => path.join(WALLPAPER_DIR(userId), 'state.json');
 
-async function ensureWallpaperDir() {
-  await fs.mkdir(WALLPAPER_DIR(), { recursive: true });
+let activeUserId = null;
+
+async function ensureWallpaperDir(userId = activeUserId) {
+  await fs.mkdir(WALLPAPER_DIR(userId), { recursive: true });
 }
 
-ipcMain.handle('wallpaper:readState', async () => {
+async function ensureUserDir(userId) {
+  const dir = path.join(app.getPath('userData'), 'users', userId);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.mkdir(path.join(dir, 'wallpaper'), { recursive: true });
+  await fs.mkdir(path.join(dir, 'avatar'), { recursive: true });
+  return dir;
+}
+
+ipcMain.handle('user:setActive', async (_event, userId) => {
+  activeUserId = userId || null;
+  if (activeUserId) await ensureUserDir(activeUserId);
+  return { ok: true, userId: activeUserId };
+});
+
+ipcMain.handle('user:getActive', () => activeUserId);
+
+ipcMain.handle('user:saveAvatarDataUrl', async (_event, { userId, dataUrl }) => {
+  if (!userId || !dataUrl || !dataUrl.startsWith('data:')) {
+    throw new Error('avatar inválido');
+  }
+  await ensureUserDir(userId);
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error('dataUrl inválido');
+  const mime = match[1];
+  let ext = '.jpg';
+  if (mime.includes('png')) ext = '.png';
+  else if (mime.includes('webp')) ext = '.webp';
+  else if (mime.includes('gif')) ext = '.gif';
+  const destPath = path.join(app.getPath('userData'), 'users', userId, 'avatar', `avatar${ext}`);
+  await fs.writeFile(destPath, Buffer.from(match[2], 'base64'));
+  return destPath;
+});
+
+ipcMain.handle('user:deleteUserData', async (_event, userId) => {
+  if (!userId) return { ok: false };
+  const dir = path.join(app.getPath('userData'), 'users', userId);
   try {
-    const raw = await fs.readFile(WALLPAPER_STATE_FILE(), 'utf8');
+    await fs.rm(dir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+  return { ok: true };
+});
+
+ipcMain.handle('wallpaper:readState', async (_event, payload) => {
+  const userId = (payload && payload.userId) || activeUserId;
+  try {
+    const raw = await fs.readFile(WALLPAPER_STATE_FILE(userId), 'utf8');
     return JSON.parse(raw);
   } catch {
     return null;
@@ -355,23 +498,27 @@ ipcMain.handle('wallpaper:readState', async () => {
 });
 
 ipcMain.handle('wallpaper:saveState', async (_event, payload) => {
-  await ensureWallpaperDir();
-  await fs.writeFile(WALLPAPER_STATE_FILE(), JSON.stringify(payload), 'utf8');
+  const userId = (payload && payload.userId) || activeUserId;
+  const state = payload && payload.state !== undefined ? payload.state : payload;
+  await ensureWallpaperDir(userId);
+  await fs.writeFile(WALLPAPER_STATE_FILE(userId), JSON.stringify(state), 'utf8');
   return true;
 });
 
-ipcMain.handle('wallpaper:importFile', async (_event, { sourcePath, type }) => {
+ipcMain.handle('wallpaper:importFile', async (_event, { sourcePath, type, userId }) => {
   if (!sourcePath) throw new Error('sourcePath obrigatorio');
-  await ensureWallpaperDir();
+  const uid = userId || activeUserId;
+  await ensureWallpaperDir(uid);
   const ext = path.extname(sourcePath) || (type === 'video' ? '.mp4' : '.jpg');
-  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${ext}`);
+  const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${ext}`);
   await fs.copyFile(sourcePath, destPath);
   return destPath;
 });
 
-ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl }) => {
+ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl, userId }) => {
   if (!dataUrl || !dataUrl.startsWith('data:')) throw new Error('dataUrl invalido');
-  await ensureWallpaperDir();
+  const uid = userId || activeUserId;
+  await ensureWallpaperDir(uid);
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error('dataUrl invalido');
   const mime = match[1];
@@ -379,23 +526,93 @@ ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl }) => {
   if (mime.includes('png')) ext = '.png';
   else if (mime.includes('webp')) ext = '.webp';
   else if (mime.includes('gif')) ext = '.gif';
-  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${ext}`);
+  const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${ext}`);
   await fs.writeFile(destPath, Buffer.from(match[2], 'base64'));
   return destPath;
 });
 
-ipcMain.handle('wallpaper:importBlob', async (_event, { buffer, ext }) => {
-  await ensureWallpaperDir();
+ipcMain.handle('wallpaper:importBlob', async (_event, { buffer, ext, userId }) => {
+  const uid = userId || activeUserId;
+  await ensureWallpaperDir(uid);
   const safeExt = ext && ext.startsWith('.') ? ext : '.mp4';
-  const destPath = path.join(WALLPAPER_DIR(), `wallpaper${safeExt}`);
+  const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${safeExt}`);
   await fs.writeFile(destPath, Buffer.from(buffer));
   return destPath;
 });
 
-app.whenReady().then(() => {
+function postDownloadToApi(body, method = 'POST', id = null) {
+  const data = JSON.stringify(body);
+  const urlPath = id ? `/downloads/${id}` : '/downloads';
+  const req = http.request(
+    {
+      hostname: '127.0.0.1',
+      port: 3333,
+      path: urlPath,
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+      },
+    },
+    (res) => {
+      res.resume();
+    }
+  );
+  req.on('error', () => {});
+  req.write(data);
+  req.end();
+}
+
+function attachDownloadTracking(webContents) {
+  try {
+    const ses = webContents.session;
+    if (!ses || ses.__dsxDownloadHooked) return;
+    ses.__dsxDownloadHooked = true;
+
+    ses.on('will-download', (_event, item) => {
+      if (!activeUserId) return;
+      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const startedAt = new Date().toISOString();
+      postDownloadToApi({
+        id,
+        user_id: activeUserId,
+        url: item.getURL(),
+        filename: item.getFilename(),
+        mime: item.getMimeType(),
+        size: item.getTotalBytes() || null,
+        state: 'progressing',
+        save_path: null,
+        started_at: startedAt,
+      });
+
+      item.once('done', (_e, state) => {
+        postDownloadToApi(
+          {
+            filename: item.getFilename(),
+            mime: item.getMimeType(),
+            size: item.getReceivedBytes() || item.getTotalBytes() || null,
+            state,
+            save_path: item.getSavePath(),
+            finished_at: new Date().toISOString(),
+          },
+          'PATCH',
+          id
+        );
+      });
+    });
+  } catch (err) {
+    console.warn('[Downloads] hook falhou:', err.message);
+  }
+}
+
+app.on('web-contents-created', (_event, contents) => {
+  attachDownloadTracking(contents);
+});
+
+app.whenReady().then(async () => {
   setupApplicationMenu();
   startMediaSdk();
-  startApiDsx();
+  await startApiDsx();
   createWindow();
 });
 

@@ -271,6 +271,9 @@
     applySettings(readSettings());
   }
 
+  document.addEventListener("user:changed", reloadFromStore);
+  document.addEventListener("customise:reloaded", reloadFromStore);
+
   window.SearchPalette = {
     open,
     close,

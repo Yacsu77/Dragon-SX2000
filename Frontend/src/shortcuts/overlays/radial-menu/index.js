@@ -363,6 +363,9 @@
     if (isOpen) paintMenu();
   }
 
+  document.addEventListener("user:changed", reloadFromStore);
+  document.addEventListener("customise:reloaded", reloadFromStore);
+
   window.RadialMenu = {
     open: () => openAt(lastPointer.x, lastPointer.y),
     close: () => close(false),

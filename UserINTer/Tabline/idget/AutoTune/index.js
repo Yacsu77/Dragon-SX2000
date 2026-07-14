@@ -913,10 +913,42 @@
     snapshotAll(root);
   });
 
+  function clearWidgets(root) {
+    if (!root) return;
+    root.querySelectorAll(".floating-widget").forEach((el) => el.remove());
+    root.querySelectorAll(".autotune-music-minimal").forEach((el) => el.remove());
+  }
+
+  function reloadFromStorage() {
+    const root = document.getElementById("floating-cosmetics-root");
+    if (!root) return;
+    clearWidgets(root);
+    removeFusion(root);
+    restore(root);
+    syncPanelToggles();
+    syncMusicMinimalPanel();
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
+      window.AutoTuneMusicMinimal.mount(root);
+    }
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
+      window.AutoTuneMusicMinimal.sync();
+    }
+    syncVisibilityFromHome();
+    syncMediaGatedVisibility();
+    if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === "function") {
+      window.AutoTuneFactory.reloadFromStorage();
+    }
+  }
+
+  document.addEventListener("user:changed", () => {
+    reloadFromStorage();
+  });
+
   window.AutoTuneEngine = {
     spawnWidget,
     getContentBounds,
     getSettings: loadSettings,
+    reloadFromStorage,
     splitFusion: () => {
       const root = document.getElementById("floating-cosmetics-root");
       if (!root) return;
@@ -926,5 +958,10 @@
         snapshotAll(root);
       }
     }
+  };
+
+  window.AutoTune = {
+    reloadFromStorage,
+    getSettings: loadSettings,
   };
 })();

@@ -71,7 +71,7 @@
 
   function readStore() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
       if (!raw) return {};
       const parsed = JSON.parse(raw);
       return parsed && typeof parsed === "object" ? parsed : {};
@@ -81,7 +81,7 @@
   }
 
   function writeStore(next) {
-    localStorage.setItem(STORE_KEY, JSON.stringify(next));
+    (window.UserStorage ? window.UserStorage.setItem(STORE_KEY, JSON.stringify(next)) : localStorage.setItem(STORE_KEY, JSON.stringify(next)));
   }
 
   function getRecord(key) {

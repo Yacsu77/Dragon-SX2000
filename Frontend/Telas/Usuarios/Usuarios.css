@@ -1,0 +1,304 @@
+.user-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(80, 30, 40, 0.35), transparent 55%),
+    linear-gradient(180deg, #0b0b0b 0%, #141414 40%, #0f0f0f 100%);
+  color: #fff;
+  font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  padding: 48px 24px;
+  box-sizing: border-box;
+}
+
+.user-gate-overlay.is-open {
+  display: flex;
+}
+
+.user-gate {
+  width: min(1100px, 100%);
+  text-align: center;
+  position: relative;
+  min-height: 420px;
+}
+
+.user-gate__brand {
+  font-size: 0.78rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 1.25rem;
+}
+
+.user-gate__title {
+  margin: 0 0 2.75rem;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.user-gate__status {
+  margin: -1.5rem 0 2rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+}
+
+.user-gate__profiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem 2.25rem;
+  transition: opacity 280ms ease, transform 280ms ease, filter 280ms ease;
+}
+
+.user-gate-overlay.is-staged .user-gate__profiles {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+  filter: blur(2px);
+}
+
+.user-gate-overlay.is-staged .user-gate__title,
+.user-gate-overlay.is-staged .user-gate__brand {
+  opacity: 0.35;
+}
+
+.user-gate__tile {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: 148px;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  transition: transform 180ms ease;
+}
+
+.user-gate__tile:hover,
+.user-gate__tile:focus-visible {
+  transform: translateY(-6px);
+  outline: none;
+}
+
+.user-gate__tile-face {
+  width: 148px;
+  height: 148px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #3a3a3a, #1f1f1f);
+  border: 3px solid transparent;
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  font-size: 3.2rem;
+  font-weight: 600;
+  color: #f5f5f5;
+}
+
+.user-gate__tile:hover .user-gate__tile-face,
+.user-gate__tile:focus-visible .user-gate__tile-face {
+  border-color: #fff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.user-gate__tile-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-gate__tile--add .user-gate__tile-face {
+  background: rgba(255, 255, 255, 0.04);
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 4rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.user-gate__tile--add:hover .user-gate__tile-face {
+  border-color: #fff;
+  color: #fff;
+}
+
+.user-gate__tile-nick {
+  margin: 0;
+  max-width: 148px;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-gate__tile:hover .user-gate__tile-nick {
+  color: #fff;
+}
+
+.user-gate__stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 48px 24px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(28px) scale(0.92);
+  transition: opacity 320ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: rgba(11, 11, 11, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.user-gate-overlay.is-staged .user-gate__stage {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.user-gate__back {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.user-gate__back:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.user-gate__stage-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  animation: userGateRise 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.user-gate__stage-card .user-gate__tile-face {
+  width: 180px;
+  height: 180px;
+  font-size: 4rem;
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+.user-gate__stage-card .user-gate__tile-nick {
+  max-width: 220px;
+  font-size: 1.35rem;
+  color: #fff;
+}
+
+@keyframes userGateRise {
+  from {
+    opacity: 0.4;
+    transform: translateY(40px) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.user-gate__password,
+.user-gate__create {
+  width: min(320px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.user-gate__create label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.user-gate__password input,
+.user-gate__create input[type="text"],
+.user-gate__create input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.user-gate__create input[type="file"] {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.user-gate__enter {
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
+  background: #e50914;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-gate__enter:hover {
+  background: #f6121d;
+}
+
+.user-gate__error {
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 640px) {
+  .user-gate__tile,
+  .user-gate__tile-face {
+    width: 112px;
+  }
+
+  .user-gate__tile-face {
+    height: 112px;
+    font-size: 2.4rem;
+  }
+
+  .user-gate__tile--add .user-gate__tile-face {
+    font-size: 3rem;
+  }
+
+  .user-gate__tile-nick {
+    max-width: 112px;
+    font-size: 0.92rem;
+  }
+
+  .user-gate__stage-card .user-gate__tile-face {
+    width: 140px;
+    height: 140px;
+  }
+}

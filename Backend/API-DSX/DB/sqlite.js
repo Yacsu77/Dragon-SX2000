@@ -158,6 +158,7 @@ async function initializeDatabase() {
 
 module.exports = {
   db,
+  DB_PATH,
   initializeDatabase,
   run,
   get,

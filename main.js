@@ -94,17 +94,25 @@ function httpGetJson(urlPath, timeoutMs = 1500) {
   });
 }
 
+function isApiFromCurrentProject(payload) {
+  if (!payload?.success || !payload?.features?.includes?.('users')) {
+    return false;
+  }
+
+  return path.resolve(payload.project_root || '') === path.resolve(__dirname);
+}
+
 /** @returns {'ready'|'stale'|'down'} */
 async function probeApiDsx() {
   const ready = await httpGetJson('/ready');
-  if (ready && ready.status === 200 && ready.json?.success && ready.json?.features?.includes?.('users')) {
-    return 'ready';
+  if (ready && ready.status === 200 && ready.json?.success) {
+    return isApiFromCurrentProject(ready.json) ? 'ready' : 'stale';
   }
 
-  // Fallback: API nova pode não ter cacheado /ready, mas /users existe.
+  // Uma API sem /ready compatível é antiga ou de outra pasta; libere a porta.
   const users = await httpGetJson('/users');
   if (users && users.status === 200 && users.json?.success === true) {
-    return 'ready';
+    return 'stale';
   }
 
   const health = await httpGetJson('/health');

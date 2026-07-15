@@ -1,8 +1,9 @@
 require('dotenv').config({ quiet: true });
 
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const { initializeDatabase } = require('./DB/sqlite');
+const { initializeDatabase, DB_PATH } = require('./DB/sqlite');
 const { initializeRedis } = require('./DB/redis');
 const historyRoutes = require('./routes/historyRoutes');
 const usersRoutes = require('./routes/usersRoutes');
@@ -13,6 +14,7 @@ const errorHandler = require('./Exceptions/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3333;
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
@@ -25,6 +27,10 @@ app.get('/ready', (req, res) => {
   res.json({
     success: true,
     version: 2,
+    pid: process.pid,
+    project_root: PROJECT_ROOT,
+    api_root: __dirname,
+    db_path: DB_PATH,
     features: ['users', 'history', 'favorites', 'downloads', 'vault'],
   });
 });

@@ -1,10 +1,11 @@
 /**
- * Favoritos — CRUD com localStorage.
+ * Favoritos — CRUD via API-DSX isolado por usuário.
  */
 (function () {
   const TEMPLATE_PATH = 'Favoritos/Favoritos.html';
-  const STORAGE_KEY = window.FAVORITOS_STORAGE_KEY || 'dragon-favoritos-v1';
   const PREVIEW_LIMIT = 6;
+  let cache = [];
+  let cacheUserId = null;
 
   let overlayEl = null;
   let listEl = null;
@@ -15,18 +16,32 @@
   let isOpen = false;
   let isBuilt = false;
 
-  function loadAll() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+  function userId() {
+    return window.UserSession?.getActiveUserId?.() || null;
   }
 
-  function saveAll(items) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  async function syncFromApi() {
+    const uid = userId();
+    if (!uid || !window.FavoritesApi) {
+      cache = [];
+      cacheUserId = null;
+      return cache;
+    }
+    try {
+      cache = await window.FavoritesApi.list(uid);
+      cacheUserId = uid;
+    } catch (err) {
+      console.warn('[Favoritos]', err.message);
+      if (cacheUserId !== uid) cache = [];
+    }
+    return cache;
+  }
+
+  function loadAll() {
+    if (cacheUserId !== userId()) {
+      syncFromApi();
+    }
+    return cache.slice();
   }
 
   function normalizeUrl(url) {
@@ -48,30 +63,63 @@
     });
   }
 
-  function removeByUrl(url) {
+  async function removeByUrl(url) {
     if (!url) return false;
+    const uid = userId();
     const normalized = normalizeUrl(url);
-    const items = loadAll().filter((item) => {
+    if (uid && window.FavoritesApi) {
+      try {
+        await window.FavoritesApi.removeByUrl(uid, normalized);
+      } catch (err) {
+        console.warn('[Favoritos]', err.message);
+      }
+    }
+    cache = cache.filter((item) => {
       try {
         return new URL(normalizeUrl(item.url)).href !== new URL(normalized).href;
       } catch {
         return item.url !== url;
       }
     });
-    saveAll(items);
     return true;
   }
 
-  function toggle(title, url) {
+  async function add(title, url) {
+    const uid = userId();
+    const normalized = normalizeUrl(url);
+    if (!normalized || !uid) return null;
+
+    let item = null;
+    try {
+      item = await window.FavoritesApi.create({
+        user_id: uid,
+        title: title || normalized,
+        url: normalized,
+      });
+    } catch (err) {
+      console.warn('[Favoritos]', err.message);
+      item = {
+        id: `fav-${Date.now()}`,
+        title: title || normalized,
+        url: normalized,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    cache = [item, ...cache.filter((e) => e.url !== item.url)];
+    return item;
+  }
+
+  async function toggle(title, url) {
     const normalized = normalizeUrl(url);
     if (!normalized) return { isFavorite: false };
 
     if (isFavorite(normalized)) {
-      removeByUrl(normalized);
+      await removeByUrl(normalized);
       return { isFavorite: false };
     }
 
-    add(title || normalized, normalized);
+    await add(title || normalized, normalized);
     return { isFavorite: true };
   }
 
@@ -82,6 +130,12 @@
     } catch {
       return '';
     }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
   }
 
   function renderList() {
@@ -119,8 +173,16 @@
         close();
       });
 
-      li.querySelector('[data-role="remove"]').addEventListener('click', () => {
-        saveAll(loadAll().filter((entry) => entry.id !== item.id));
+      li.querySelector('[data-role="remove"]').addEventListener('click', async () => {
+        const uid = userId();
+        if (uid && window.FavoritesApi) {
+          try {
+            await window.FavoritesApi.remove(item.id, uid);
+          } catch (err) {
+            console.warn('[Favoritos]', err.message);
+          }
+        }
+        cache = cache.filter((entry) => entry.id !== item.id);
         renderList();
       });
 
@@ -128,13 +190,7 @@
     });
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-  }
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (!titleInput || !urlInput) return;
 
@@ -142,15 +198,7 @@
     const url = normalizeUrl(urlInput.value);
     if (!title || !url) return;
 
-    const items = loadAll();
-    items.unshift({
-      id: `fav-${Date.now()}`,
-      title,
-      url,
-      createdAt: new Date().toISOString(),
-    });
-    saveAll(items);
-
+    await add(title, url);
     titleInput.value = '';
     urlInput.value = '';
     renderList();
@@ -185,11 +233,11 @@
 
     document.body.appendChild(overlayEl);
     isBuilt = true;
-    renderList();
   }
 
   async function open() {
     await ensureBuilt();
+    await syncFromApi();
     renderList();
     isOpen = true;
     if (window.FavoritosAnim) window.FavoritosAnim.open(overlayEl);
@@ -202,6 +250,7 @@
   }
 
   async function loadPreview() {
+    await syncFromApi();
     const items = loadAll().slice(0, PREVIEW_LIMIT);
     const root = document.createElement('div');
     root.className = 'favoritos-preview';
@@ -221,6 +270,11 @@
     return root;
   }
 
+  async function reload() {
+    await syncFromApi();
+    if (isOpen) renderList();
+  }
+
   window.Favoritos = {
     open,
     close,
@@ -229,15 +283,13 @@
     isFavorite,
     removeByUrl,
     toggle,
-    add(title, url) {
-      const items = loadAll();
-      items.unshift({
-        id: `fav-${Date.now()}`,
-        title,
-        url: normalizeUrl(url),
-        createdAt: new Date().toISOString(),
-      });
-      saveAll(items);
-    },
+    add,
+    reload,
   };
+
+  document.addEventListener('user:changed', () => {
+    cache = [];
+    cacheUserId = null;
+    syncFromApi();
+  });
 })();

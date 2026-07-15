@@ -58,13 +58,16 @@
     }
   }
 
-  // Criação centralizada do <webview> (DRY). Usa uma sessão persistente
-  // compartilhada entre todas as abas: reaproveita cache HTTP, cookies e
-  // conexões, acelerando o carregamento — especialmente de sites pesados.
+  // Criação centralizada do <webview> (DRY). Partition por usuário
+  // (`persist:dragon-{userId}`) isola cookies/cache entre perfis.
   function buildWebview(url, tabId) {
     const webview = document.createElement('webview');
     webview.setAttribute('allowpopups', '');
-    webview.setAttribute('partition', 'persist:dragon');
+    const partition =
+      (window.UserSession && typeof window.UserSession.getPartition === 'function'
+        ? window.UserSession.getPartition()
+        : null) || 'persist:dragon-pending';
+    webview.setAttribute('partition', partition);
     webview.dataset.id = tabId;
     webview.src = url;
     return webview;
@@ -211,9 +214,9 @@
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     const webview = buildWebview(url, tabId);
-    attachWebviewListeners(webview, tabId, titleSpan);
-
+    // Precisa estar no DOM antes de listeners/activate chamarem APIs do guest.
     insertTabElements(tabButton, webview, referenceTabId);
+    attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, false);
@@ -255,9 +258,8 @@
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
     const webview = buildWebview(url, tabId);
-    attachWebviewListeners(webview, tabId, titleSpan);
-
     insertTabElements(tabButton, webview, null);
+    attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
     emitTabCreated(tabId, false);
     if (activate !== false) activateTab(tabId);
@@ -427,9 +429,8 @@
 
     const webview = buildWebview(url, newTabId);
     webview.classList.add('active');
-    attachWebviewListeners(webview, newTabId, titleSpan);
-
     document.getElementById('browser').appendChild(webview);
+    attachWebviewListeners(webview, newTabId, titleSpan);
 
     emitTabCreated(newTabId, false);
     emitTabChanged(newTabId, false);

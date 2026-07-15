@@ -33,7 +33,7 @@
 
   function readSettings() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
       if (!raw) return { ...DEFAULT_SETTINGS };
       const store = JSON.parse(raw);
       const record = store && store[TARGET_KEY];
@@ -270,6 +270,9 @@
   function reloadFromStore() {
     applySettings(readSettings());
   }
+
+  document.addEventListener("user:changed", reloadFromStore);
+  document.addEventListener("customise:reloaded", reloadFromStore);
 
   window.SearchPalette = {
     open,

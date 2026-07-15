@@ -16,13 +16,25 @@ contextBridge.exposeInMainWorld('DragonFiles', {
   pickFolder: () => ipcRenderer.invoke('files:pickFolder'),
 });
 
+contextBridge.exposeInMainWorld('DragonUser', {
+  setActive: (userId) => ipcRenderer.invoke('user:setActive', userId),
+  getActive: () => ipcRenderer.invoke('user:getActive'),
+  saveAvatarDataUrl: (userId, dataUrl) =>
+    ipcRenderer.invoke('user:saveAvatarDataUrl', { userId, dataUrl }),
+  deleteUserData: (userId) => ipcRenderer.invoke('user:deleteUserData', userId),
+});
+
 contextBridge.exposeInMainWorld('DragonWallpaper', {
   getFilePath: (file) => resolveFilePath(file),
-  readState: () => ipcRenderer.invoke('wallpaper:readState'),
-  saveState: (payload) => ipcRenderer.invoke('wallpaper:saveState', payload),
-  importFile: (sourcePath, type) => ipcRenderer.invoke('wallpaper:importFile', { sourcePath, type }),
-  importDataUrl: (dataUrl) => ipcRenderer.invoke('wallpaper:importDataUrl', { dataUrl }),
-  importBlob: (buffer, ext) => ipcRenderer.invoke('wallpaper:importBlob', { buffer, ext }),
+  readState: (userId) => ipcRenderer.invoke('wallpaper:readState', { userId }),
+  saveState: (payload, userId) =>
+    ipcRenderer.invoke('wallpaper:saveState', { state: payload, userId }),
+  importFile: (sourcePath, type, userId) =>
+    ipcRenderer.invoke('wallpaper:importFile', { sourcePath, type, userId }),
+  importDataUrl: (dataUrl, userId) =>
+    ipcRenderer.invoke('wallpaper:importDataUrl', { dataUrl, userId }),
+  importBlob: (buffer, ext, userId) =>
+    ipcRenderer.invoke('wallpaper:importBlob', { buffer, ext, userId }),
 });
 
 contextBridge.exposeInMainWorld('DragonBrowser', {
@@ -40,19 +52,14 @@ contextBridge.exposeInMainWorld('DragonCursorControl', {
 });
 
 contextBridge.exposeInMainWorld('DragonShortcuts', {
-  // Informa ao processo principal quais combos devem ser capturados mesmo
-  // quando o foco está dentro de um site (webview).
   setGlobalCombos: (combos) => {
     const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];
     ipcRenderer.send('shortcuts:set-global-combos', list);
   },
-  // Combos de hold (keydown + keyup), ex.: Alt do menu radial.
   setGlobalHoldCombos: (combos) => {
     const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];
     ipcRenderer.send('shortcuts:set-global-hold-combos', list);
   },
-  // Recebe do main um combo global disparado dentro de um webview.
-  // payload: string (legado) | { combo: string, phase: "down"|"up" }
   onGlobalCombo: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const handler = (_event, payload) => callback(payload);

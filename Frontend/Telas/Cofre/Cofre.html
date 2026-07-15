@@ -1,0 +1,29 @@
+<div class="cofre-screen" data-role="cofre-screen">
+  <header class="cofre-screen__header">
+    <h1 class="cofre-screen__title">Gerenciador de Senhas</h1>
+    <button type="button" class="cofre-screen__close" data-role="close" aria-label="Fechar">×</button>
+  </header>
+  <div class="cofre-screen__body">
+    <section class="cofre-screen__unlock" data-role="unlock-panel">
+      <p data-role="unlock-hint">Desbloqueie o cofre com a senha do perfil ou PIN do cofre.</p>
+      <label>
+        Senha / PIN
+        <input type="password" data-role="unlock-secret" autocomplete="current-password" />
+      </label>
+      <button type="button" class="cofre-screen__btn" data-role="unlock">Desbloquear</button>
+      <button type="button" class="cofre-screen__btn cofre-screen__btn--ghost" data-role="set-pin">Definir PIN do cofre</button>
+      <p class="cofre-screen__error" data-role="unlock-error" hidden></p>
+    </section>
+
+    <section class="cofre-screen__vault" data-role="vault-panel" hidden>
+      <form class="cofre-screen__form" data-role="add-form">
+        <input type="text" name="origin" placeholder="Origem (ex: https://site.com)" required />
+        <input type="text" name="username" placeholder="Usuário" />
+        <input type="password" name="password" placeholder="Senha" required />
+        <button type="submit" class="cofre-screen__btn">Salvar</button>
+      </form>
+      <ul class="cofre-screen__list" data-role="list"></ul>
+      <button type="button" class="cofre-screen__btn cofre-screen__btn--ghost" data-role="lock">Bloquear cofre</button>
+    </section>
+  </div>
+</div>

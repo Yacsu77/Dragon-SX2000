@@ -5,7 +5,7 @@ window.AutoTuneWidgets = window.AutoTuneWidgets || {};
 
   function loadState() {
     try {
-      const raw = localStorage.getItem(TASKLIST_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(TASKLIST_KEY) : localStorage.getItem(TASKLIST_KEY));
       if (!raw) return { tasks: [], activeTaskId: null };
       const parsed = JSON.parse(raw);
       const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
@@ -24,7 +24,7 @@ window.AutoTuneWidgets = window.AutoTuneWidgets || {};
   }
 
   function saveState(state) {
-    localStorage.setItem(TASKLIST_KEY, JSON.stringify(state));
+    (window.UserStorage ? window.UserStorage.setItem(TASKLIST_KEY, JSON.stringify(state)) : localStorage.setItem(TASKLIST_KEY, JSON.stringify(state)));
     window.dispatchEvent(new CustomEvent("autotune:tasklist-updated", { detail: state }));
   }
 

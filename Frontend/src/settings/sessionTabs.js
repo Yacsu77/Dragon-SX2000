@@ -27,7 +27,7 @@
 
   function readSnapshot() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = ((window.UserStorage && window.UserStorage.getItem(STORAGE_KEY)) || null);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.tabs)) return null;
@@ -39,13 +39,13 @@
 
   function writeSnapshot(payload) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(payload)) : localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)));
     } catch (_) { /* ignore */ }
   }
 
   function clear() {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      (window.UserStorage ? window.UserStorage.removeItem(STORAGE_KEY) : localStorage.removeItem(STORAGE_KEY));
     } catch (_) { /* ignore */ }
   }
 

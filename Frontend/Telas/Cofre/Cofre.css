@@ -1,0 +1,130 @@
+.cofre-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 116;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.cofre-screen-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cofre-screen {
+  width: min(560px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 18, 28, 0.94);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  color: #e5e7eb;
+}
+
+.cofre-screen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cofre-screen__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.cofre-screen__close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.cofre-screen__body {
+  padding: 20px;
+}
+
+.cofre-screen__unlock label,
+.cofre-screen__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cofre-screen__unlock input,
+.cofre-screen__form input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: #e5e7eb;
+}
+
+.cofre-screen__btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #3d7ea6;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.cofre-screen__btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.cofre-screen__error {
+  color: #ff8f8f;
+  font-size: 13px;
+}
+
+.cofre-screen__list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.cofre-screen__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cofre-screen__item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cofre-screen__item-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 12px;
+}

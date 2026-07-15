@@ -9,6 +9,8 @@
     { id: 'historico', label: 'Histórico', preview: 'history' },
     { id: 'favoritos', label: 'Favoritos', action: 'favoritos' },
     { id: 'atalhos', label: 'Atalhos', preview: 'shortcuts' },
+    { id: 'cofre', label: 'Senhas', placeholder: 'Gerenciador de senhas protegido por perfil.' },
+    { id: 'usuarios', label: 'Trocar usuário', placeholder: 'Alternar perfil neste aparelho.' },
     { id: 'sobre', label: 'Sobre', placeholder: 'Dragon SX2000 — Navegue com estilo e velocidade.' },
   ];
 
@@ -131,6 +133,20 @@
     if (item.id === 'atalhos') {
       if (window.AtalhosScreen && typeof window.AtalhosScreen.open === 'function') {
         window.AtalhosScreen.open();
+        close();
+      }
+      return;
+    }
+
+    if (item.id === 'cofre') {
+      if (window.CofreScreen) window.CofreScreen.open();
+      close();
+      return;
+    }
+
+    if (item.id === 'usuarios') {
+      if (window.UserGate && typeof window.UserGate.openSwitcher === 'function') {
+        window.UserGate.openSwitcher();
         close();
       }
     }

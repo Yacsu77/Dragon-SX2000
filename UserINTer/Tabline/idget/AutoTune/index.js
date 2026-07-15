@@ -24,9 +24,9 @@
   }
 
   function migrateLegacySettings() {
-    if (localStorage.getItem(SETTINGS_KEY)) return;
+    if ((window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY))) return;
     try {
-      const raw = localStorage.getItem(LEGACY_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(LEGACY_KEY) : localStorage.getItem(LEGACY_KEY));
       if (!raw) return;
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr) || arr.length === 0) return;
@@ -43,8 +43,8 @@
           active: true
         };
       });
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-      localStorage.removeItem(LEGACY_KEY);
+      (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
+      (window.UserStorage ? window.UserStorage.removeItem(LEGACY_KEY) : localStorage.removeItem(LEGACY_KEY));
     } catch {
       /* ignore */
     }
@@ -53,7 +53,7 @@
   function loadSettings() {
     migrateLegacySettings();
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY));
       if (!raw) return emptyState();
       const data = JSON.parse(raw);
       if (!data || typeof data !== "object") return emptyState();
@@ -68,7 +68,7 @@
           h: data.h,
           active: data.active !== false
         };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+        (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
         return next;
       }
 
@@ -101,7 +101,7 @@
   }
 
   function saveSettings(state) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
+    (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(state)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(state)));
   }
 
   function getContentBounds() {
@@ -913,10 +913,42 @@
     snapshotAll(root);
   });
 
+  function clearWidgets(root) {
+    if (!root) return;
+    root.querySelectorAll(".floating-widget").forEach((el) => el.remove());
+    root.querySelectorAll(".autotune-music-minimal").forEach((el) => el.remove());
+  }
+
+  function reloadFromStorage() {
+    const root = document.getElementById("floating-cosmetics-root");
+    if (!root) return;
+    clearWidgets(root);
+    removeFusion(root);
+    restore(root);
+    syncPanelToggles();
+    syncMusicMinimalPanel();
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
+      window.AutoTuneMusicMinimal.mount(root);
+    }
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
+      window.AutoTuneMusicMinimal.sync();
+    }
+    syncVisibilityFromHome();
+    syncMediaGatedVisibility();
+    if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === "function") {
+      window.AutoTuneFactory.reloadFromStorage();
+    }
+  }
+
+  document.addEventListener("user:changed", () => {
+    reloadFromStorage();
+  });
+
   window.AutoTuneEngine = {
     spawnWidget,
     getContentBounds,
     getSettings: loadSettings,
+    reloadFromStorage,
     splitFusion: () => {
       const root = document.getElementById("floating-cosmetics-root");
       if (!root) return;
@@ -926,5 +958,10 @@
         snapshotAll(root);
       }
     }
+  };
+
+  window.AutoTune = {
+    reloadFromStorage,
+    getSettings: loadSettings,
   };
 })();

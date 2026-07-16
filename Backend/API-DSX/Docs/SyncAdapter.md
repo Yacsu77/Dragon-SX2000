@@ -12,7 +12,7 @@ Interface pretendida para sincronização remota. **Não implementada** — loca
  * @property {(handler: Function) => () => void} subscribeRealtime
  */
 
-/** Recursos sincronizáveis: users | history | favorites | downloads | vault_meta */
+/** Recursos sincronizáveis: users | history | favorites | downloads | vault_meta | tab_groups */
 ```
 
 Hoje os Services (`usersService`, `historyService`, …) leem/escrevem SQLite.

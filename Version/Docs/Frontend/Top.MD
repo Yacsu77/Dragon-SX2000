@@ -6,7 +6,7 @@
 
 ## Responsabilidade
 
-Barra de navegação: menu, voltar/avançar, barra de endereço. Orquestrada por `Top.js`.
+Barra de navegação: menu, voltar/avançar, barra de endereço, Music inline e botões da direita. Orquestrada por `Top.js` + `ChromeLayout.js`.
 
 ---
 
@@ -14,23 +14,42 @@ Barra de navegação: menu, voltar/avançar, barra de endereço. Orquestrada por
 
 ```
 Top/
-├── Top.html          ← Markup da nav (montado em #topRoot pelo Shell)
-├── Top.css           ← .nav-bar, .nav-btn, .nav-left/right/center
-├── Top.js            ← Orquestra init + botão Editar
+├── Top.html            ← Markup da nav (grid: esquerda | busca | direita)
+├── Top.css             ← .nav-bar grid 1fr | busca | 1fr; slots de Music
+├── Top.js              ← Orquestra init + botão Editar
+├── ChromeLayout.js     ← Aplica Layout Topo Global (busca, botões, Music, bordas)
 ├── Menu/
-│   ├── Menu.html     ← Estrutura do painel menubar
-│   ├── Menu.css
-│   ├── Menu.js       ← Itens, preview, click Histórico/Favoritos/Atalhos/Editar
-│   └── Menu.anim.js  ← Abrir/fechar, posicionamento
 ├── ButtonGo/
-│   ├── ButtonGo.css
-│   ├── ButtonGo.js   ← goBack(), goForward(), updateNavigationButtons()
-│   └── ButtonGo.anim.js ← Estado disabled/hover
 └── Search/
-    ├── Search.css    ← .address-bar, .address-input
-    ├── Search.js     ← URL vs busca, updateAddressBar() (só webview ativa)
-    └── Search.anim.js ← Focus mostra URL; blur mostra domínio
 ```
+
+**Preferências:** `Frontend/src/settings/chromeLayoutSettings.js` → chave `dragonsx.chrome.layout`
+
+**Customise:** `UserINTer/Tabline/idget/Customise/` → item **Layout Topo Global**
+
+---
+
+## Layout (v1.4)
+
+```
+.nav-bar  (display: grid)
+├── .nav-side--left
+│   ├── .nav-left          (#menuBtn, #backBtn, #forwardBtn)
+│   └── #navMusicSlotLeft  (Music quando position=left)
+├── .nav-center            (#addressBar — sempre no centro)
+└── .nav-side--right
+    ├── #navMusicSlotRight (Music quando position=right)
+    └── .nav-right         (botões de ação)
+```
+
+| Token / dataset | Função |
+|-----------------|--------|
+| `--nav-search-width` | Largura da busca (`260–820px`) |
+| `--nav-music-gap` | Espaço simétrico busca ↔ Music ↔ botões |
+| `body[data-music-position]` | `left` \| `right` \| `bottom` |
+| `body[data-right-slot]` | Sempre `right` (v1.4) |
+
+A coluna do meio do grid é `minmax(0, var(--nav-search-width))`, então o slider do Customise altera o tamanho real da busca.
 
 ---
 
@@ -41,8 +60,11 @@ Top/
 | `#menuBtn` | Menu |
 | `#backBtn`, `#forwardBtn` | ButtonGo |
 | `#addressBar`, `#addressInput` | Search |
+| `#navMusicSlotLeft`, `#navMusicSlotRight` | AutoTune Music minimal |
 | `#downloadBtn`, `#arquivosBtn`, `#newTabBtn`, `#configBtn` | TopActions |
 | `#editarBtn` | Tela Editar (`EditarScreen.open`) |
+
+Ordem dos botões da direita: `rightOrder` em `ChromeLayoutSettings` (arraste no Customise).
 
 ---
 
@@ -50,21 +72,21 @@ Top/
 
 ```js
 window.TopBar = { init() }
+window.ChromeLayout = { init(), apply(), getSettings() }
+window.ChromeLayoutSettings = { read(), write(), update(), reset(), DEFAULTS }
 window.MainMenu = { open(), close(), toggle(), init() }
 window.ButtonGo = { init(), goBack(), goForward(), updateNavigationButtons() }
 window.NavSearch = { init(), handleAddressBar(), updateAddressBar(), clearAddressBar(), getDomainFromUrl() }
-// Legado:
-window.handleAddressBar, window.updateAddressBar, window.updateNavigationButtons
 ```
 
 ---
 
-## CustomEvents escutados
+## CustomEvents
 
-| Módulo | Eventos |
-|--------|---------|
-| ButtonGo | `app:webview-navigated`, `app:tab-changed` |
-| Search | `app:webview-navigated`, `app:tab-changed` |
+| Evento | Quem escuta / emite |
+|--------|---------------------|
+| `chrome-layout:changed` | Emitido por settings; `ChromeLayout.apply` + Music `reposition` |
+| `app:webview-navigated`, `app:tab-changed` | ButtonGo, Search |
 
 ---
 
@@ -82,17 +104,6 @@ Array `MENU_ITEMS`:
 { id: 'sobre', label: 'Sobre', placeholder: '…' }
 ```
 
-| Campo / id | Efeito |
-|------------|--------|
-| `preview: 'history'` | `MiniHistorico.load()` |
-| `preview: 'shortcuts'` | `MiniAtalhos.load()` |
-| `id: 'editar'` (click) | `EditarScreen.open()` |
-| `id: 'atalhos'` (click) | `AtalhosScreen.open()` |
-| `id: 'historico'` (click) | `HistoryScreen.open()` |
-| `action: 'favoritos'` | `Favoritos.open()` |
-
-**Como adicionar item:** incluir objeto em `MENU_ITEMS` + handler em `handleMenuClick()` / `showPreview()`.
-
 ---
 
 ## Search/Search.js
@@ -102,29 +113,24 @@ Array `MENU_ITEMS`:
 - `updateAddressBar()`: sem webview ativa → `clearAddressBar()` (Home sempre limpa)
 - `onWebviewNavigated`: ignora se não for o `webview.active` (evita URL fantasma)
 
-**Mudar motor de busca:** `Home/HomeSearch/HomeSearch.js` → `performSearch()`.
+**Largura:** controlada por `--nav-search-width` (Customise → Busca).
 
-**Mudar placeholder:** `Top/Top.html` → `#addressInput`.
-
-**Prefetch ao digitar:** `js/connectionPrefetch.js` escuta `#addressInput` (feature padrão).
-
----
-
-## ButtonGo/ButtonGo.js
-
-Chama `webview.goBack()` / `goForward()` no webview ativo. Estado sincronizado via `app:webview-navigated`.
-
-Usado também por `shortcuts/actions/navigation-controls/` (`nav-back` / `nav-forward`).
-
-**Mudar aparência disabled:** `ButtonGo.anim.js` → `setButtonState(btn, enabled)`.
+**Prefetch ao digitar:** `js/connectionPrefetch.js` escuta `#addressInput`.
 
 ---
 
 ## Top.js — ordem de init
 
 ```
-ButtonGo → NavSearch → MainMenu → TopDownloads → TopArquivos → TopNewTab → ConfigOverview
+ChromeLayout → ButtonGo → NavSearch → MainMenu → TopDownloads → TopArquivos → TopNewTab → ConfigOverview
 → #editarBtn → EditarScreen.open()
 ```
 
-**Adicionar botão na nav:** editar `Top.html` + handler em `TopActions/` ou direto em `Top.js` + script em `index.html`.
+**Adicionar botão na nav:** editar `Top.html` + handler em `TopActions/` + incluir em `rightOrder` / `rightItems` do Layout Topo Global.
+
+---
+
+## Ver também
+
+- [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD) — release notes
+- [`Autotune.md`](../Autotune.md) — Music minimal e posições

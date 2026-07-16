@@ -10,6 +10,7 @@
 | **Data de lançamento** | Jul/2026 |
 | **Plataforma** | Desktop (Electron) |
 | **Downloads** | [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+| **Sucessor** | [Log v1.4.MD](Log%20v1.4.MD) — lançamento **04/08/2026** em [dragonsx.com.br](https://dragonsx.com.br) |
 
 ---
 
@@ -209,6 +210,7 @@
 | [`js.MD`](../Docs/Frontend/js.MD) | `ConnectionPrefetch`, boot com `PerfSettings` |
 | [`core.MD`](../Docs/Frontend/core.MD) | Token `--content-bg` |
 | [`Inicial.MD`](../Docs/Frontend/Inicial.MD) / [`index.MD`](../Docs/Frontend/index.MD) | Mapa e ordem de scripts atualizados |
+| [`Log v1.4.MD`](Log%20v1.4.MD) | **Próximo release** (04/08/2026 · dragonsx.com.br) |
 | [`Log v1.2.MD`](Log%20v1.2.MD) | Release anterior (refatoração modular Frontend) |
 | [`Log v1.1.MD`](Log%20v1.1.MD) | AutoTune Clock, Factory, histórico API-DSX |
 | [`Log 1.0.MD`](Log%201.0.MD) | Release beta inicial |

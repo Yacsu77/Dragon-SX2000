@@ -149,9 +149,37 @@
       ).data,
   };
 
+  const TabGroupsApi = {
+    list: async (userId) =>
+      (await request(`/tab-groups?user_id=${encodeURIComponent(userId)}`)).data || [],
+    create: async (body) =>
+      (await request('/tab-groups', { method: 'POST', body: JSON.stringify(body) })).data,
+    update: async (id, userId, body) =>
+      (
+        await request(`/tab-groups/${id}?user_id=${encodeURIComponent(userId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        })
+      ).data,
+    remove: async (id, userId) =>
+      (
+        await request(`/tab-groups/${id}?user_id=${encodeURIComponent(userId)}`, {
+          method: 'DELETE',
+        })
+      ).data,
+    replaceTabs: async (id, body) =>
+      (
+        await request(`/tab-groups/${id}/tabs`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        })
+      ).data,
+  };
+
   window.UsersApi = UsersApi;
   window.FavoritesApi = FavoritesApi;
   window.DownloadsApi = DownloadsApi;
   window.VaultApi = VaultApi;
+  window.TabGroupsApi = TabGroupsApi;
   window.DsxApi = { waitForApi, API_BASE };
 })();

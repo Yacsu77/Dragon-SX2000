@@ -22,6 +22,9 @@
   let started = false;
 
   function isEnabled() {
+    if (window.TabGroupsRuntime && window.TabGroupsRuntime.isEnabled()) {
+      return false;
+    }
     return !!(window.PerfSettings && window.PerfSettings.isRestoreSessionTabs());
   }
 

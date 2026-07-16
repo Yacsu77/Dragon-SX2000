@@ -10,6 +10,7 @@ const usersRoutes = require('./routes/usersRoutes');
 const favoritesRoutes = require('./routes/favoritesRoutes');
 const downloadsRoutes = require('./routes/downloadsRoutes');
 const vaultRoutes = require('./routes/vaultRoutes');
+const tabGroupsRoutes = require('./routes/tabGroupsRoutes');
 const errorHandler = require('./Exceptions/errorHandler');
 
 const app = express();
@@ -31,7 +32,7 @@ app.get('/ready', (req, res) => {
     project_root: PROJECT_ROOT,
     api_root: __dirname,
     db_path: DB_PATH,
-    features: ['users', 'history', 'favorites', 'downloads', 'vault'],
+    features: ['users', 'history', 'favorites', 'downloads', 'vault', 'tab-groups'],
   });
 });
 
@@ -40,6 +41,7 @@ app.use('/users', usersRoutes);
 app.use('/favorites', favoritesRoutes);
 app.use('/downloads', downloadsRoutes);
 app.use('/vault', vaultRoutes);
+app.use('/tab-groups', tabGroupsRoutes);
 app.use(errorHandler);
 
 async function startServer() {

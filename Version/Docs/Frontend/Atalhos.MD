@@ -88,4 +88,4 @@ Em `Top/Menu/Menu.js`:
 ## Documentação relacionada
 
 - [`shortcuts.MD`](./shortcuts.MD) — registry e atalhos globais
-- [`Log v1.3.MD`](../../Lançamento/Log%20v1.3.MD) — release notes
+- [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD) · [`Log v1.3.MD`](../../Lançamento/Log%20v1.3.MD) — release notes

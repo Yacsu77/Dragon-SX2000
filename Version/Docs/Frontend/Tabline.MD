@@ -56,7 +56,7 @@ Array `WIDGET_SCRIPTS` (ordem importa):
 |------|------------|------|
 | Wallpaper | `wallpaper` | Link `#wallpaper-widget` |
 | Tema | `tema` | `#temaTabBtn` — ciclo claro/escuro/sistema |
-| Customise | `customise` | Catálogo de personalização (Radial Menu + Factory) |
+| Customise | `customise` | Catálogo (Layout Topo Global, Radial Menu, Factory) |
 | Donate | `donate` | Placeholder |
 | AutoTune | `autotune` | Link `#autotune-widget` |
 
@@ -88,6 +88,7 @@ Click em `.tab-item` alterna classe `.active` (visual apenas; links usam hash).
 |------|-------------|
 | AutoTune | [Autotune.md](../Autotune.md) |
 | Factory | [Factory.md](../Factory.md) |
+| Layout Topo Global | [Top.MD](./Top.MD) · [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) |
 | Novo widget | [NewComponet.md](../NewComponet.md) |
 
 ---

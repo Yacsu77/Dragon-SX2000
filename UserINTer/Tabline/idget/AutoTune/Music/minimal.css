@@ -21,6 +21,41 @@
   transform: translateY(0);
 }
 
+/* Modo inline: entre a busca e os botões da direita */
+.music-minimal-bar--inline {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  bottom: auto;
+  width: auto;
+  z-index: 2;
+  transform: none;
+}
+
+.music-minimal-bar--inline.music-minimal-bar--visible {
+  transform: none;
+}
+
+.music-minimal-bar--inline .music-minimal-move {
+  display: none !important;
+}
+
+.music-minimal-bar--inline .music-minimal-shell {
+  border-radius: 10px;
+  background: rgba(40, 40, 40, 0.45);
+  box-shadow: none;
+}
+
+.music-minimal-bar--inline .music-minimal-inner {
+  width: 156px;
+  padding: 2px 8px 4px;
+}
+
+.nav-music:has(.music-minimal-bar--visible) {
+  min-width: 168px;
+}
+
 /* Grip de movimento — fora à esquerda, só no hover */
 .music-minimal-move {
   position: absolute;

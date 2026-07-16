@@ -95,12 +95,87 @@
     let lastVolumePointerY = null;
     let volumeApplying = false;
 
-    function positionBar(bar) {
-      if (!bar) return;
+    function getMusicPosition() {
+      const fromBody = document.body?.dataset?.musicPosition;
+      if (fromBody === "left" || fromBody === "right" || fromBody === "bottom") return fromBody;
+      const fromSettings = window.ChromeLayoutSettings?.read?.()?.musicPosition;
+      if (fromSettings === "between") return "right";
+      if (fromSettings === "left" || fromSettings === "right" || fromSettings === "bottom") return fromSettings;
+      return "right";
+    }
+
+    function clearInlineSlots(exceptId) {
+      ["navMusicSlotLeft", "navMusicSlotRight"].forEach((id) => {
+        if (id === exceptId) return;
+        const slot = document.getElementById(id);
+        if (!slot) return;
+        slot.setAttribute("aria-hidden", "true");
+        if (barEl && barEl.parentElement === slot) {
+          /* moved elsewhere */
+        }
+      });
+    }
+
+    function mountInline(bar, slotId, position) {
+      const slot = document.getElementById(slotId);
+      if (!slot) return false;
+
+      clearInlineSlots(slotId);
+      bar.classList.add("music-minimal-bar--inline");
+      bar.dataset.musicPosition = position;
+      bar.style.top = "";
+      bar.style.right = "";
+      bar.style.bottom = "";
+      bar.style.left = "";
+      bar.style.width = "";
+      bar.style.position = "";
+      if (bar.parentElement !== slot) slot.appendChild(bar);
+
+      const move = bar.querySelector(".music-minimal-move");
+      if (move) {
+        move.hidden = true;
+        move.style.display = "none";
+      }
+
+      slot.setAttribute("aria-hidden", bar.classList.contains("music-minimal-bar--visible") ? "false" : "true");
+      return true;
+    }
+
+    function mountBottom(bar) {
+      clearInlineSlots(null);
       offsetX = clampOffset(offsetX);
+      bar.classList.remove("music-minimal-bar--inline");
+      bar.dataset.musicPosition = "bottom";
       bar.style.top = `${getTabsBottom()}px`;
       bar.style.right = `${DEFAULT_OFFSET_RIGHT + offsetX}px`;
+      bar.style.bottom = "";
+      bar.style.left = "";
       bar.style.width = `${TOTAL_WIDTH}px`;
+      bar.style.position = "fixed";
+
+      const move = bar.querySelector(".music-minimal-move");
+      if (move) {
+        move.hidden = false;
+        move.style.display = "";
+      }
+
+      if (bar.parentElement !== document.body) {
+        document.body.appendChild(bar);
+      }
+    }
+
+    function positionBar(bar) {
+      if (!bar) return;
+      const position = getMusicPosition();
+
+      if (position === "left") {
+        if (mountInline(bar, "navMusicSlotLeft", "left")) return;
+      }
+      if (position === "right") {
+        if (mountInline(bar, "navMusicSlotRight", "right")) return;
+      }
+
+      mountBottom(bar);
     }
 
     async function sendCommand(action) {
@@ -181,6 +256,13 @@
       const shouldShow = loadMusicMinimal() && hasMedia;
       barEl.classList.toggle("music-minimal-bar--visible", shouldShow);
       barEl.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+      ["navMusicSlotLeft", "navMusicSlotRight"].forEach((id) => {
+        const slot = document.getElementById(id);
+        if (!slot) return;
+        const active = barEl.parentElement === slot && shouldShow;
+        slot.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+      positionBar(barEl);
 
       if (!hasMedia) {
         refs.title.textContent = "Sem mídia";
@@ -263,6 +345,7 @@
 
       moveEl.addEventListener("mousedown", (event) => {
         if (event.button !== 0) return;
+        if (getMusicPosition() !== "bottom") return;
         moveDragActive = true;
         moveDragStartX = event.clientX;
         moveDragStartOffset = offsetX;
@@ -324,6 +407,7 @@
         offsetX = clampOffset(offsetX);
         positionBar(barEl);
       });
+      document.addEventListener("chrome-layout:changed", () => positionBar(barEl));
     }
 
     function mount(root) {
@@ -419,6 +503,7 @@
       mount,
       sync,
       destroy,
+      reposition: () => positionBar(barEl),
       isEnabled: loadMusicMinimal,
       setEnabled: (enabled) => {
         saveMusicMinimal(!!enabled);

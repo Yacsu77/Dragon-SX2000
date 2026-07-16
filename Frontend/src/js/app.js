@@ -2,6 +2,11 @@
  * Bootstrap da aplicação — orquestração global + gate de usuário.
  */
 async function closeAllBrowserTabs() {
+  if (typeof window.clearTabsForGroupSwitch === 'function') {
+    window.clearTabsForGroupSwitch(false);
+    return;
+  }
+
   const tabs = Array.from(document.querySelectorAll('.tab'));
   for (const tab of tabs) {
     const id = tab.dataset.id;
@@ -44,7 +49,9 @@ async function reloadForActiveUser() {
   }
 
   let restored = false;
-  if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
+  if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.reload === 'function') {
+    restored = !!(await window.TabGroupsRuntime.reload());
+  } else if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
     restored = !!window.SessionTabs.restore();
   }
   if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
@@ -138,6 +145,14 @@ async function mountWorkspace() {
     window.SessionTabs.init();
   }
 
+  if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.init === 'function') {
+    await window.TabGroupsRuntime.init();
+  }
+
+  if (window.TabGroupsRender && typeof window.TabGroupsRender.init === 'function') {
+    window.TabGroupsRender.init();
+  }
+
   if (window.Home) await window.Home.init();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -145,12 +160,17 @@ async function mountWorkspace() {
   }
 
   let restored = false;
-  if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
+  if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.restoreActiveGroup === 'function') {
+    restored = !!(await window.TabGroupsRuntime.restoreActiveGroup());
+  } else if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
     restored = !!window.SessionTabs.restore();
   }
 
   if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
     window.AppShell.showHome();
+    if (!document.querySelector('.tab') && typeof window.createHomeTab === 'function') {
+      window.createHomeTab();
+    }
   }
 
   if (typeof updateTabsBarVisibility === 'function') {

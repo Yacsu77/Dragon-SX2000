@@ -29,7 +29,8 @@ Documentação relacionada fora desta pasta:
 - AutoTune / Factory → [Autotune.md](../Autotune.md), [Factory.md](../Factory.md)
 - Regressão manual → [ChecklistRegressao.MD](../ChecklistRegressao.MD)
 - Histórico da refatoração → [TaskPlanejamento.MD](../TaskPlanejamento.MD)
-- Release notes → [Log v1.3.MD](../../Lançamento/Log%20v1.3.MD)
+- Release notes → [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) · [Log v1.3.MD](../../Lançamento/Log%20v1.3.MD)
+- Lançamento 1.4 → **04/08/2026** em [dragonsx.com.br](https://dragonsx.com.br)
 
 ---
 
@@ -41,14 +42,14 @@ Frontend/src/
 ├── core/                   ← Bootstrap, CSS base, AppShell, montagem HTML
 ├── Top/                    ← Barra superior (menu, voltar/avançar, endereço, Editar)
 ├── TopActions/             ← Botões direitos (Downloads, Arquivos, Nova aba, Config)
-├── Tabs/                   ← Sistema de abas + webviews (partition persistente)
+├── Tabs/                   ← Abas + grupos (TabGroups.*) + webviews (partition persistente)
+├── settings/               ← perfSettings + chromeLayoutSettings (Layout Topo Global)
 ├── Tabline/                ← Barra lateral de idgets
 ├── Home/                   ← Área da home tab (transparente / wallpaper)
 ├── Browser/                ← Container webview + eventos + modo perf-render-all
 ├── Favoritos/              ← CRUD de favoritos (localStorage)
 ├── Wallpaper/              ← Markup do painel Wallpaper (lógica em UserINTer/)
-├── settings/               ← Preferências (perfSettings)
-├── js/                     ← Bootstrap, histórico, media bridge, connectionPrefetch
+├── js/                     ← Bootstrap, userApi (TabGroupsApi), histórico, media bridge
 └── shortcuts/              ← Atalhos globais (teclado + mouse + webview)
 
 Frontend/Telas/
@@ -70,11 +71,12 @@ Frontend/MiniTelas/
 | **Shell** (`index.html` + `core/Shell.js`) | Mount points vazios; carrega fragmentos HTML antes do bootstrap |
 | **AppShell** | Alterna home ↔ navegador; emite `app:home-shown` / `app:browser-shown` |
 | **Top + TopActions** | Interação do usuário na barra superior |
-| **Tabs** | CRUD de abas, webviews, drag, animações, visibilidade da barra |
+| **Tabs** | CRUD de abas, grupos (snapshots), webviews, drag, many-tabs, LED |
+| **ChromeLayout** | Layout Topo Global: busca, botões, Music, bordas, opacidade da aba |
 | **Tabline** | Idgets laterais; carrega scripts de `UserINTer/Tabline/idget/` |
 | **Home + Browser** | Área principal: wallpaper (home) ou webview (navegação) |
 | **Favoritos / Telas** | Features fullscreen (Favoritos em `src/`; Downloads/Arquivos/Atalhos/Editar em `Frontend/Telas/`) |
-| **js/ + settings/** | Serviços transversais (histórico API, prefetch, preferências de desempenho) |
+| **js/ + settings/** | Serviços transversais (histórico API, TabGroupsApi, prefetch, Layout Topo Global, desempenho) |
 | **shortcuts/** | Atalhos globais (teclado, mouse extras, sync com webviews) |
 
 ---
@@ -107,6 +109,9 @@ Comunicação entre módulos via `document`:
 | `app:home-shown` | `AppShell.js` | `{}` | AutoTune, HomeSearch.anim |
 | `app:browser-shown` | `AppShell.js` | `{}` | AutoTune, ButtonGo, Search |
 | `app:webview-navigated` | `Browser.js` | `{ url, canGoBack, canGoForward, webview }` | ButtonGo, Search |
+| `chrome-layout:changed` | `chromeLayoutSettings.js` | settings | ChromeLayout, Music minimal |
+| `tab-groups:changed` | `TabGroups.runtime` | `{ groups, activeGroupId }` | TabGroups.render |
+| `tab-groups:active-changed` | `TabGroups.runtime` | `{ activeGroupId, group }` | UI / sync |
 
 Exemplo:
 
@@ -125,13 +130,14 @@ document.addEventListener('app:tab-changed', (e) => {
 2. Browser.init()
 3. CursorControll.init()
 4. Tabline.init()
-5. TopBar.init()            → Menu, ButtonGo, Search, TopActions, #editarBtn
-6. ConnectionPrefetch.init()
-7. PerfSettings.init()
-8. Home.init()
-9. lucide.createIcons()
-10. AppShell.showHome()
-11. updateTabsBarVisibility()
+5. TopBar.init()            → ChromeLayout, Menu, ButtonGo, Search, TopActions, #editarBtn
+6. TabGroupsRuntime.init() + TabGroupsRender.init() + restoreActiveGroup()
+7. ConnectionPrefetch.init()
+8. PerfSettings.init()
+9. Home.init()
+10. lucide.createIcons()
+11. AppShell.showHome()
+12. updateTabsBarVisibility()
 ```
 
 Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
@@ -146,8 +152,10 @@ Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
 | Botão do menu ou itens | `Top/Menu/Menu.js` → array `MENU_ITEMS` |
 | Barra de endereço / busca | `Top/Search/Search.js` |
 | Nova aba, fechar, ativar | `Tabs/Tabs.core.js` |
+| Grupos de abas | `Tabs/TabGroups.*` + API `/tab-groups` |
+| Layout Topo Global / Music no Top | `settings/chromeLayoutSettings.js`, `Top/ChromeLayout.js`, Customise |
 | Drag ou animação de abas | `Tabs/Tabs.reorder.js`, `Tabs/Tabs.anim.js` |
-| Esconder barra com 1 home tab | `Tabs/Tabs.visibility.js` |
+| Many-tabs / LED / opacidade | `Tabs/Tabs.visibility.js` + Customize Abas |
 | Idgets laterais | `Tabline/Tabline.html`, `Tabline/Tabline.js` |
 | Botão Downloads / Arquivos / Config | `TopActions/<Nome>/` |
 | Preferências de desempenho | `Telas/Editar/` + `settings/perfSettings.js` |

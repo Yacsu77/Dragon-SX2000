@@ -292,6 +292,25 @@ Wallpaper e Tema **não** passam pelo catálogo AutoTune. São carregados separa
 
 ---
 
+## Music minimal — posições no Topo Global (v1.4)
+
+Além do widget flutuante clássico, o Music tem o modo **minimal** (`Music/minimal.js` + `minimal.css`):
+
+| Posição | Onde monta | Arraste |
+|---------|------------|---------|
+| `right` (padrão) | `#navMusicSlotRight` (entre busca e botões) | Não |
+| `left` | `#navMusicSlotLeft` (entre nav e busca) | Não |
+| `bottom` | Fixed sob a tabs-bar | Sim (`minimalOffsetX`) |
+
+Controle: **Customise → Layout Topo Global → Music** (`musicPosition` em `dragonsx.chrome.layout`).  
+Valor legado `between` é tratado como `right`.
+
+Persistência complementar em `settingsAUTO.music`: `minimal`, `minimalOffsetX`, `minimalVolumeLevel`.
+
+Espaçamento simétrico busca ↔ Music: CSS var `--nav-music-gap` no Top. Detalhes em [`Top.MD`](./Frontend/Top.MD).
+
+---
+
 ## Referências úteis
 
 | API | Local |
@@ -299,3 +318,4 @@ Wallpaper e Tema **não** passam pelo catálogo AutoTune. São carregados separa
 | `window.AutoTuneEngine.spawnWidget(type, root, layout)` | `AutoTune/index.js` |
 | `window.AutoTuneFactory.applyPersistedToElement(el)` | `Factory/index.js` |
 | `window.setAutoTuneHomeVisible(bool)` | `AutoTune/index.js` |
+| Release v1.4 | [`Log v1.4.MD`](../Lançamento/Log%20v1.4.MD) |

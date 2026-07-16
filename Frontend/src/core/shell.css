@@ -5,3 +5,19 @@
 .browser-container {
   display: none;
 }
+
+#topRoot {
+  order: 10;
+  flex: 0 0 auto;
+}
+
+#tabsRoot {
+  order: 20;
+  flex: 0 0 auto;
+}
+
+#homePage,
+#browser {
+  order: 30;
+}
+

@@ -10,6 +10,10 @@
   --address-bg: rgba(40, 40, 40, 0.3);
   --address-border: rgba(255, 255, 255, 0.1);
   --input-placeholder: #9aa0a6;
+  --nav-search-width: 520px;
+  --chrome-border-rgb: 255, 255, 255;
+  --chrome-border-opacity: 0.15;
+  --active-tab-group-color: #7a8cff;
   /* Fundo opaco da área de conteúdo enquanto o site carrega, para não deixar
      o wallpaper "vazar" atrás de um webview ainda em branco. */
   --content-bg: #ffffff;

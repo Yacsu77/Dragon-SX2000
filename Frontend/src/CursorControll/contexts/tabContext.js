@@ -37,6 +37,36 @@
       },
     });
 
+    if (window.TabGroupsState?.getGroups?.().length) {
+      actions.push({
+        id: 'add-tab-to-group',
+        label: 'Adicionar a grupo...',
+        icon: 'folder-plus',
+        separatorBefore: true,
+        execute: async () => {
+          await window.CursorTabActions?.addTabToGroup(tabId);
+        },
+      });
+
+      actions.push({
+        id: 'move-tab-to-group',
+        label: 'Mover para grupo...',
+        icon: 'folder-input',
+        execute: async () => {
+          await window.CursorTabActions?.moveTabToGroup(tabId);
+        },
+      });
+
+      actions.push({
+        id: 'create-group-from-tab',
+        label: 'Criar grupo com esta aba',
+        icon: 'folder-plus',
+        execute: async () => {
+          await window.CursorTabActions?.createGroupFromTab(tabId);
+        },
+      });
+    }
+
     if (!isHomeTab && hasUrl) {
       actions.push({
         id: 'copy-tab-url',

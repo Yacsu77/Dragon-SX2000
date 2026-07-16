@@ -75,6 +75,35 @@ const CREATE_STATEMENTS = [
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`,
+
+  `CREATE TABLE IF NOT EXISTS tab_groups (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    icon TEXT,
+    position INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS tab_group_tabs (
+    id TEXT PRIMARY KEY,
+    group_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    runtime_tab_id TEXT,
+    url TEXT,
+    title TEXT,
+    favicon_url TEXT,
+    is_home INTEGER DEFAULT 0,
+    active INTEGER DEFAULT 0,
+    position INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES tab_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
 ];
 
 const CREATE_INDEXES = [
@@ -87,6 +116,10 @@ const CREATE_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_favorites_user_url ON favorites(user_id, url)',
   'CREATE INDEX IF NOT EXISTS idx_password_vault_user_id ON password_vault(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_groups_user_id ON tab_groups(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_groups_user_position ON tab_groups(user_id, position)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_group_tabs_group_position ON tab_group_tabs(group_id, position)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_group_tabs_user_id ON tab_group_tabs(user_id)',
 ];
 
 function run(sql, params = []) {

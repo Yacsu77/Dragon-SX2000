@@ -1,6 +1,6 @@
 .address-bar {
   width: 100%;
-  max-width: 600px;
+  max-width: 100%;
   height: 36px;
   background: var(--address-bg);
   backdrop-filter: blur(30px) saturate(200%) brightness(110%);

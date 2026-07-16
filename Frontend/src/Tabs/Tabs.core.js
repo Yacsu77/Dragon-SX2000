@@ -273,7 +273,6 @@
     }
 
     const tabs = Array.from(document.querySelectorAll('.tab'));
-    const currentIndex = tabs.findIndex((tab) => tab.classList.contains('active'));
     const targetIndex = tabs.findIndex((tab) => tab.dataset.id === tabId);
     if (targetIndex === -1) return;
 
@@ -287,15 +286,7 @@
     // intervalo — o que causava o "flash" do fundo e a lentidão percebida.
     finishActivateBrowserTab(targetTab, targetWebview, tabId);
 
-    // Animação apenas cosmética dos botões da barra; não bloqueia o conteúdo.
-    if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
-      window.TabsAnim.animateTabTransition({
-        currentIndex,
-        targetIndex,
-        tabs,
-        onComplete: () => restoreActiveTabButton(targetTab),
-      });
-    }
+    restoreActiveTabButton(targetTab);
   }
 
   function closeTab(tabId) {
@@ -333,6 +324,15 @@
     tabButton.classList.add('tab');
     tabButton.dataset.id = tabId;
 
+    const closeBtn = document.createElement('span');
+    closeBtn.classList.add('tab-close');
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeTab(tabId);
+    };
+    tabButton.appendChild(closeBtn);
+
     const iconSpan = document.createElement('span');
     iconSpan.classList.add('tab-icon');
     setDefaultTabIcon(iconSpan);
@@ -342,15 +342,6 @@
     titleSpan.classList.add('tab-title');
     titleSpan.textContent = 'New Tab';
     tabButton.appendChild(titleSpan);
-
-    const closeBtn = document.createElement('span');
-    closeBtn.classList.add('tab-close');
-    closeBtn.innerHTML = '×';
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeTab(tabId);
-    };
-    tabButton.appendChild(closeBtn);
 
     tabButton.onclick = () => activateHomeTab(tabId);
 
@@ -367,25 +358,14 @@
 
   function activateHomeTab(tabId) {
     const tabs = Array.from(document.querySelectorAll('.tab'));
-    const currentIndex = tabs.findIndex((tab) => tab.classList.contains('active'));
     const targetIndex = tabs.findIndex((tab) => tab.dataset.id === tabId);
     if (targetIndex === -1) return;
 
     const tab = tabs[targetIndex];
     if (!tab) return;
 
-    // Mostra a home imediatamente (evita a área de conteúdo vazia durante a
-    // animação). A animação da barra fica apenas cosmética.
     finishActivateHomeTab(tab, tabId);
-
-    if (currentIndex !== -1 && currentIndex !== targetIndex && window.TabsAnim) {
-      window.TabsAnim.animateTabTransition({
-        currentIndex,
-        targetIndex,
-        tabs,
-        onComplete: () => restoreActiveTabButton(tab),
-      });
-    }
+    restoreActiveTabButton(tab);
   }
 
   function updateTabIcon(tabId, faviconUrl) {
@@ -410,6 +390,76 @@
     }
 
     faviconImg.src = faviconUrl;
+  }
+
+  function getTabUrl(tabId) {
+    const webview = document.querySelector(`webview[data-id="${tabId}"]`);
+    if (!webview) return null;
+    try {
+      return (typeof webview.getURL === 'function' && webview.getURL()) || webview.src || null;
+    } catch {
+      return webview.src || null;
+    }
+  }
+
+  function getTabSnapshot(tabId, position = 0) {
+    const tab = document.querySelector(`.tab[data-id="${tabId}"]`);
+    if (!tab) return null;
+
+    const isHomeTab = tabId.startsWith('home-tab');
+    const titleEl = tab.querySelector('.tab-title');
+    const faviconImg = tab.querySelector('.tab-icon img');
+    const url = isHomeTab ? null : getTabUrl(tabId);
+    if (!isHomeTab && (!url || url === 'about:blank')) return null;
+
+    return {
+      runtime_tab_id: tabId,
+      is_home: isHomeTab,
+      url,
+      title: titleEl ? titleEl.textContent.trim() : null,
+      favicon_url: faviconImg?.src || null,
+      active: tab.classList.contains('active'),
+      position,
+    };
+  }
+
+  function getOpenTabSnapshots() {
+    return Array.from(document.querySelectorAll('#tabs .tab'))
+      .map((tab, index) => getTabSnapshot(tab.dataset.id || '', index))
+      .filter(Boolean);
+  }
+
+  function createTabFromSnapshot(snapshot, activate = false, referenceTabId = null) {
+    if (!snapshot) return null;
+    if (snapshot.is_home || snapshot.isHomeTab) {
+      return createHomeTab(activate);
+    }
+
+    const url = snapshot.url;
+    if (!url) return null;
+
+    const id = referenceTabId
+      ? createTabAfter(referenceTabId, url, snapshot.title || null, null, activate)
+      : createTab(url, snapshot.title || null, null, activate);
+
+    if (id && snapshot.favicon_url) {
+      updateTabIcon(id, snapshot.favicon_url);
+    }
+    return id;
+  }
+
+  function clearTabsForGroupSwitch(showHome = false) {
+    document.querySelectorAll('#tabs .tab').forEach((tab) => tab.remove());
+    document.querySelectorAll('#browser webview').forEach((view) => view.remove());
+    state.currentActiveTab = null;
+    window.currentActiveTab = null;
+
+    if (showHome) {
+      window.showHome();
+    }
+
+    document.dispatchEvent(new CustomEvent('app:tabs-cleared'));
+    afterTabLayoutUpdate();
   }
 
   function convertHomeTabToNormalTab(tabId, url, title = null) {
@@ -455,6 +505,10 @@
     activateHomeTab,
     updateTabIcon,
     convertHomeTabToNormalTab,
+    getTabSnapshot,
+    getOpenTabSnapshots,
+    createTabFromSnapshot,
+    clearTabsForGroupSwitch,
   };
 
   window.createTab = createTab;
@@ -466,4 +520,7 @@
   window.activateHomeTab = activateHomeTab;
   window.updateTabIcon = updateTabIcon;
   window.convertHomeTabToNormalTab = convertHomeTabToNormalTab;
+  window.getOpenTabSnapshots = getOpenTabSnapshots;
+  window.createTabFromSnapshot = createTabFromSnapshot;
+  window.clearTabsForGroupSwitch = clearTabsForGroupSwitch;
 })();

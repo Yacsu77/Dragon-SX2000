@@ -1,12 +1,56 @@
 /**
  * Visibilidade da barra de abas e ponto "+" (nova aba).
+ * Com 7+ abas, a ativa mantém a largura equivalente a 1/5 do container
+ * e as demais dividem o espaço restante para preencher a barra.
  */
 (function () {
+  const MANY_TABS_THRESHOLD = 7;
+  const REFERENCE_TAB_COUNT = 5;
+  const INACTIVE_MIN_WIDTH = 36;
+
+  function resetTabSizing(tabsContainer) {
+    if (!tabsContainer) return;
+    tabsContainer.classList.remove('many-tabs');
+    tabsContainer.style.removeProperty('--many-active-tab-width');
+    tabsContainer.style.removeProperty('--many-inactive-tab-width');
+    tabsContainer.querySelectorAll('.tab').forEach((tab) => {
+      tab.style.minWidth = '';
+      tab.style.maxWidth = '';
+      tab.style.width = '';
+      tab.style.flexGrow = '';
+      tab.style.flexShrink = '';
+      tab.style.flexBasis = '';
+    });
+  }
+
+  /**
+   * Largura que cada aba teria com 5 abas ocupando o container.
+   * Usada como alvo da aba selecionada quando há 7+.
+   */
+  function computeActiveWidthForManyTabs(containerWidth, tabCount) {
+    if (containerWidth <= 0 || tabCount < MANY_TABS_THRESHOLD) return null;
+
+    const referenceWidth = Math.floor(containerWidth / REFERENCE_TAB_COUNT);
+    const inactiveCount = Math.max(1, tabCount - 1);
+    const maxActive = Math.max(96, containerWidth - inactiveCount * INACTIVE_MIN_WIDTH);
+
+    return Math.max(96, Math.min(referenceWidth, maxActive));
+  }
+
+  function ensureLedRing(tab) {
+    if (!tab || tab.querySelector('.tab-led-ring')) return;
+    const ring = document.createElement('span');
+    ring.className = 'tab-led-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    tab.insertBefore(ring, tab.firstChild);
+  }
+
   function updateLastTabDot() {
     document.querySelectorAll('.new-tab-dot').forEach((dot) => dot.remove());
 
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach((tab) => {
+      ensureLedRing(tab);
       const titleSpan = tab.querySelector('.tab-title');
 
       if (!tab.querySelector('.new-tab-dot')) {
@@ -40,60 +84,69 @@
   function updateTabsBarVisibility() {
     const tabsBar = document.querySelector('.tabs-bar');
     const tabs = document.querySelectorAll('.tab');
+    const hasGroupsButton = Boolean(document.getElementById('tabGroupsBtn'));
 
-    if (tabs.length === 1 && tabs[0].dataset.id && tabs[0].dataset.id.startsWith('home-tab')) {
+    if (!hasGroupsButton && tabs.length === 1 && tabs[0].dataset.id && tabs[0].dataset.id.startsWith('home-tab')) {
       if (tabsBar) tabsBar.classList.add('hidden');
     } else if (tabsBar) {
       tabsBar.classList.remove('hidden');
     }
 
     const tabsContainer = document.querySelector('.tabs');
-    if (!tabsContainer || tabs.length === 0) return;
+    if (!tabsContainer) return;
+    if (tabs.length === 0) {
+      resetTabSizing(tabsContainer);
+      return;
+    }
 
     tabsContainer.offsetHeight;
 
-    const activeTab = tabsContainer.querySelector('.tab.active');
-    if (activeTab) {
-      const containerWidth = tabsContainer.offsetWidth;
-      const activeTabWidth = activeTab.offsetWidth;
-      const activeTabPercentage = containerWidth > 0 ? (activeTabWidth / containerWidth) * 100 : 0;
+    const containerWidth = tabsContainer.clientWidth;
+    const shouldCondense = tabs.length >= MANY_TABS_THRESHOLD;
 
-      if (activeTabPercentage < 15 && containerWidth > 0) {
-        tabsContainer.classList.add('many-tabs');
-        const minWidthPixels = containerWidth * 0.15;
-        activeTab.style.minWidth = `${minWidthPixels}px`;
-        activeTab.style.flexShrink = '0';
-        activeTab.style.flexGrow = '0';
-
-        tabsContainer.querySelectorAll('.tab:not(.active)').forEach((tab) => {
-          tab.style.minWidth = '';
-          tab.style.maxWidth = '';
-          tab.style.width = '';
-          tab.style.flexGrow = '';
-          tab.style.flexShrink = '';
-        });
-      } else {
-        tabsContainer.classList.remove('many-tabs');
-        activeTab.style.minWidth = '';
-        activeTab.style.flexShrink = '';
-        activeTab.style.flexGrow = '';
-
-        tabsContainer.querySelectorAll('.tab:not(.active)').forEach((tab) => {
-          tab.style.minWidth = '';
-          tab.style.maxWidth = '';
-          tab.style.width = '';
-          tab.style.flexGrow = '';
-          tab.style.flexShrink = '';
-        });
-      }
-    } else {
-      const containerWidth = tabsContainer.offsetWidth;
-      if (containerWidth > 0) {
-        const estimatedTabWidth = containerWidth / tabs.length;
-        const estimatedPercentage = (estimatedTabWidth / containerWidth) * 100;
-        tabsContainer.classList.toggle('many-tabs', estimatedPercentage < 15);
-      }
+    if (!shouldCondense) {
+      resetTabSizing(tabsContainer);
+      return;
     }
+
+    const activeWidth = computeActiveWidthForManyTabs(containerWidth, tabs.length);
+    if (!activeWidth) {
+      resetTabSizing(tabsContainer);
+      return;
+    }
+
+    const inactiveCount = Math.max(1, tabs.length - 1);
+    const remaining = Math.max(0, containerWidth - activeWidth);
+    // Divide o espaço restante igualmente — sem teto artificial, para preencher a barra.
+    const inactiveWidth = Math.max(INACTIVE_MIN_WIDTH, Math.floor(remaining / inactiveCount));
+    const leftover = Math.max(0, remaining - inactiveWidth * inactiveCount);
+
+    tabsContainer.classList.add('many-tabs');
+    tabsContainer.style.setProperty('--many-active-tab-width', `${activeWidth}px`);
+    tabsContainer.style.setProperty('--many-inactive-tab-width', `${inactiveWidth}px`);
+
+    let inactiveIndex = 0;
+    tabsContainer.querySelectorAll('.tab').forEach((tab) => {
+      ensureLedRing(tab);
+      if (tab.classList.contains('active')) {
+        tab.style.minWidth = `${activeWidth}px`;
+        tab.style.maxWidth = `${activeWidth}px`;
+        tab.style.width = `${activeWidth}px`;
+        tab.style.flexBasis = `${activeWidth}px`;
+        tab.style.flexGrow = '0';
+        tab.style.flexShrink = '0';
+      } else {
+        // Distribui 1px extra nos primeiros itens para fechar o espaço restante.
+        const width = inactiveWidth + (inactiveIndex < leftover ? 1 : 0);
+        inactiveIndex += 1;
+        tab.style.minWidth = `${width}px`;
+        tab.style.maxWidth = `${width}px`;
+        tab.style.width = `${width}px`;
+        tab.style.flexBasis = `${width}px`;
+        tab.style.flexGrow = '0';
+        tab.style.flexShrink = '0';
+      }
+    });
   }
 
   function scheduleVisibilityUpdate() {
@@ -112,6 +165,7 @@
     updateLastTabDot,
     updateTabsBarVisibility,
     scheduleVisibilityUpdate,
+    computeActiveWidthForManyTabs,
   };
 
   window.updateTabsBarVisibility = updateTabsBarVisibility;

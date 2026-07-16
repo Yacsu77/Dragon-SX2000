@@ -141,6 +141,8 @@ async function deleteUser(id) {
   await run('DELETE FROM downloads WHERE user_id = ?', [id]);
   await run('DELETE FROM favorites WHERE user_id = ?', [id]);
   await run('DELETE FROM password_vault WHERE user_id = ?', [id]);
+  await run('DELETE FROM tab_group_tabs WHERE user_id = ?', [id]);
+  await run('DELETE FROM tab_groups WHERE user_id = ?', [id]);
   await run('DELETE FROM users WHERE id = ?', [id]);
 
   return { id, deleted: true };

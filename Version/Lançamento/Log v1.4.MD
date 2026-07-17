@@ -58,7 +58,8 @@
 | **Acabamento** | Cor e intensidade das bordas do chrome |
 | **Abas (Customise)** | Opacidade da aba ativa + borda LED animada |
 
-**Arquivos:** `UserINTer/Tabline/idget/Customise/`, `Frontend/src/settings/chromeLayoutSettings.js`, `Frontend/src/Top/ChromeLayout.js`, `Top.html` / `Top.css`
+**Arquivos:** `UserINTer/Tabline/idget/Customise/components/topoGlobal/`, `chromeLayoutSettings.js`, `ChromeLayout.js`, `Top.html` / `Top.css`  
+**Arquitetura:** ver [`Customise.md`](../Docs/Customise.md) (Factory + Adapters por componente)
 
 ---
 
@@ -145,6 +146,7 @@
 | [`Top.MD`](../Docs/Frontend/Top.MD) | Grid do Top, Music slots, ChromeLayout |
 | [`Tabs.MD`](../Docs/Frontend/Tabs.MD) | Grupos de abas, many-tabs, LED |
 | [`Autotune.md`](../Docs/Autotune.md) | Music minimal e posições no Topo Global |
+| [`Customise.md`](../Docs/Customise.md) | Customise modular (Factory + Adapters) |
 | [`Inicial.MD`](../Docs/Frontend/Inicial.MD) / [`index.MD`](../Docs/Frontend/index.MD) | Mapa e scripts atualizados |
 | [`DB.md`](../../Backend/API-DSX/Docs/DB.md) | Tabelas `tab_groups` / `tab_group_tabs` |
 | [`Log v1.3.MD`](Log%20v1.3.MD) | Release anterior |

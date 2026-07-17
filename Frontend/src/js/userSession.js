@@ -5,6 +5,7 @@
   const ACTIVE_META_KEY = 'dsx.activeUserId';
   let activeUser = null;
   let vaultToken = null;
+  let profileSecret = null;
   let bootResolved = false;
 
   function getActiveUserId() {
@@ -27,6 +28,19 @@
     vaultToken = null;
   }
 
+  /** Senha do perfil em memória (auto-unlock do vault no fluxo de senhas). */
+  function getProfileSecret() {
+    return profileSecret;
+  }
+
+  function setProfileSecret(secret) {
+    profileSecret = secret || null;
+  }
+
+  function clearProfileSecret() {
+    profileSecret = null;
+  }
+
   function getPartition() {
     const id = getActiveUserId();
     return id ? `persist:dragon-${id}` : 'persist:dragon-pending';
@@ -42,10 +56,25 @@
     }
   }
 
+  async function unlockVaultWithSecret(userId, secret) {
+    if (!userId || !secret || !window.VaultApi?.unlock) return false;
+    try {
+      const result = await window.VaultApi.unlock(userId, secret);
+      setVaultToken(result.token);
+      try {
+        window.PasswordBus?.notify?.('vault:unlocked', {});
+      } catch (_) { /* ignore */ }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function setActiveUser(user, options = {}) {
     const previousId = activeUser?.id || null;
     activeUser = user ? { ...user } : null;
     clearVaultToken();
+    if (!options.keepProfileSecret) clearProfileSecret();
 
     if (activeUser?.id) {
       localStorage.setItem(ACTIVE_META_KEY, activeUser.id);
@@ -56,6 +85,7 @@
       }
     } else {
       localStorage.removeItem(ACTIVE_META_KEY);
+      clearProfileSecret();
     }
 
     await notifyMainActiveUser(activeUser?.id || null);
@@ -79,6 +109,7 @@
       /* ignore */
     }
     clearVaultToken();
+    clearProfileSecret();
   }
 
   /**
@@ -110,18 +141,24 @@
 
     if (user.has_password) {
       const result = await window.UsersApi.unlock(user.id, password);
-      await setActiveUser(result.user, { reason: 'unlock' });
+      setProfileSecret(password);
+      await setActiveUser(result.user, { reason: 'unlock', keepProfileSecret: true });
+      // Sistema de senhas segue direto; Cofre visual permanece trancado.
+      await unlockVaultWithSecret(result.user.id, password);
       return result.user;
     }
 
     await window.UsersApi.unlock(user.id, null);
+    clearProfileSecret();
     await setActiveUser(user, { reason: 'select' });
     return user;
   }
 
   async function createAndSelect(payload) {
     const user = await window.UsersApi.create(payload);
-    await setActiveUser(user, { reason: 'create' });
+    if (payload?.password) setProfileSecret(payload.password);
+    await setActiveUser(user, { reason: 'create', keepProfileSecret: Boolean(payload?.password) });
+    if (payload?.password) await unlockVaultWithSecret(user.id, payload.password);
     return user;
   }
 
@@ -142,6 +179,7 @@
       activeUser = null;
       localStorage.removeItem(ACTIVE_META_KEY);
       clearVaultToken();
+      clearProfileSecret();
       await notifyMainActiveUser(null);
     }
     return { id: userId, deleted: true };
@@ -160,6 +198,7 @@
     getVaultToken,
     setVaultToken,
     clearVaultToken,
+    getProfileSecret,
     setActiveUser,
     resolveForBoot,
     selectUser,

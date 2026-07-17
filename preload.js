@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const path = require('path');
 
 function resolveFilePath(file) {
   if (!file) return null;
@@ -49,6 +50,17 @@ contextBridge.exposeInMainWorld('DragonBrowser', {
 contextBridge.exposeInMainWorld('DragonCursorControl', {
   createWindow: (url) => ipcRenderer.invoke('cursor:create-window', { url }),
   consumePendingUrl: () => ipcRenderer.invoke('cursor:consume-pending-url'),
+});
+
+contextBridge.exposeInMainWorld('DragonPasswords', {
+  formDetectorPreload: path.join(
+    __dirname,
+    'Frontend',
+    'src',
+    'Passwords',
+    'detection',
+    'formDetector.preload.js'
+  ),
 });
 
 contextBridge.exposeInMainWorld('DragonShortcuts', {

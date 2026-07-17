@@ -133,6 +133,10 @@ async function mountWorkspace() {
 
   if (window.TopBar) window.TopBar.init();
 
+  if (window.PasswordManager && typeof window.PasswordManager.init === 'function') {
+    window.PasswordManager.init();
+  }
+
   if (window.ConnectionPrefetch && typeof window.ConnectionPrefetch.init === 'function') {
     window.ConnectionPrefetch.init();
   }

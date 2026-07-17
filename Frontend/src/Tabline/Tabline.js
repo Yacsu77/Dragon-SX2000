@@ -4,10 +4,32 @@
 (function () {
   const TEMPLATE_PATH = 'Tabline/Tabline.html';
 
+  const CUSTOMISE_BASE = '../../UserINTer/Tabline/idget/Customise';
   const WIDGET_SCRIPTS = [
     '../../UserINTer/Tabline/idget/Wallpaper/index.js',
     '../../UserINTer/Tabline/idget/Tema/index.js',
-    '../../UserINTer/Tabline/idget/Customise/index.js',
+    // Customise — core → adapters → factory → components → shell → API
+    `${CUSTOMISE_BASE}/core/keys.js`,
+    `${CUSTOMISE_BASE}/core/utils.js`,
+    `${CUSTOMISE_BASE}/adapters/storageAdapter.js`,
+    `${CUSTOMISE_BASE}/adapters/runtimeAdapter.js`,
+    `${CUSTOMISE_BASE}/adapters/settingsAdapterRegistry.js`,
+    `${CUSTOMISE_BASE}/core/store.js`,
+    `${CUSTOMISE_BASE}/factory/registry.js`,
+    `${CUSTOMISE_BASE}/factory/shared/dragList.js`,
+    `${CUSTOMISE_BASE}/components/radialMenu/defaults.js`,
+    `${CUSTOMISE_BASE}/components/radialMenu/geometry.js`,
+    `${CUSTOMISE_BASE}/components/radialMenu/preview.js`,
+    `${CUSTOMISE_BASE}/components/radialMenu/editor.js`,
+    `${CUSTOMISE_BASE}/components/searchPalette/defaults.js`,
+    `${CUSTOMISE_BASE}/components/searchPalette/preview.js`,
+    `${CUSTOMISE_BASE}/components/searchPalette/editor.js`,
+    `${CUSTOMISE_BASE}/components/topoGlobal/defaults.js`,
+    `${CUSTOMISE_BASE}/components/topoGlobal/meta.js`,
+    `${CUSTOMISE_BASE}/components/topoGlobal/preview.js`,
+    `${CUSTOMISE_BASE}/components/topoGlobal/editor.js`,
+    `${CUSTOMISE_BASE}/core/shell.js`,
+    `${CUSTOMISE_BASE}/index.js`,
     '../../UserINTer/Tabline/idget/AutoTune/Timer/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Share/index.js',

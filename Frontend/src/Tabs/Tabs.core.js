@@ -153,6 +153,10 @@
     if (window.CursorMouseEventService) {
       window.CursorMouseEventService.attachWebviewEvents(webview);
     }
+
+    if (window.PasswordWebviewAdapter && typeof window.PasswordWebviewAdapter.attach === 'function') {
+      window.PasswordWebviewAdapter.attach(webview, tabId);
+    }
   }
 
   function insertTabElements(tabButton, webview, referenceTabId) {

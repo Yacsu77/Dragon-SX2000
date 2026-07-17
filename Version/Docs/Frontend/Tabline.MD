@@ -88,7 +88,8 @@ Click em `.tab-item` alterna classe `.active` (visual apenas; links usam hash).
 |------|-------------|
 | AutoTune | [Autotune.md](../Autotune.md) |
 | Factory | [Factory.md](../Factory.md) |
-| Layout Topo Global | [Top.MD](./Top.MD) · [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) |
+| Customise | [Customise.md](../Customise.md) |
+| Layout Topo Global | [Top.MD](./Top.MD) · [Customise.md](../Customise.md) · [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) |
 | Novo widget | [NewComponet.md](../NewComponet.md) |
 
 ---

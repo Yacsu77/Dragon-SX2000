@@ -25,7 +25,8 @@ Top/
 
 **Preferências:** `Frontend/src/settings/chromeLayoutSettings.js` → chave `dragonsx.chrome.layout`
 
-**Customise:** `UserINTer/Tabline/idget/Customise/` → item **Layout Topo Global**
+**Customise:** `UserINTer/Tabline/idget/Customise/` → item **Layout Topo Global**  
+Detalhes da arquitetura: [`Customise.md`](../Customise.md)
 
 ---
 

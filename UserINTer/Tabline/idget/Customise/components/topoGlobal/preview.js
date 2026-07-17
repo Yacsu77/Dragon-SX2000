@@ -16,12 +16,23 @@
     return Math.max(72, Math.ceil(tabsH + navH + 8));
   }
 
-  function setTopoGlobalMode(overlay, enabled) {
+  /**
+   * @param {HTMLElement|null} overlay
+   * @param {boolean} enabled
+   * @param {{ remeasure?: boolean }} [options]
+   *   remeasure=false mantém o clearance já definido (evita o painel “pular”
+   *   quando Music/botões alteram a altura real do topo).
+   */
+  function setTopoGlobalMode(overlay, enabled, options = {}) {
     if (!overlay) return;
     overlay.classList.toggle("is-topo-global", Boolean(enabled));
     document.body.classList.toggle("customise-topo-editing", Boolean(enabled));
     if (enabled) {
-      overlay.style.setProperty("--topo-clearance", `${measureTopoClearance()}px`);
+      const shouldRemeasure =
+        options.remeasure !== false || !overlay.style.getPropertyValue("--topo-clearance");
+      if (shouldRemeasure) {
+        overlay.style.setProperty("--topo-clearance", `${measureTopoClearance()}px`);
+      }
     } else {
       overlay.style.removeProperty("--topo-clearance");
     }

@@ -150,6 +150,7 @@
 
 .customise-factory-modal {
   width: min(1120px, 97vw);
+  height: min(85vh, 780px);
   max-height: min(92vh, 900px);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(11, 15, 29, 0.98), rgba(6, 11, 24, 0.98));
@@ -204,6 +205,7 @@
   padding: 16px 18px 20px;
   overflow: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 0;
 }
 
 .customise-factory-panel {
@@ -417,7 +419,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .customise-factory-preview-header {
@@ -429,7 +431,7 @@
 
 .customise-factory-preview-stage {
   flex: 1;
-  min-height: 420px;
+  min-height: 0;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
@@ -641,7 +643,10 @@
   pointer-events: all;
   width: 100%;
   max-width: none;
+  /* Altura fixa: troca de seção (Busca/Botões/…) não empurra o topo real */
+  height: calc(100vh - var(--topo-clearance, 88px));
   max-height: calc(100vh - var(--topo-clearance, 88px));
+  min-height: calc(100vh - var(--topo-clearance, 88px));
   border-radius: 22px 22px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom: none;
@@ -658,13 +663,22 @@ body.customise-topo-editing .nav-bar {
 
 .customise-factory-body--topo {
   grid-template-columns: minmax(300px, 0.85fr) minmax(420px, 1.15fr);
+  height: 100%;
+  min-height: 0;
 }
 
 .customise-topo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding-top: 12px;
 }
 
 .customise-topo-hero {
+  flex-shrink: 0;
   padding: 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -674,12 +688,14 @@ body.customise-topo-editing .nav-bar {
 }
 
 .customise-topo-section {
-  margin-top: 4px;
+  flex: 1 1 auto;
+  margin-top: 0;
   padding: 14px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
-  min-height: 220px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .customise-topo-section h4 {
@@ -759,6 +775,11 @@ body.customise-topo-editing .nav-bar {
 }
 
 .customise-topo-preview-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   background:
     radial-gradient(circle at 70% 0%, rgba(122, 140, 255, 0.1), transparent 40%),
     rgba(0, 0, 0, 0.12);
@@ -766,10 +787,12 @@ body.customise-topo-editing .nav-bar {
 }
 
 .customise-topo-stage {
+  flex: 1 1 auto;
   align-items: stretch;
   justify-content: stretch;
   padding: 18px;
-  min-height: 300px;
+  min-height: 0;
+  overflow: auto;
   background:
     linear-gradient(180deg, rgba(20, 24, 36, 0.35), rgba(8, 10, 18, 0.55));
 }

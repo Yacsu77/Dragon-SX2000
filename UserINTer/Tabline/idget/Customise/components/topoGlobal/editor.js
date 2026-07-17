@@ -61,7 +61,8 @@
       draft.rightSlot = "right";
       draft.musicPosition = TopoGlobalComponent.normalizeMusicPosition(draft.musicPosition);
       draft = Store.updateRecord(Keys.CHROME, draft);
-      TopoGlobalPreview.setTopoGlobalMode(overlay, true);
+      // Não re-mede o topo a cada save — altura do painel fica estável.
+      TopoGlobalPreview.setTopoGlobalMode(overlay, true, { remeasure: false });
     }
 
     function drawPreview() {

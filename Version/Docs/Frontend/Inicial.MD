@@ -27,6 +27,7 @@ Guia de referência do código em `Frontend/src/` após a refatoração v1.2.
 Documentação relacionada fora desta pasta:
 
 - AutoTune / Factory → [Autotune.md](../Autotune.md), [Factory.md](../Factory.md)
+- Customise (Factory + Adapters) → [Customise.md](../Customise.md)
 - Regressão manual → [ChecklistRegressao.MD](../ChecklistRegressao.MD)
 - Histórico da refatoração → [TaskPlanejamento.MD](../TaskPlanejamento.MD)
 - Release notes → [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) · [Log v1.3.MD](../../Lançamento/Log%20v1.3.MD)

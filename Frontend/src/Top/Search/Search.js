@@ -3,6 +3,7 @@
  */
 (function () {
   let fullUrl = '';
+  let smartController = null;
 
   function getDomainFromUrl(url) {
     try {
@@ -26,6 +27,10 @@
   function handleAddressBar() {
     const addressInput = document.getElementById('addressInput');
     if (!addressInput) return;
+    if (smartController) {
+      smartController.submit();
+      return;
+    }
 
     const input = addressInput.value.trim();
     if (!input) return;
@@ -119,17 +124,15 @@
       });
     }
 
-    if (addressInput) {
-      addressInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleAddressBar();
-        }
-      });
-    }
-
     if (window.SearchAnim) {
       window.SearchAnim.bindFocusBlur(addressInput, getFullUrl, getDomainFromUrl);
+    }
+    if (addressInput && window.SmartSearch) {
+      smartController = window.SmartSearch.attach(addressInput, {
+        mount: document.querySelector('.nav-search-wrap') || addressBar,
+        // O painel abre abaixo da barra de abas, nunca por cima dela.
+        avoid: '#tabsRoot',
+      });
     }
 
     document.addEventListener('app:webview-navigated', onWebviewNavigated);

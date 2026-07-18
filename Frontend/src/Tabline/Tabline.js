@@ -24,6 +24,8 @@
     `${CUSTOMISE_BASE}/components/searchPalette/defaults.js`,
     `${CUSTOMISE_BASE}/components/searchPalette/preview.js`,
     `${CUSTOMISE_BASE}/components/searchPalette/editor.js`,
+    `${CUSTOMISE_BASE}/components/smartSearch/defaults.js`,
+    `${CUSTOMISE_BASE}/components/smartSearch/editor.js`,
     `${CUSTOMISE_BASE}/components/topoGlobal/defaults.js`,
     `${CUSTOMISE_BASE}/components/topoGlobal/meta.js`,
     `${CUSTOMISE_BASE}/components/topoGlobal/preview.js`,

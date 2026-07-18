@@ -142,6 +142,19 @@
     return window.VaultApi.reveal(id, userId, token);
   }
 
+  async function updateMeta(id, meta) {
+    const userId = getUserId();
+    const token = getToken();
+    if (!userId || !token || !window.VaultApi?.update) {
+      throw new Error('Vault locked or unavailable');
+    }
+    return window.VaultApi.update(id, {
+      user_id: userId,
+      token,
+      meta: meta || {},
+    });
+  }
+
   /**
    * Garante sessão do vault para o sistema de senhas (não abre o Cofre).
    * Usa a senha do perfil se ainda estiver em cache curta, ou token existente.
@@ -176,6 +189,7 @@
     hasCredential,
     create,
     reveal,
+    updateMeta,
     ensureUnlocked,
     isUnlocked,
   };

@@ -161,10 +161,27 @@
     }
   }
 
+  async function fillAndSubmitActive(username, password) {
+    const webview = document.querySelector('webview.active');
+    if (!webview) return false;
+    await inject(webview);
+    const u = JSON.stringify(String(username || ''));
+    const p = JSON.stringify(String(password || ''));
+    try {
+      return !!(await webview.executeJavaScript(
+        `window.__DSX_PASSWORD__ && window.__DSX_PASSWORD__.fillAndSubmit(${u}, ${p})`,
+        true
+      ));
+    } catch (_) {
+      return false;
+    }
+  }
+
   window.PasswordWebviewAdapter = {
     attach,
     applyPreload,
     fillActive,
+    fillAndSubmitActive,
     inject,
   };
 })();

@@ -27,12 +27,20 @@ app.get('/health', (req, res) => {
 app.get('/ready', (req, res) => {
   res.json({
     success: true,
-    version: 2,
+    version: 3,
     pid: process.pid,
     project_root: PROJECT_ROOT,
     api_root: __dirname,
     db_path: DB_PATH,
-    features: ['users', 'history', 'favorites', 'downloads', 'vault', 'tab-groups'],
+    features: [
+      'users',
+      'history',
+      'favorites',
+      'downloads',
+      'vault',
+      'tab-groups',
+      'smart-suggestions',
+    ],
   });
 });
 

@@ -11,6 +11,7 @@
   let usedInVisit = false;
   let lastDraft = null;
   let publishTimer = null;
+  let automatedSubmitInProgress = false;
 
   function emit(type, detail) {
     try {
@@ -323,9 +324,44 @@
     return true;
   }
 
+  function fillAndSubmit(username, password) {
+    if (!fillCredentials(username, password)) return false;
+    const passwords = findPasswordInputs();
+    if (!passwords.length) return false;
+    const form = passwords[0].closest('form');
+    automatedSubmitInProgress = true;
+    armPendingLogin('dsx-autologin');
+
+    try {
+      if (form && typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        const scope = form || document;
+        const submit = Array.from(
+          scope.querySelectorAll('button, input[type="submit"], input[type="button"], [role="button"]')
+        ).find(isSubmitLike);
+        if (!submit) {
+          automatedSubmitInProgress = false;
+          clearPendingLogin();
+          return false;
+        }
+        submit.click();
+      }
+    } catch (_) {
+      automatedSubmitInProgress = false;
+      clearPendingLogin();
+      return false;
+    }
+    setTimeout(function () {
+      automatedSubmitInProgress = false;
+    }, 500);
+    return true;
+  }
+
   window.__DSX_PASSWORD__ = {
     scan: publish,
     fill: fillCredentials,
+    fillAndSubmit,
     markUsed: function () {
       usedInVisit = true;
       lastSignature = '';
@@ -340,6 +376,7 @@
       const form = event.target;
       if (!(form instanceof HTMLFormElement)) return;
       if (!form.querySelector('input[type="password"]')) return;
+      if (automatedSubmitInProgress) return;
       armPendingLogin('form-submit');
     },
     true
@@ -350,6 +387,7 @@
     function (event) {
       if (!findPasswordInputs().length) return;
       if (!isSubmitLike(event.target)) return;
+      if (automatedSubmitInProgress) return;
       setTimeout(function () {
         armPendingLogin('button-click');
       }, 0);

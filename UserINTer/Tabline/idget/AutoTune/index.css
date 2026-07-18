@@ -257,6 +257,10 @@
   user-select: none;
 }
 
+.floating-widget[data-widget-type="share"] {
+  overflow: visible;
+}
+
 .floating-widget-header {
   padding: 8px 10px;
   font-size: 11px;

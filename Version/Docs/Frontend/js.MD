@@ -88,7 +88,14 @@ window.ConnectionPrefetch = { init(), hint(raw) }
 
 Endpoints da API-DSX para histórico de navegação.
 
+```js
+HistoryApi.smartSuggestions(query)   // { sites, google } — Busca Inteligente
+```
+
 **Mudar URL da API:** constantes de base URL no arquivo.
+
+Ver [`BuscaInteligente.md`](../BuscaInteligente.md) para o fluxo completo de
+sugestões e autocomplete.
 
 ---
 

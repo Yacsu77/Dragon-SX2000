@@ -18,6 +18,8 @@
 
 - **Grupos de abas** por usuário (API + UI + sincronização de snapshots)
 - **Layout Topo Global** no Customise (busca, botões, Music, acabamento, abas)
+- **Busca Inteligente** compartilhada (topo, AutoTune, Shortcuts) com autocomplete por domínio e sugestões do Google
+- **Gerenciador de senhas** estilo Safari (Observer) com login automático por formulário e por URL
 - **Music minimal** com posições: esquerda, direita (entre busca e botões) ou embaixo
 - Barra de abas mais estável: destaque, condensação com 7+, borda LED opcional
 - Isolamento correto da API SQLite (evita processo stale / `SQLITE_READONLY`)
@@ -60,6 +62,27 @@
 
 **Arquivos:** `UserINTer/Tabline/idget/Customise/components/topoGlobal/`, `chromeLayoutSettings.js`, `ChromeLayout.js`, `Top.html` / `Top.css`  
 **Arquitetura:** ver [`Customise.md`](../Docs/Customise.md) (Factory + Adapters por componente)
+
+---
+
+### Busca Inteligente (topo · AutoTune · Shortcuts)
+
+| Item | Descrição |
+|---|---|
+| **Núcleo** | `SmartSearch.attach()` / `SmartSearch.navigate()` compartilhado pelos três buscadores |
+| **Fontes** | Histórico (frecência) · logins do Vault · sessões ativas · sugestões do Google |
+| **Sites visitados** | Até 2 recomendações, os mais acessados |
+| **Google** | 5 sugestões com recomendação local, 7 sem — via `client=gws-wiz` (igual google.com), fallback `client=chrome` |
+| **Autocomplete** | Observa o domínio: `senac` → `senac.br`, `yo` → `youtube.com`; `Enter` entra na URL real |
+| **Navegação** | Topo e AutoTune usam a **aba atual**; Shortcuts abre **aba nova** |
+| **Login automático** | Navegar por URL arma tentativa de preenchimento por 20s (integra Password Manager) |
+| **Privacidade** | `session:listKnownOrigins` expõe só origens com sessão, nunca cookies |
+| **UI** | Painel 10% maior; posiciona-se abaixo das abas; animação “descida”; borda LED RGB ou 1 cor |
+| **Customise** | Item **Buscadores** (`dragonsx.smart-search`): borda, opacidade, fonte, animação |
+| **API** | `GET /history/suggestions` → `{ sites, google }`; feature `smart-suggestions` no `/ready` |
+
+**Arquivos:** `Frontend/src/search/SmartSearch.*`, `Backend/API-DSX/Services/historyService.js`, `Backend/API-DSX/DB/redis.js`, `UserINTer/Tabline/idget/Customise/components/smartSearch/`, `Top/Search/Search.js`, `shortcuts/overlays/search-palette/`, `AutoTune/Share/index.js`  
+**Documentação:** ver [`BuscaInteligente.md`](../Docs/BuscaInteligente.md)
 
 ---
 
@@ -134,6 +157,7 @@
 |---|---|---|
 | **Grupos de abas** | SQLite `tab_groups` / `tab_group_tabs` | Nome, cor, ícone, posição, abas (url/title/favicon/home/active) |
 | **Layout Topo Global** | `dragonsx.chrome.layout` | Busca, botões (`rightItems`/`rightOrder`), Music, bordas, opacidade/LED |
+| **Busca Inteligente** | `customiseSettings['dragonsx.smart-search']` + Redis `smart-search:rank:{userId}` | Borda/opacidade/fonte/animação + ranking de URLs por frecência |
 | **AutoTune Music minimal** | `settingsAUTO.music` | `minimal`, `minimalOffsetX`, `minimalVolumeLevel` |
 | **Demais módulos** | Sem alteração em relação à v1.3 | Ver [`Log v1.3.MD`](Log%20v1.3.MD) |
 
@@ -147,6 +171,7 @@
 | [`Tabs.MD`](../Docs/Frontend/Tabs.MD) | Grupos de abas, many-tabs, LED |
 | [`Autotune.md`](../Docs/Autotune.md) | Music minimal e posições no Topo Global |
 | [`Customise.md`](../Docs/Customise.md) | Customise modular (Factory + Adapters) |
+| [`BuscaInteligente.md`](../Docs/BuscaInteligente.md) | Busca inteligente, autocomplete e sugestões |
 | [`Inicial.MD`](../Docs/Frontend/Inicial.MD) / [`index.MD`](../Docs/Frontend/index.MD) | Mapa e scripts atualizados |
 | [`DB.md`](../../Backend/API-DSX/Docs/DB.md) | Tabelas `tab_groups` / `tab_group_tabs` |
 | [`Log v1.3.MD`](Log%20v1.3.MD) | Release anterior |

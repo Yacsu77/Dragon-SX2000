@@ -50,6 +50,14 @@
     return result.data || [];
   }
 
+  async function smartSuggestions(query, userId = null) {
+    const params = new URLSearchParams({ q: query });
+    const uid = userId || activeUserId();
+    if (uid) params.set('user_id', uid);
+    const result = await request(`/history/suggestions?${params.toString()}`);
+    return result.data || { sites: [], google: [] };
+  }
+
   async function fetchHistoryById(id) {
     const result = await request(`/history/${id}`);
     return result.data;
@@ -83,6 +91,7 @@
     API_BASE,
     fetchHistory,
     searchHistory,
+    smartSuggestions,
     fetchHistoryById,
     deleteHistoryItem,
     clearAllHistory,

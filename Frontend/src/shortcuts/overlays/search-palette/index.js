@@ -25,6 +25,7 @@
   let inputEl = null;
   let formEl = null;
   let submitEl = null;
+  let smartController = null;
   let isOpen = false;
   let lastFocusEl = null;
   let focusTimer = null;
@@ -130,36 +131,25 @@
     inputEl = rootEl.querySelector('[data-role="input"]');
     formEl = rootEl.querySelector('[data-role="form"]');
     submitEl = rootEl.querySelector('[data-role="submit"]');
+    if (window.SmartSearch) {
+      smartController = window.SmartSearch.attach(inputEl, {
+        mount: rootEl.querySelector('.shortcut-search-palette__shell'),
+        onNavigate: (url, title) => {
+          close();
+          if (typeof window.createTab === "function") window.createTab(url, title);
+          else window.open(url, "_blank");
+        },
+      });
+    }
 
     rootEl.querySelector('[data-role="backdrop"]').addEventListener("click", () => close());
     formEl.addEventListener("submit", onSubmit);
     applySettings(readSettings());
   }
 
-  function looksLikeUrl(value) {
-    return value.includes(".") && !value.includes(" ");
-  }
-
-  function normalizeUrl(value) {
-    if (/^https?:\/\//i.test(value)) return value;
-    return `https://${value}`;
-  }
-
   function runSearch(raw) {
-    let url;
-    let title;
-    if (looksLikeUrl(raw)) {
-      url = normalizeUrl(raw);
-    } else {
-      url = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
-      title = `Busca: ${raw}`;
-    }
-
-    if (typeof window.createTab === "function") {
-      window.createTab(url, title);
-    } else {
-      window.open(url, "_blank");
-    }
+    // O Shortcuts é o único buscador que abre em aba nova.
+    return window.SmartSearch?.navigate?.(raw, { newTab: true });
   }
 
   function onSubmit(event) {
@@ -170,13 +160,12 @@
 
     const raw = (inputEl && inputEl.value ? inputEl.value : "").trim();
 
-    // Fecha primeiro para a UI sumir mesmo se a abertura da aba falhar.
-    close();
-
     if (!raw) return;
 
     try {
-      runSearch(raw);
+      if (smartController) smartController.submit();
+      else runSearch(raw);
+      close();
     } catch (err) {
       console.warn("[SearchPalette] falha ao buscar:", err);
     }
@@ -234,6 +223,7 @@
       rootEl.classList.remove("is-open");
       rootEl.setAttribute("aria-hidden", "true");
     }
+    smartController?.close?.();
     if (inputEl) {
       inputEl.blur();
       inputEl.value = "";

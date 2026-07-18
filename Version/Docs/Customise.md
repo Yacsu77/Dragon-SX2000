@@ -35,6 +35,7 @@ Customise/
 └── components/
     ├── radialMenu/           ← defaults, geometry, preview, editor
     ├── searchPalette/        ← defaults, preview, editor
+    ├── smartSearch/          ← defaults, editor (painel da Busca Inteligente)
     └── topoGlobal/           ← defaults, meta, preview, editor
 ```
 
@@ -101,6 +102,7 @@ Eventos: `customise:settings-changed`, `customise:reloaded`.
 | `customise-radial-menu` | Radial Menu |
 | `customise-search-palette` | Search Palette |
 | `dragonsx.chrome.layout` | Layout Topo Global |
+| `dragonsx.smart-search` | Buscadores (Busca Inteligente) |
 
 ---
 
@@ -114,4 +116,5 @@ Eventos: `customise:settings-changed`, `customise:reloaded`.
 
 - [`Top.MD`](./Frontend/Top.MD) — ChromeLayout / Topo Global
 - [`Autotune.md`](./Autotune.md) — Music positions via Topo
+- [`BuscaInteligente.md`](./BuscaInteligente.md) — editor Buscadores (`dragonsx.smart-search`)
 - [`Log v1.4.MD`](../Lançamento/Log%20v1.4.MD)

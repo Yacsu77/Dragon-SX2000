@@ -36,6 +36,41 @@ function setStatus(message) {
   }
 }
 
+function getWallpaperUserId() {
+  try {
+    if (window.UserSession && typeof window.UserSession.getActiveUserId === "function") {
+      return window.UserSession.getActiveUserId() || null;
+    }
+  } catch (_) { /* ignore */ }
+  return null;
+}
+
+function restoreDefaultBackground() {
+  const background = document.querySelector(".background");
+  const backgroundVideo = document.querySelector(".background-video");
+  const backgroundSource = backgroundVideo ? backgroundVideo.querySelector("source") : null;
+  if (!background) return;
+  if (backgroundVideo && backgroundSource) {
+    const fallback =
+      backgroundSource.getAttribute("data-default-src") ||
+      "../../UserINTer/back%20groud/dark-queen-knight-moewalls-com.mp4";
+    if (!backgroundSource.getAttribute("data-default-src") && backgroundSource.src) {
+      try {
+        const current = backgroundSource.getAttribute("src") || "";
+        if (current && !current.startsWith("file:") && !current.startsWith("blob:")) {
+          backgroundSource.setAttribute("data-default-src", current);
+        }
+      } catch (_) { /* ignore */ }
+    }
+    backgroundSource.src =
+      backgroundSource.getAttribute("data-default-src") || fallback;
+    backgroundVideo.load();
+    backgroundVideo.style.display = "block";
+    backgroundVideo.play().catch(() => {});
+  }
+  background.style.backgroundImage = "none";
+}
+
 function updateTransform() {
   if (!currentMedia) return;
   const { x, y, rotate, flipX, flipY } = transformState;
@@ -117,25 +152,26 @@ function resetTransforms() {
 
 async function persistMediaFile() {
   if (!window.DragonWallpaper) return null;
+  const userId = getWallpaperUserId();
 
   if (currentType === "video") {
     if (currentFilePath) {
-      return window.DragonWallpaper.importFile(currentFilePath, "video");
+      return window.DragonWallpaper.importFile(currentFilePath, "video", userId);
     }
     if (currentDataUrl && currentDataUrl.startsWith("blob:")) {
       const response = await fetch(currentDataUrl);
       const buffer = await response.arrayBuffer();
-      return window.DragonWallpaper.importBlob(buffer, ".mp4");
+      return window.DragonWallpaper.importBlob(buffer, ".mp4", userId);
     }
     return null;
   }
 
   if (currentType === "image") {
     if (currentFilePath) {
-      return window.DragonWallpaper.importFile(currentFilePath, "image");
+      return window.DragonWallpaper.importFile(currentFilePath, "image", userId);
     }
     if (currentDataUrl && currentDataUrl.startsWith("data:")) {
-      return window.DragonWallpaper.importDataUrl(currentDataUrl);
+      return window.DragonWallpaper.importDataUrl(currentDataUrl, userId);
     }
   }
 
@@ -167,7 +203,7 @@ async function saveState() {
 
   if (window.DragonWallpaper) {
     try {
-      await window.DragonWallpaper.saveState(payload);
+      await window.DragonWallpaper.saveState(payload, getWallpaperUserId());
       if (window.UserStorage) window.UserStorage.removeItem("wallpaperState");
       else localStorage.removeItem("wallpaperState");
       if (persistedPath) {
@@ -196,8 +232,13 @@ async function saveState() {
   }
 }
 
+function isRestorablePayload(payload) {
+  // blob: não sobrevive a restart — payload gravado por fallback antigo é lixo.
+  return Boolean(payload && payload.dataUrl && !payload.dataUrl.startsWith("blob:"));
+}
+
 function applyPayloadToPreview(payload) {
-  if (!payload || !payload.dataUrl) return false;
+  if (!isRestorablePayload(payload)) return false;
 
   currentType = payload.type;
   currentDataUrl = payload.dataUrl;
@@ -236,10 +277,20 @@ function applyPayloadToPreview(payload) {
 
 async function loadState() {
   let payload = null;
+  const userId = getWallpaperUserId();
 
   if (window.DragonWallpaper) {
     try {
-      payload = await window.DragonWallpaper.readState();
+      payload = await window.DragonWallpaper.readState(userId);
+      // Legado: estado salvo antes do userId ativo (pasta global).
+      if (!payload && userId) {
+        payload = await window.DragonWallpaper.readState(null);
+        if (payload) {
+          try {
+            await window.DragonWallpaper.saveState(payload, userId);
+          } catch (_) { /* ignore migrate errors */ }
+        }
+      }
     } catch (error) {
       payload = null;
     }
@@ -249,19 +300,20 @@ async function loadState() {
     const saved = window.UserStorage
       ? window.UserStorage.getItem("wallpaperState")
       : localStorage.getItem("wallpaperState");
-    if (!saved) return;
+    if (!saved) return false;
     try {
       payload = JSON.parse(saved);
     } catch (error) {
-      return;
+      return false;
     }
   }
 
   try {
-    if (!applyPayloadToPreview(payload)) return;
+    if (!applyPayloadToPreview(payload)) return false;
     applyToBackground();
+    return true;
   } catch (error) {
-    // ignore invalid storage
+    return false;
   }
 }
 
@@ -284,8 +336,47 @@ async function clearBackgroundPreview() {
 }
 
 async function reloadForUser() {
-  await clearBackgroundPreview();
-  await loadState();
+  // Carrega primeiro; só limpa se houver estado válido — evita tela preta no boot.
+  let payload = null;
+  const userId = getWallpaperUserId();
+  if (window.DragonWallpaper) {
+    try {
+      payload = await window.DragonWallpaper.readState(userId);
+      if (!payload && userId) {
+        payload = await window.DragonWallpaper.readState(null);
+      }
+    } catch (_) {
+      payload = null;
+    }
+  }
+  if (!payload) {
+    const saved = window.UserStorage
+      ? window.UserStorage.getItem("wallpaperState")
+      : localStorage.getItem("wallpaperState");
+    if (saved) {
+      try {
+        payload = JSON.parse(saved);
+      } catch (_) {
+        payload = null;
+      }
+    }
+  }
+
+  if (isRestorablePayload(payload)) {
+    await clearBackgroundPreview();
+    try {
+      applyPayloadToPreview(payload);
+      applyToBackground();
+    } catch (_) {
+      restoreDefaultBackground();
+    }
+    return;
+  }
+
+  // Sem wallpaper do usuário: mantém / restaura o fundo padrão.
+  if (!currentDataUrl) {
+    restoreDefaultBackground();
+  }
 }
 
 window.WallpaperUserReload = reloadForUser;

@@ -44,6 +44,8 @@ Frontend/src/
 ├── Top/                    ← Barra superior (menu, voltar/avançar, endereço, Editar)
 ├── TopActions/             ← Botões direitos (Downloads, Arquivos, Nova aba, Config)
 ├── Tabs/                   ← Abas + grupos (TabGroups.*) + webviews (partition persistente)
+├── search/                 ← Busca Inteligente (SmartSearch: sugestões, autocomplete, navegação)
+├── Passwords/              ← Gerenciador de senhas (Observer: bus, service, indicador, detecção)
 ├── settings/               ← perfSettings + chromeLayoutSettings (Layout Topo Global)
 ├── Tabline/                ← Barra lateral de idgets
 ├── Home/                   ← Área da home tab (transparente / wallpaper)
@@ -151,7 +153,8 @@ Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
 |--------------|-------------|
 | Alternar home / navegador | `core/AppShell.js` |
 | Botão do menu ou itens | `Top/Menu/Menu.js` → array `MENU_ITEMS` |
-| Barra de endereço / busca | `Top/Search/Search.js` |
+| Barra de endereço / busca | `Top/Search/Search.js` (usa `search/SmartSearch.js`) |
+| Busca inteligente / autocomplete | `search/SmartSearch.js` — ver [`BuscaInteligente.md`](../BuscaInteligente.md) |
 | Nova aba, fechar, ativar | `Tabs/Tabs.core.js` |
 | Grupos de abas | `Tabs/TabGroups.*` + API `/tab-groups` |
 | Layout Topo Global / Music no Top | `settings/chromeLayoutSettings.js`, `Top/ChromeLayout.js`, Customise |

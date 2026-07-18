@@ -143,6 +143,13 @@
           body: JSON.stringify({ user_id: userId, token }),
         })
       ).data,
+    update: async (id, body) =>
+      (
+        await request(`/vault/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        })
+      ).data,
     remove: async (id, userId) =>
       (
         await request(`/vault/${id}?user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' })

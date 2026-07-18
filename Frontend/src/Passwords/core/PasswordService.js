@@ -12,6 +12,7 @@
   /** @type {null | { origin, username, password, formType, source, at, tabId }} */
   let pendingAttempt = null;
   let pendingTimer = null;
+  const autoAttempts = new Map();
 
   function isActiveTab(detail) {
     if (!detail?.tabId) return true;
@@ -24,6 +25,55 @@
 
   function siteOf(origin) {
     return window.PasswordVaultAdapter?.siteLabel?.(origin) || origin || 'site';
+  }
+
+  function normalizeLoginUrl(input) {
+    try {
+      const url = new URL(input);
+      const path = url.pathname.replace(/\/+$/, '') || '/';
+      return `${url.protocol}//${url.host}${path}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  async function useCredential(item, options = {}) {
+    if (!item?.id || !window.PasswordVaultAdapter || !window.PasswordWebviewAdapter) return false;
+    const unlocked = await window.PasswordVaultAdapter.ensureUnlocked?.();
+    if (!unlocked) return false;
+    try {
+      const revealed = await window.PasswordVaultAdapter.reveal(item.id);
+      const username = revealed?.username || item.username || '';
+      const password = revealed?.password || '';
+      if (!password) return false;
+      const ok = await window.PasswordWebviewAdapter.fillAndSubmitActive(username, password);
+      if (ok) {
+        window.PasswordBus.notify('credentials:filled', {
+          id: item.id,
+          origin: item.origin,
+          automatic: Boolean(options.automatic),
+        });
+        window.PasswordBus.notify('indicator:used', { origin: item.origin });
+      }
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function autoCandidate(items, detail) {
+    if (detail.formType !== 'login') return null;
+    const currentUrl = normalizeLoginUrl(detail.href);
+    const eligible = items.filter((item) => {
+      const meta = item.meta || {};
+      if (meta.autoLoginUrl && normalizeLoginUrl(meta.loginUrl) === currentUrl) return true;
+      return meta.autoLoginForm === true;
+    });
+    return eligible.length === 1 ? eligible[0] : null;
+  }
+
+  function autoAttemptKey(item, detail) {
+    return `${detail.tabId || 'active'}|${item.id}|${normalizeLoginUrl(detail.href)}`;
   }
 
   function clearPendingAttempt() {
@@ -62,6 +112,7 @@
       formType: detail.formType || 'login',
       tabId: detail.tabId,
       source: detail.source || 'submit',
+      href: detail.href || '',
     });
   }
 
@@ -90,12 +141,22 @@
       const items = await window.PasswordVaultAdapter.listByOrigin(origin);
       if (!isActiveTab(detail)) return;
       if (items.length) {
+        const candidate = autoCandidate(items, detail);
+        if (candidate) {
+          const attemptKey = autoAttemptKey(candidate, detail);
+          const lastAttempt = autoAttempts.get(attemptKey) || 0;
+          if (Date.now() - lastAttempt > 30000) {
+            autoAttempts.set(attemptKey, Date.now());
+            if (await useCredential(candidate, { automatic: true })) return;
+          }
+        }
         window.PasswordBus.notify('credentials:candidates', {
           origin,
           site: siteOf(origin),
           items,
           formType: detail.formType,
           tabId: detail.tabId,
+          href: detail.href,
         });
       }
     } catch (_) { /* ignore */ }
@@ -135,6 +196,7 @@
       formType: detail.formType || 'login',
       source: detail.source || 'submit',
       tabId: detail.tabId,
+      href: detail.href || '',
       at: Date.now(),
     };
     if (pendingTimer) clearTimeout(pendingTimer);
@@ -176,6 +238,7 @@
     window.PasswordCache?.clear?.();
     lastForm = null;
     clearPendingAttempt();
+    autoAttempts.clear();
     window.PasswordBus.notify('indicator:hide', { reason: 'user-changed' });
     window.PasswordBus.notify('vault:locked', {});
   }
@@ -201,5 +264,7 @@
     getLastForm: () => lastForm,
     getActiveTabId: () => activeTabId,
     hasPendingAttempt: () => Boolean(pendingAttempt),
+    useCredential,
+    normalizeLoginUrl,
   };
 })();

@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('DragonUser', {
   deleteUserData: (userId) => ipcRenderer.invoke('user:deleteUserData', userId),
 });
 
+contextBridge.exposeInMainWorld('DragonSession', {
+  listKnownOrigins: () => ipcRenderer.invoke('session:listKnownOrigins'),
+});
+
 contextBridge.exposeInMainWorld('DragonWallpaper', {
   getFilePath: (file) => resolveFilePath(file),
   readState: (userId) => ipcRenderer.invoke('wallpaper:readState', { userId }),

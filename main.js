@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron');
 const path = require('path');
 const http = require('http');
 const { spawn, execFile } = require('child_process');
@@ -95,7 +95,9 @@ function httpGetJson(urlPath, timeoutMs = 1500) {
 }
 
 function isApiFromCurrentProject(payload) {
-  if (!payload?.success || !payload?.features?.includes?.('users')) {
+  // Exigir a feature mais recente força restart de instâncias antigas que
+  // ficaram rodando sem as rotas novas (ex.: /history/suggestions).
+  if (!payload?.success || !payload?.features?.includes?.('smart-suggestions')) {
     return false;
   }
 
@@ -466,6 +468,21 @@ ipcMain.handle('user:setActive', async (_event, userId) => {
 });
 
 ipcMain.handle('user:getActive', () => activeUserId);
+
+ipcMain.handle('session:listKnownOrigins', async () => {
+  if (!activeUserId) return [];
+  const partition = `persist:dragon-${activeUserId}`;
+  const cookies = await session.fromPartition(partition).cookies.get({});
+  const authName = /(^|[_-])(session|sess|sid|auth|token|login|account)([_-]|$)/i;
+  const domains = new Set();
+  cookies.forEach((cookie) => {
+    if (!cookie?.domain) return;
+    if (!authName.test(cookie.name || '') && !(cookie.httpOnly && cookie.secure)) return;
+    const domain = cookie.domain.replace(/^\./, '').toLowerCase();
+    if (domain && domain.includes('.')) domains.add(`https://${domain}`);
+  });
+  return Array.from(domains).slice(0, 100);
+});
 
 ipcMain.handle('user:saveAvatarDataUrl', async (_event, { userId, dataUrl }) => {
   if (!userId || !dataUrl || !dataUrl.startsWith('data:')) {

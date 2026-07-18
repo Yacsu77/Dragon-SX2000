@@ -43,6 +43,15 @@ async function search(req, res, next) {
   }
 }
 
+async function suggestions(req, res, next) {
+  try {
+    const results = await historyService.smartSuggestions(req.query.q, resolveUserId(req));
+    res.json({ success: true, data: results });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function deleteById(req, res, next) {
   try {
     const result = await historyService.deleteHistoryById(req.params.id);
@@ -66,6 +75,7 @@ module.exports = {
   findAll,
   findById,
   search,
+  suggestions,
   deleteById,
   clear,
 };

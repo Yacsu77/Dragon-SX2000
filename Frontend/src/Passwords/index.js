@@ -24,5 +24,9 @@
     } catch (_) { /* ignore */ }
   }
 
-  window.PasswordManager = { init, dismiss, rescan };
+  function armAutoLogin(url) {
+    return window.PasswordService?.armForNavigation?.(url) || false;
+  }
+
+  window.PasswordManager = { init, dismiss, rescan, armAutoLogin };
 })();

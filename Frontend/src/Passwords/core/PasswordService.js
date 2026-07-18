@@ -12,6 +12,7 @@
   /** @type {null | { origin, username, password, formType, source, at, tabId }} */
   let pendingAttempt = null;
   let pendingTimer = null;
+  let armedNavigation = null;
   const autoAttempts = new Map();
 
   function isActiveTab(detail) {
@@ -63,13 +64,35 @@
 
   function autoCandidate(items, detail) {
     if (detail.formType !== 'login') return null;
+    let currentOrigin = '';
+    try {
+      currentOrigin = new URL(detail.href || detail.origin).origin;
+    } catch (_) { /* keep empty */ }
+    const armed =
+      armedNavigation &&
+      Date.now() < armedNavigation.expiresAt &&
+      armedNavigation.origin === currentOrigin;
     const currentUrl = normalizeLoginUrl(detail.href);
     const eligible = items.filter((item) => {
+      if (armed) return true;
       const meta = item.meta || {};
       if (meta.autoLoginUrl && normalizeLoginUrl(meta.loginUrl) === currentUrl) return true;
       return meta.autoLoginForm === true;
     });
     return eligible.length === 1 ? eligible[0] : null;
+  }
+
+  function armForNavigation(url) {
+    try {
+      armedNavigation = {
+        origin: new URL(url).origin,
+        expiresAt: Date.now() + 20000,
+      };
+      return true;
+    } catch (_) {
+      armedNavigation = null;
+      return false;
+    }
   }
 
   function autoAttemptKey(item, detail) {
@@ -147,7 +170,10 @@
           const lastAttempt = autoAttempts.get(attemptKey) || 0;
           if (Date.now() - lastAttempt > 30000) {
             autoAttempts.set(attemptKey, Date.now());
-            if (await useCredential(candidate, { automatic: true })) return;
+            if (await useCredential(candidate, { automatic: true })) {
+              armedNavigation = null;
+              return;
+            }
           }
         }
         window.PasswordBus.notify('credentials:candidates', {
@@ -239,6 +265,7 @@
     lastForm = null;
     clearPendingAttempt();
     autoAttempts.clear();
+    armedNavigation = null;
     window.PasswordBus.notify('indicator:hide', { reason: 'user-changed' });
     window.PasswordBus.notify('vault:locked', {});
   }
@@ -266,5 +293,6 @@
     hasPendingAttempt: () => Boolean(pendingAttempt),
     useCredential,
     normalizeLoginUrl,
+    armForNavigation,
   };
 })();

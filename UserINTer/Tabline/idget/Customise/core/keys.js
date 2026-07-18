@@ -10,5 +10,6 @@
     RADIAL: "customise-radial-menu",
     SEARCH: "customise-search-palette",
     CHROME: "dragonsx.chrome.layout",
+    SMART: "dragonsx.smart-search",
   });
 })();

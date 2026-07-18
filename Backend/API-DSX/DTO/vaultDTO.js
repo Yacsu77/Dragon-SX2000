@@ -42,6 +42,38 @@ function validateCreateVaultItem(data) {
   };
 }
 
+function validateUpdateVaultItem(data) {
+  if (!data || typeof data !== 'object') {
+    throw new ApiError('Dados inválidos', 400);
+  }
+  const userId = requireUserId(data.user_id);
+  if (!data.token) {
+    throw new ApiError('token de vault (unlock) é obrigatório', 400);
+  }
+  if (!data.meta || typeof data.meta !== 'object' || Array.isArray(data.meta)) {
+    throw new ApiError('meta é obrigatório', 400);
+  }
+  const meta = {};
+  if (typeof data.meta.autoLoginForm === 'boolean') {
+    meta.autoLoginForm = data.meta.autoLoginForm;
+  }
+  if (typeof data.meta.autoLoginUrl === 'boolean') {
+    meta.autoLoginUrl = data.meta.autoLoginUrl;
+  }
+  if (data.meta.loginUrl === null || typeof data.meta.loginUrl === 'string') {
+    meta.loginUrl = data.meta.loginUrl;
+  }
+  if (!Object.keys(meta).length) {
+    throw new ApiError('Nenhuma configuração válida para atualizar', 400);
+  }
+
+  return {
+    user_id: userId,
+    token: String(data.token),
+    meta,
+  };
+}
+
 function formatVaultItemSafe(row) {
   if (!row) return null;
   let meta = null;
@@ -65,5 +97,6 @@ module.exports = {
   requireUserId,
   validateVaultUnlock,
   validateCreateVaultItem,
+  validateUpdateVaultItem,
   formatVaultItemSafe,
 };

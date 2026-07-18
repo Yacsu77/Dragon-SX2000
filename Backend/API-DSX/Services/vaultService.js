@@ -125,6 +125,31 @@ async function revealVaultItem(id, userId, token) {
   };
 }
 
+async function updateVaultItem(id, data) {
+  requireUnlocked(data.user_id, data.token);
+  const row = await get('SELECT * FROM password_vault WHERE id = ? AND user_id = ?', [
+    id,
+    data.user_id,
+  ]);
+  if (!row) throw new ApiError('Item do cofre não encontrado', 404);
+
+  let currentMeta = {};
+  try {
+    currentMeta = row.meta ? JSON.parse(row.meta) : {};
+  } catch {
+    currentMeta = {};
+  }
+  const meta = JSON.stringify({ ...currentMeta, ...data.meta });
+  const now = new Date().toISOString();
+  await run('UPDATE password_vault SET meta = ?, updated_at = ? WHERE id = ? AND user_id = ?', [
+    meta,
+    now,
+    id,
+    data.user_id,
+  ]);
+  return formatVaultItemSafe(await get('SELECT * FROM password_vault WHERE id = ?', [id]));
+}
+
 async function deleteVaultItem(id, userId) {
   const row = await get('SELECT * FROM password_vault WHERE id = ?', [id]);
   if (!row) throw new ApiError('Item do cofre não encontrado', 404);
@@ -146,6 +171,7 @@ module.exports = {
   listVaultItems,
   createVaultItem,
   revealVaultItem,
+  updateVaultItem,
   deleteVaultItem,
   clearVault,
 };

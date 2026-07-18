@@ -3,6 +3,7 @@ const {
   requireUserId,
   validateVaultUnlock,
   validateCreateVaultItem,
+  validateUpdateVaultItem,
 } = require('../DTO/vaultDTO');
 
 async function unlock(req, res, next) {
@@ -62,6 +63,16 @@ async function reveal(req, res, next) {
   }
 }
 
+async function update(req, res, next) {
+  try {
+    const data = validateUpdateVaultItem(req.body);
+    const item = await vaultService.updateVaultItem(req.params.id, data);
+    res.json({ success: true, data: item });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     const userId = requireUserId(req.query.user_id);
@@ -82,4 +93,4 @@ async function clear(req, res, next) {
   }
 }
 
-module.exports = { unlock, lock, findAll, create, reveal, remove, clear };
+module.exports = { unlock, lock, findAll, create, reveal, update, remove, clear };

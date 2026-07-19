@@ -182,10 +182,13 @@ async function startApiDsx() {
   }
 
   if (status === 'stale') {
-    console.warn('[API-DSX] instância antiga detectada (sem /users). Reiniciando…');
-    await freePort3333();
-    await new Promise((r) => setTimeout(r, 500));
+    console.warn('[API-DSX] instância antiga detectada. Reiniciando…');
   }
+
+  // Sempre liberar a porta antes de subir: sockets zumbis (ex.: processo morto
+  // sem fechar o bind) deixam o probe como "down" mas impedem o novo listen.
+  await freePort3333();
+  await new Promise((r) => setTimeout(r, 500));
 
   const apiEntry = path.join(__dirname, 'Backend', 'API-DSX', 'app.js');
 

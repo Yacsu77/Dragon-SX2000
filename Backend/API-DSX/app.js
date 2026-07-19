@@ -57,8 +57,15 @@ async function startServer() {
     await initializeDatabase();
     await initializeRedis();
 
-    app.listen(PORT, '127.0.0.1', () => {
+    const server = app.listen(PORT, '127.0.0.1', () => {
       console.log(`[API-DSX] Servidor rodando em http://127.0.0.1:${PORT}`);
+    });
+
+    // Erros de bind (ex.: EADDRINUSE) chegam como evento, não como throw.
+    // Sair com código != 0 faz o main.js reagendar o start em 2s.
+    server.on('error', (err) => {
+      console.error(`[API-DSX] Falha no listen (${err.code || 'erro'}): ${err.message}`);
+      process.exit(1);
     });
   } catch (err) {
     console.error('[API-DSX] Falha ao iniciar:', err.message);

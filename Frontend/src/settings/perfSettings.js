@@ -1,22 +1,10 @@
 /**
  * PerfSettings — preferências de desempenho persistidas em localStorage.
  *
- * Responsabilidade única: guardar o estado das opções de desempenho, aplicá-las
- * ao DOM (classe no <body>) e notificar quem estiver observando. Não desenha UI.
- *
  * Opções:
- *   renderAllTabs (bool) — manter todas as abas renderizadas em segundo plano
- *     (troca instantânea, porém mais uso de CPU/GPU e RAM).
- *   restoreSessionTabs (bool) — guardar abas abertas e restaurar no próximo boot
- *     (mais CPU/RAM na abertura se houver muitas abas).
- *
- * API:
- *   PerfSettings.init()
- *   PerfSettings.isRenderAllTabs() → boolean
- *   PerfSettings.setRenderAllTabs(bool)
- *   PerfSettings.isRestoreSessionTabs() → boolean
- *   PerfSettings.setRestoreSessionTabs(bool)
- *   PerfSettings.onChange(fn) → unsubscribe
+ *   renderAllTabs — manter todas as abas renderizadas
+ *   restoreSessionTabs — restaurar abas ao abrir
+ *   keepSidebarPanels — manter webviews da barra lateral carregados
  */
 (function () {
   const STORAGE_KEY = 'dragonsx.settings.perf';
@@ -25,6 +13,7 @@
   const state = {
     renderAllTabs: false,
     restoreSessionTabs: false,
+    keepSidebarPanels: false,
   };
   const listeners = new Set();
 
@@ -36,6 +25,7 @@
       if (parsed && typeof parsed === 'object') {
         state.renderAllTabs = !!parsed.renderAllTabs;
         state.restoreSessionTabs = !!parsed.restoreSessionTabs;
+        state.keepSidebarPanels = !!parsed.keepSidebarPanels;
       }
     } catch (_) { /* ignore */ }
   }
@@ -86,6 +76,18 @@
     }
   }
 
+  function isKeepSidebarPanels() {
+    return state.keepSidebarPanels;
+  }
+
+  function setKeepSidebarPanels(value) {
+    const next = !!value;
+    if (next === state.keepSidebarPanels) return;
+    state.keepSidebarPanels = next;
+    save();
+    emit();
+  }
+
   function onChange(fn) {
     if (typeof fn !== 'function') return () => {};
     listeners.add(fn);
@@ -103,6 +105,8 @@
     setRenderAllTabs,
     isRestoreSessionTabs,
     setRestoreSessionTabs,
+    isKeepSidebarPanels,
+    setKeepSidebarPanels,
     onChange,
   };
 

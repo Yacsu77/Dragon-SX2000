@@ -35,6 +35,10 @@
       if (key === Keys.CHROME && window.ChromeLayout?.apply) {
         window.ChromeLayout.apply(window.ChromeLayoutSettings?.read?.());
       }
+      if (key === Keys.SIDEBAR) {
+        if (window.SidebarNS?.Store?.reload) window.SidebarNS.Store.reload();
+        if (window.Tabline?.refresh) window.Tabline.refresh();
+      }
     },
   };
 })();

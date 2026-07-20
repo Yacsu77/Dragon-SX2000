@@ -38,9 +38,24 @@
     const check = validateLink(url);
     if (!check.ok) return check;
 
+    const userId = window.UserSession?.getActiveUserId?.() || null;
+
+    if (window.DragonJanelas?.createWithTab) {
+      try {
+        const result = await window.DragonJanelas.createWithTab(
+          { url: check.url, title: null, is_home: false, active: true },
+          userId
+        );
+        return result?.ok ? { ok: true } : { ok: false, error: result?.error || 'window-failed' };
+      } catch (err) {
+        window.CursorLogger?.error('Falha ao abrir nova janela', err);
+        return { ok: false, error: 'window-failed' };
+      }
+    }
+
     if (window.DragonCursorControl && typeof window.DragonCursorControl.createWindow === 'function') {
       try {
-        const result = await window.DragonCursorControl.createWindow(check.url);
+        const result = await window.DragonCursorControl.createWindow(check.url, userId);
         return result?.ok ? { ok: true } : { ok: false, error: result?.error || 'window-failed' };
       } catch (err) {
         window.CursorLogger?.error('Falha ao abrir nova janela', err);

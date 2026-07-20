@@ -98,6 +98,11 @@
       });
     }
 
+    const splitActions = window.JanelasNS?.SplitActions?.getMenuActions?.(tabId);
+    if (Array.isArray(splitActions) && splitActions.length) {
+      actions.push(...splitActions);
+    }
+
     return actions;
   }
 

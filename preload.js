@@ -51,8 +51,41 @@ contextBridge.exposeInMainWorld('DragonBrowser', {
 });
 
 contextBridge.exposeInMainWorld('DragonCursorControl', {
-  createWindow: (url) => ipcRenderer.invoke('cursor:create-window', { url }),
+  createWindow: (url, userId) =>
+    ipcRenderer.invoke('cursor:create-window', { url, userId: userId || null }),
   consumePendingUrl: () => ipcRenderer.invoke('cursor:consume-pending-url'),
+});
+
+contextBridge.exposeInMainWorld('DragonJanelas', {
+  createWithTab: (snapshot, userId) =>
+    ipcRenderer.invoke('janelas:create-with-tab', {
+      snapshot,
+      userId: userId || null,
+    }),
+  consumePendingTab: () => ipcRenderer.invoke('janelas:consume-pending-tab'),
+  consumePendingBoot: () => ipcRenderer.invoke('janelas:consume-pending-boot'),
+  reportTabsBounds: (bounds) => ipcRenderer.send('janelas:report-tabs-bounds', bounds),
+  resolveDropTarget: () => ipcRenderer.invoke('janelas:resolve-drop-target'),
+  moveTab: (targetWindowId, snapshot) =>
+    ipcRenderer.invoke('janelas:move-tab', { targetWindowId, snapshot }),
+  dragGhostStart: (payload) => ipcRenderer.send('janelas:drag-ghost-start', payload),
+  dragGhostUpdate: (payload) => ipcRenderer.send('janelas:drag-ghost-update', payload),
+  dragGhostEnd: () => ipcRenderer.send('janelas:drag-ghost-end'),
+  getCursorScreenPoint: () => ipcRenderer.invoke('janelas:get-cursor-screen-point'),
+  setDragHover: (payload) => ipcRenderer.send('janelas:drag-hover', payload),
+  clearDragHover: () => ipcRenderer.send('janelas:drag-hover-clear'),
+  onReceiveTab: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const handler = (_event, tab) => callback(tab);
+    ipcRenderer.on('janelas:receive-tab', handler);
+    return () => ipcRenderer.removeListener('janelas:receive-tab', handler);
+  },
+  onDropIndicator: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('janelas:drop-indicator', handler);
+    return () => ipcRenderer.removeListener('janelas:drop-indicator', handler);
+  },
 });
 
 contextBridge.exposeInMainWorld('DragonShortcuts', {

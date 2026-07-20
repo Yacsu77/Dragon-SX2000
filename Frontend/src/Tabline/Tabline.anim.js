@@ -1,58 +1,66 @@
 /**
- * Animações da tabline lateral: hover pill e tooltip.
+ * Tooltip da sidebar dock.
  */
 (function () {
-  function showTooltip(tabsTooltip, tab) {
-    if (!tabsTooltip) return;
+  let hideTimer = null;
 
-    const label = tab.getAttribute('aria-label') || tab.title || '';
-    const rect = tab.getBoundingClientRect();
-
-    tabsTooltip.textContent = label;
-    tabsTooltip.style.opacity = '1';
-    tabsTooltip.style.left = `${Math.round(rect.right + 12)}px`;
-    tabsTooltip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
+  function tooltipEl() {
+    return document.getElementById('sideTooltip');
   }
 
-  function hideTooltip(tabsTooltip) {
-    if (tabsTooltip) tabsTooltip.style.opacity = '0';
+  function showTooltip(anchor, text) {
+    const tip = tooltipEl();
+    if (!tip || !anchor || !text) return;
+
+    const rect = anchor.getBoundingClientRect();
+    tip.textContent = text;
+    tip.classList.add('is-visible');
+    tip.style.left = `${Math.round(rect.right + 12)}px`;
+    tip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
   }
 
-  function updateHover(tabsHover, button) {
-    if (!tabsHover) return;
-
-    tabsHover.style.opacity = '1';
-    tabsHover.style.setProperty('--hover-y', `${button.offsetTop}px`);
-    tabsHover.style.height = `${button.offsetHeight}px`;
+  function hideTooltip() {
+    const tip = tooltipEl();
+    if (tip) tip.classList.remove('is-visible');
   }
 
-  function hideHover(tabsHover) {
-    if (tabsHover) tabsHover.style.opacity = '0';
+  function flashTooltip(anchor, text, ms = 1600) {
+    clearTimeout(hideTimer);
+    showTooltip(anchor, text);
+    hideTimer = setTimeout(hideTooltip, ms);
+  }
+
+  function bindItem(el) {
+    el.addEventListener('mouseenter', () => {
+      const label = el.getAttribute('aria-label') || el.title || '';
+      if (label) showTooltip(el, label);
+    });
+    el.addEventListener('focus', () => {
+      const label = el.getAttribute('aria-label') || el.title || '';
+      if (label) showTooltip(el, label);
+    });
+    el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('blur', hideTooltip);
   }
 
   function init() {
-    const idgetTabs = document.querySelectorAll('.side-tabs .tab-item');
-    const tabsList = document.querySelector('.side-tabs .tabs-list');
-    const tabsHover = document.querySelector('.side-tabs .tabs-hover');
-    const tabsTooltip = document.getElementById('tabsTooltip');
+    const dock = document.getElementById('sideDock');
+    if (!dock) return;
 
-    if (!tabsList || !tabsHover || idgetTabs.length === 0) return;
+    dock.querySelectorAll('.side-item, .widgets-orb, .side-sync, .side-profile').forEach(bindItem);
 
-    idgetTabs.forEach((tab) => {
-      const onEnter = () => {
-        updateHover(tabsHover, tab);
-        showTooltip(tabsTooltip, tab);
-      };
-
-      tab.addEventListener('mouseenter', onEnter);
-      tab.addEventListener('focus', onEnter);
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.matches?.('.side-item')) bindItem(node);
+          node.querySelectorAll?.('.side-item').forEach(bindItem);
+        });
+      });
     });
 
-    tabsList.addEventListener('mouseleave', () => {
-      hideHover(tabsHover);
-      hideTooltip(tabsTooltip);
-    });
+    observer.observe(dock, { childList: true, subtree: true });
   }
 
-  window.TablineAnim = { init };
+  window.TablineAnim = { init, showTooltip, hideTooltip, flashTooltip };
 })();

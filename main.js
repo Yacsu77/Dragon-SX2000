@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, session, screen } = require('electron');
 const path = require('path');
 const http = require('http');
 const { spawn, execFile } = require('child_process');
@@ -250,6 +250,12 @@ function stopBackgroundServices() {
 
 let mainWindow = null;
 const pendingWindowUrls = new Map();
+/** @type {Map<number, object>} snapshot de aba para nova janela (Janelas detach) */
+const pendingWindowTabs = new Map();
+/** @type {Map<number, { x: number, y: number, width: number, height: number }>} */
+const tabsDropBoundsByHost = new Map();
+/** @type {Map<number, { userId: string|null, cleanSession: boolean }>} */
+const pendingWindowBoot = new Map();
 
 // Combos de atalho "globais" por janela host (webContents.id → Set<combo>).
 // São atalhos que precisam funcionar mesmo com o foco dentro de um site
@@ -259,6 +265,7 @@ const globalCombosByHost = new Map();
 const globalHoldCombosByHost = new Map();
 
 function isAllowedNavigationUrl(url) {
+  
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
@@ -347,7 +354,7 @@ function attachWebviewPopupHandler(win) {
   });
 }
 
-function createBrowserWindow(pendingUrl = null) {
+function createBrowserWindow(pending = null) {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -358,14 +365,45 @@ function createBrowserWindow(pendingUrl = null) {
     },
   });
 
-  if (pendingUrl && isAllowedNavigationUrl(pendingUrl)) {
+  let pendingUrl = null;
+  let pendingTab = null;
+  let bootUserId = activeUserId;
+  let cleanSession = false;
+
+  if (typeof pending === 'string') {
+    pendingUrl = pending;
+    cleanSession = true;
+  } else if (pending && typeof pending === 'object') {
+    pendingUrl = pending.url || null;
+    pendingTab = pending.tab || null;
+    if (pending.userId) bootUserId = pending.userId;
+    cleanSession = Boolean(
+      pending.cleanSession || pendingUrl || pendingTab
+    );
+  }
+
+  if (pendingTab && typeof pendingTab === 'object') {
+    pendingWindowTabs.set(win.webContents.id, pendingTab);
+    cleanSession = true;
+  } else if (pendingUrl && isAllowedNavigationUrl(pendingUrl)) {
     pendingWindowUrls.set(win.webContents.id, pendingUrl);
+    cleanSession = true;
+  }
+
+  if (bootUserId || cleanSession) {
+    pendingWindowBoot.set(win.webContents.id, {
+      userId: bootUserId || null,
+      cleanSession,
+    });
   }
 
   attachWebviewPopupHandler(win);
 
   win.on('closed', () => {
     pendingWindowUrls.delete(win.webContents.id);
+    pendingWindowTabs.delete(win.webContents.id);
+    pendingWindowBoot.delete(win.webContents.id);
+    tabsDropBoundsByHost.delete(win.webContents.id);
     globalCombosByHost.delete(win.webContents.id);
     globalHoldCombosByHost.delete(win.webContents.id);
     if (mainWindow === win) mainWindow = null;
@@ -393,12 +431,16 @@ function setupApplicationMenu() {
   }
 }
 
-ipcMain.handle('cursor:create-window', async (_event, { url }) => {
+ipcMain.handle('cursor:create-window', async (_event, { url, userId } = {}) => {
   if (!url || typeof url !== 'string' || !isAllowedNavigationUrl(url)) {
     return { ok: false, error: 'invalid-url' };
   }
   try {
-    createBrowserWindow(url);
+    createBrowserWindow({
+      url,
+      userId: userId || activeUserId || null,
+      cleanSession: true,
+    });
     return { ok: true };
   } catch (err) {
     console.error('[CursorControll] falha ao criar janela:', err);
@@ -413,6 +455,381 @@ ipcMain.handle('cursor:consume-pending-url', (event) => {
     return url;
   }
   return null;
+});
+
+function sanitizePendingTab(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const isHome = Boolean(snapshot.is_home || snapshot.isHomeTab);
+  const url = typeof snapshot.url === 'string' ? snapshot.url : null;
+  if (!isHome && (!url || !isAllowedNavigationUrl(url))) return null;
+  return {
+    url: isHome ? null : url,
+    title: typeof snapshot.title === 'string' ? snapshot.title : null,
+    favicon_url: typeof snapshot.favicon_url === 'string' ? snapshot.favicon_url : null,
+    is_home: isHome,
+    active: true,
+  };
+}
+
+ipcMain.handle('janelas:create-with-tab', async (_event, { snapshot, userId } = {}) => {
+  const tab = sanitizePendingTab(snapshot);
+  if (!tab) {
+    return { ok: false, error: 'invalid-snapshot' };
+  }
+  try {
+    createBrowserWindow({
+      tab,
+      userId: userId || activeUserId || null,
+      cleanSession: true,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error('[Janelas] falha ao criar janela com aba:', err);
+    return { ok: false, error: 'window-failed' };
+  }
+});
+
+ipcMain.handle('janelas:consume-pending-tab', (event) => {
+  const tab = pendingWindowTabs.get(event.sender.id);
+  if (tab) {
+    pendingWindowTabs.delete(event.sender.id);
+    return tab;
+  }
+  return null;
+});
+
+ipcMain.handle('janelas:consume-pending-boot', (event) => {
+  const boot = pendingWindowBoot.get(event.sender.id);
+  if (boot) {
+    pendingWindowBoot.delete(event.sender.id);
+    return boot;
+  }
+  return null;
+});
+
+ipcMain.on('janelas:report-tabs-bounds', (event, bounds) => {
+  if (
+    !bounds ||
+    typeof bounds.x !== 'number' ||
+    typeof bounds.y !== 'number' ||
+    typeof bounds.width !== 'number' ||
+    typeof bounds.height !== 'number'
+  ) {
+    return;
+  }
+  tabsDropBoundsByHost.set(event.sender.id, {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+  });
+});
+
+function pointInBounds(x, y, b) {
+  return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+}
+
+ipcMain.handle('janelas:resolve-drop-target', (event) => {
+  const point = screen.getCursorScreenPoint();
+  const sourceId = event.sender.id;
+
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win || win.isDestroyed()) continue;
+    // Ignora a janela fantasma do drag
+    if (dragGhostWin && win === dragGhostWin) continue;
+
+    const id = win.webContents.id;
+    if (id === sourceId) continue;
+
+    const reported = tabsDropBoundsByHost.get(id);
+    if (reported && pointInBounds(point.x, point.y, reported)) {
+      return { windowId: id, zone: 'tabs', screenX: point.x, screenY: point.y };
+    }
+
+    // Fallback: faixa superior do content (nav + abas)
+    try {
+      const content = win.getContentBounds();
+      const tabsZone = {
+        x: content.x,
+        y: content.y,
+        width: content.width,
+        height: Math.min(160, Math.max(84, Math.round(content.height * 0.18))),
+      };
+      if (pointInBounds(point.x, point.y, tabsZone)) {
+        return { windowId: id, zone: 'tabs', screenX: point.x, screenY: point.y };
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  return null;
+});
+
+function broadcastDropIndicator(targetWindowId, screenX) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win || win.isDestroyed()) continue;
+    const id = win.webContents.id;
+    try {
+      if (targetWindowId && id === targetWindowId) {
+        win.webContents.send('janelas:drop-indicator', {
+          show: true,
+          screenX: screenX || null,
+        });
+      } else {
+        win.webContents.send('janelas:drop-indicator', { show: false });
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+
+ipcMain.on('janelas:drag-hover', (event, payload = {}) => {
+  const targetWindowId = Number(payload.targetWindowId);
+  if (!Number.isFinite(targetWindowId)) {
+    broadcastDropIndicator(null, null);
+    return;
+  }
+  // Não destacar a própria janela origem aqui — o placeholder local cuida disso
+  if (targetWindowId === event.sender.id) {
+    broadcastDropIndicator(null, null);
+    return;
+  }
+  broadcastDropIndicator(targetWindowId, payload.screenX);
+});
+
+ipcMain.on('janelas:drag-hover-clear', () => {
+  broadcastDropIndicator(null, null);
+});
+
+ipcMain.handle('janelas:move-tab', async (event, { targetWindowId, snapshot } = {}) => {
+  const tab = sanitizePendingTab(snapshot);
+  if (!tab) {
+    return { ok: false, error: 'invalid-snapshot' };
+  }
+
+  const targetId = Number(targetWindowId);
+  if (!Number.isFinite(targetId)) {
+    return { ok: false, error: 'invalid-target' };
+  }
+
+  if (targetId === event.sender.id) {
+    return { ok: false, error: 'same-window' };
+  }
+
+  const target = BrowserWindow.getAllWindows().find(
+    (w) => !w.isDestroyed() && w.webContents.id === targetId
+  );
+  if (!target) {
+    return { ok: false, error: 'target-gone' };
+  }
+
+  try {
+    target.webContents.send('janelas:receive-tab', tab);
+    if (!target.isDestroyed()) {
+      if (target.isMinimized()) target.restore();
+      target.focus();
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('[Janelas] falha ao mover aba:', err);
+    return { ok: false, error: 'send-failed' };
+  }
+});
+
+/* ─── Ghost flutuante (drag entre janelas / monitores) ───────────────────── */
+let dragGhostWin = null;
+let dragGhostFollowTimer = null;
+let dragGhostMeta = {
+  offsetX: 40,
+  offsetY: 14,
+  mode: 'tab',
+};
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildDragGhostHtml(payload) {
+  const title = escapeHtml(payload.title || 'Aba');
+  const favicon = payload.favicon ? String(payload.favicon) : '';
+  const thumb = payload.thumbnail ? String(payload.thumbnail) : '';
+  const mode = payload.mode || 'tab';
+  const faviconHtml = favicon
+    ? `<img class="icon" src="${escapeHtml(favicon)}" alt="" />`
+    : `<span class="icon-fallback">•</span>`;
+  const bodyHtml =
+    mode === 'detach' && thumb
+      ? `<div class="shot"><img src="${escapeHtml(thumb)}" alt="" /></div>`
+      : mode === 'detach'
+        ? `<div class="shot hint">Nova janela</div>`
+        : `<div class="row">${faviconHtml}<span class="title">${title}</span></div>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .ghost{box-sizing:border-box;width:100%;height:100%;border-radius:12px;background:linear-gradient(to bottom,rgba(100,100,100,.95),rgba(80,80,80,.92));
+    box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.2);color:#fff;display:flex;align-items:stretch;overflow:hidden;}
+  .ghost.transfer{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 2px rgba(120,180,255,.9);}
+  .ghost.detach{flex-direction:column;}
+  .row{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 12px;width:100%;}
+  .icon{width:14px;height:14px;object-fit:contain;flex:0 0 auto;}
+  .icon-fallback{width:14px;text-align:center;opacity:.7;}
+  .title{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .shot{flex:1;background:#0e0e12;display:flex;align-items:center;justify-content:center;}
+  .shot img{width:100%;height:100%;object-fit:cover;object-position:top center;}
+  .hint{font-size:11px;color:rgba(255,255,255,.55);}
+</style></head><body>
+<div class="ghost ${escapeHtml(mode)}" id="g">${bodyHtml}</div>
+<script>
+  window.__setMode = function(mode){
+    var el = document.getElementById('g');
+    if(!el) return;
+    el.className = 'ghost ' + (mode || 'tab');
+  };
+</script>
+</body></html>`;
+}
+
+function stopDragGhostFollow() {
+  if (dragGhostFollowTimer) {
+    clearInterval(dragGhostFollowTimer);
+    dragGhostFollowTimer = null;
+  }
+}
+
+function destroyDragGhostWindow() {
+  stopDragGhostFollow();
+  if (dragGhostWin && !dragGhostWin.isDestroyed()) {
+    try {
+      dragGhostWin.close();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  dragGhostWin = null;
+}
+
+function ensureDragGhostWindow() {
+  if (dragGhostWin && !dragGhostWin.isDestroyed()) return dragGhostWin;
+  dragGhostWin = new BrowserWindow({
+    width: 180,
+    height: 36,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    focusable: false,
+    show: false,
+    hasShadow: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  try {
+    dragGhostWin.setIgnoreMouseEvents(true, { forward: true });
+  } catch (_) {
+    dragGhostWin.setIgnoreMouseEvents(true);
+  }
+  dragGhostWin.on('closed', () => {
+    dragGhostWin = null;
+    stopDragGhostFollow();
+  });
+  return dragGhostWin;
+}
+
+function followDragGhostCursor() {
+  stopDragGhostFollow();
+  dragGhostFollowTimer = setInterval(() => {
+    if (!dragGhostWin || dragGhostWin.isDestroyed()) {
+      stopDragGhostFollow();
+      return;
+    }
+    const point = screen.getCursorScreenPoint();
+    const x = Math.round(point.x - (dragGhostMeta.offsetX || 40));
+    const y = Math.round(point.y - (dragGhostMeta.offsetY || 14));
+    try {
+      dragGhostWin.setPosition(x, y, false);
+    } catch (_) {
+      /* ignore */
+    }
+  }, 16);
+}
+
+ipcMain.on('janelas:drag-ghost-start', (event, payload = {}) => {
+  const win = ensureDragGhostWindow();
+  const mode = payload.mode || 'tab';
+  const width = mode === 'detach' ? 168 : Math.max(80, Number(payload.width) || 160);
+  const height = mode === 'detach' ? 128 : Math.max(28, Number(payload.height) || 32);
+  dragGhostMeta = {
+    offsetX: Number(payload.offsetX) || Math.round(width / 2),
+    offsetY: Number(payload.offsetY) || Math.round(height / 2),
+    mode,
+  };
+
+  const html = buildDragGhostHtml({
+    title: payload.title,
+    favicon: payload.favicon,
+    thumbnail: payload.thumbnail,
+    mode,
+  });
+
+  win.setSize(Math.round(width), Math.round(height), false);
+  win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  const point = screen.getCursorScreenPoint();
+  win.setPosition(
+    Math.round(point.x - dragGhostMeta.offsetX),
+    Math.round(point.y - dragGhostMeta.offsetY),
+    false
+  );
+  if (!win.isVisible()) win.showInactive();
+  followDragGhostCursor();
+});
+
+ipcMain.on('janelas:drag-ghost-update', (_event, payload = {}) => {
+  if (!dragGhostWin || dragGhostWin.isDestroyed()) return;
+  const mode = payload.mode || 'tab';
+  const prevMode = dragGhostMeta.mode;
+  dragGhostMeta.mode = mode;
+  const width = mode === 'detach' ? 168 : Math.max(80, Number(payload.width) || dragGhostWin.getSize()[0]);
+  const height = mode === 'detach' ? 128 : Math.max(28, Number(payload.height) || dragGhostWin.getSize()[1]);
+  try {
+    dragGhostWin.setSize(Math.round(width), Math.round(height), false);
+    // Só reconstrói HTML quando o modo muda (evita ghost “sumindo” a cada frame)
+    if (mode !== prevMode) {
+      const html = buildDragGhostHtml({
+        title: payload.title,
+        favicon: payload.favicon,
+        thumbnail: payload.thumbnail,
+        mode,
+      });
+      dragGhostWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    } else {
+      dragGhostWin.webContents
+        .executeJavaScript(`window.__setMode && window.__setMode(${JSON.stringify(mode)})`, true)
+        .catch(() => {});
+    }
+  } catch (_) {
+    /* ignore */
+  }
+});
+
+ipcMain.on('janelas:drag-ghost-end', () => {
+  destroyDragGhostWindow();
+});
+
+ipcMain.handle('janelas:get-cursor-screen-point', () => {
+  return screen.getCursorScreenPoint();
 });
 
 ipcMain.on('shortcuts:set-global-combos', (event, combos) => {
@@ -651,6 +1068,11 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isAppQuitting = true;
+  try {
+    destroyDragGhostWindow();
+  } catch (_) {
+    /* ignore */
+  }
   stopBackgroundServices();
 });
 app.on('will-quit', () => {

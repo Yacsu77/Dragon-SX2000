@@ -15,6 +15,8 @@
   let warningEl = null;
   let restoreToggleEl = null;
   let restoreWarningEl = null;
+  let keepSidebarToggleEl = null;
+  let keepSidebarWarningEl = null;
   let isBuilt = false;
   let isOpen = false;
   let unsubscribe = null;
@@ -33,6 +35,12 @@
       restoreToggleEl.checked = on;
       if (restoreWarningEl) restoreWarningEl.hidden = !on;
     }
+
+    if (keepSidebarToggleEl && typeof window.PerfSettings.isKeepSidebarPanels === 'function') {
+      const on = window.PerfSettings.isKeepSidebarPanels();
+      keepSidebarToggleEl.checked = on;
+      if (keepSidebarWarningEl) keepSidebarWarningEl.hidden = !on;
+    }
   }
 
   async function ensureBuilt() {
@@ -49,6 +57,8 @@
     warningEl = overlayEl.querySelector('[data-role="render-all-warning"]');
     restoreToggleEl = overlayEl.querySelector('[data-role="toggle-restore-session"]');
     restoreWarningEl = overlayEl.querySelector('[data-role="restore-session-warning"]');
+    keepSidebarToggleEl = overlayEl.querySelector('[data-role="toggle-keep-sidebar"]');
+    keepSidebarWarningEl = overlayEl.querySelector('[data-role="keep-sidebar-warning"]');
 
     overlayEl.querySelector('[data-role="close"]').addEventListener('click', close);
     overlayEl.addEventListener('click', (e) => {
@@ -72,6 +82,15 @@
           window.PerfSettings.setRestoreSessionTabs(restoreToggleEl.checked);
         }
         if (restoreWarningEl) restoreWarningEl.hidden = !restoreToggleEl.checked;
+      });
+    }
+
+    if (keepSidebarToggleEl) {
+      keepSidebarToggleEl.addEventListener('change', () => {
+        if (window.PerfSettings && typeof window.PerfSettings.setKeepSidebarPanels === 'function') {
+          window.PerfSettings.setKeepSidebarPanels(keepSidebarToggleEl.checked);
+        }
+        if (keepSidebarWarningEl) keepSidebarWarningEl.hidden = !keepSidebarToggleEl.checked;
       });
     }
 

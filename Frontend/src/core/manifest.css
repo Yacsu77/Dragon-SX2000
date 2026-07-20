@@ -12,6 +12,7 @@
 @import url('../search/SmartSearch.css');
 @import url('../Passwords/ui/PasswordIndicator.css');
 @import url('../Tabline/Tabline.css');
+@import url('../Tabline/panel/SidePanelHost.css');
 @import url('../Tabs/Tabs.css');
 @import url('../Home/Home.css');
 @import url('../Home/HomeSearch/HomeSearch.css');

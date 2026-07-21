@@ -12,5 +12,6 @@
     CHROME: "dragonsx.chrome.layout",
     SMART: "dragonsx.smart-search",
     SIDEBAR: "sidebar.layout",
+    JANELAS: "dragonsx.janelas",
   });
 })();

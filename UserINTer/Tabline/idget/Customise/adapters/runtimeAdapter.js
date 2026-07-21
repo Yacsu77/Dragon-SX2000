@@ -39,6 +39,10 @@
         if (window.SidebarNS?.Store?.reload) window.SidebarNS.Store.reload();
         if (window.Tabline?.refresh) window.Tabline.refresh();
       }
+      if (key === Keys.JANELAS) {
+        if (window.JanelasNS?.Store?.reload) window.JanelasNS.Store.reload();
+        if (window.JanelasNS?.LayoutRegistry?.apply) window.JanelasNS.LayoutRegistry.apply();
+      }
     },
   };
 })();

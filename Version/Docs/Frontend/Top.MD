@@ -20,6 +20,7 @@ Top/
 ├── ChromeLayout.js     ← Aplica Layout Topo Global (busca, botões, Music, bordas)
 ├── Menu/
 ├── ButtonGo/
+├── PictureInPicture/  ← Detecção de vídeo + menu PiP nativo do Chromium
 └── Search/
 ```
 
@@ -61,6 +62,7 @@ A coluna do meio do grid é `minmax(0, var(--nav-search-width))`, então o slide
 | `#menuBtn` | Menu |
 | `#backBtn`, `#forwardBtn` | ButtonGo |
 | `#addressBar`, `#addressInput` | Search |
+| `#pipControl`, `#pipButton` | Picture in Picture (visível só com vídeo tocando) |
 | `#navMusicSlotLeft`, `#navMusicSlotRight` | AutoTune Music minimal |
 | `#downloadBtn`, `#arquivosBtn`, `#newTabBtn`, `#configBtn` | TopActions |
 | `#editarBtn` | Tela Editar (`EditarScreen.open`) |
@@ -78,7 +80,23 @@ window.ChromeLayoutSettings = { read(), write(), update(), reset(), DEFAULTS }
 window.MainMenu = { open(), close(), toggle(), init() }
 window.ButtonGo = { init(), goBack(), goForward(), updateNavigationButtons() }
 window.NavSearch = { init(), handleAddressBar(), updateAddressBar(), clearAddressBar(), getDomainFromUrl() }
+window.PictureInPictureControl = {
+  init(), dispose(), refresh(), open(), close(),
+  command(action), getSnapshot(), getState()
+}
 ```
+
+## PictureInPicture/
+
+- Inspeciona exclusivamente `#browser webview.active`; o vídeo do wallpaper não participa.
+- O botão aparece à esquerda da busca apenas quando há um `<video>` tocando.
+- Usa a API nativa do Chromium: `video.requestPictureInPicture()` e `document.exitPictureInPicture()`.
+- O menu moderno mostra metadata/capa, progresso, play/pause e anterior/próxima.
+- Registra uma fonte local prioritária no `DragonMedia`; Music completo e minimal passam a reconhecer e controlar o PiP.
+- Sites sem Media Session recebem metadata e handlers básicos de play/pause/seek; handlers existentes do site não são substituídos.
+- Reavalia o estado em eventos de mídia, aba, navegação e por um intervalo leve.
+- Sites que isolam o vídeo em iframe cross-origin ou usam DRM podem bloquear o PiP.
+- A moldura da janela PiP é nativa do Chromium/SO e não aceita CSS, raio ou HTML do app.
 
 ---
 

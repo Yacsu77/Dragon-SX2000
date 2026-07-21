@@ -116,5 +116,6 @@ Opacidade da ativa e LED: `ChromeLayoutSettings` (`activeTabOpacity`, `activeTab
 
 ## Ver também
 
+- [`Janelas.MD`](./Janelas.MD) — Multijanelas, detach, transfer, split (integra com snapshots / reorder)
 - [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD)
 - [`Top.MD`](./Top.MD) — Layout Topo Global

@@ -29,6 +29,7 @@
   let manualClose = false;
   let commandSeq = 0;
   const pendingCommands = new Map();
+  let localSource = null;
 
   const state = {
     snapshot: null,
@@ -59,6 +60,40 @@
   function off(event, fn) {
     const set = listeners.get(event);
     if (set) set.delete(fn);
+  }
+
+  function getLocalSnapshot() {
+    if (!localSource || typeof localSource.getSnapshot !== "function") return null;
+    try {
+      return localSource.getSnapshot() || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function getEffectiveSnapshot() {
+    return getLocalSnapshot() || state.snapshot;
+  }
+
+  /**
+   * Fonte local prioritária (ex.: vídeo em Picture in Picture dentro de webview).
+   * Assim o Music usa a mesma API do SDK sem confundir o vídeo do wallpaper.
+   */
+  function registerLocalSource(source) {
+    if (!source || typeof source.getSnapshot !== "function") return () => {};
+    localSource = source;
+    emit("media_change", getEffectiveSnapshot());
+    return () => {
+      if (localSource !== source) return;
+      localSource = null;
+      emit("media_change", state.snapshot);
+    };
+  }
+
+  function notifyLocalSourceChanged(event = "media_progress") {
+    if (!localSource) return;
+    const snapshot = getLocalSnapshot();
+    emit(snapshot ? event : "media_stop", snapshot);
   }
 
   function applyMessage(event, data) {
@@ -187,7 +222,7 @@
    * Resolve com `{ ok, action, error? }` quando o servidor responder.
    * Timeout de 2s caso o SDK não responda.
    */
-  function command(action) {
+  function remoteCommand(action) {
     return new Promise((resolve) => {
       if (!socket || socket.readyState !== WebSocket.OPEN) {
         resolve({ ok: false, error: "disconnected", action });
@@ -210,13 +245,27 @@
     });
   }
 
+  async function command(action) {
+    const localSnapshot = getLocalSnapshot();
+    if (localSnapshot && localSource && typeof localSource.command === "function") {
+      try {
+        const result = await localSource.command(action);
+        if (result?.ok || result?.passthrough !== true) return result;
+      } catch (error) {
+        console.warn("[DragonMedia] fonte local:", error);
+      }
+    }
+    return remoteCommand(action);
+  }
+
   function start() {
     manualClose = false;
     connect();
   }
 
   window.DragonMedia = {
-    get snapshot() { return state.snapshot; },
+    get snapshot() { return getEffectiveSnapshot(); },
+    get sdkSnapshot() { return state.snapshot; },
     get connected() { return state.connected; },
     get hasController() { return state.hasController; },
     on,
@@ -224,6 +273,8 @@
     start,
     disconnect,
     command,
+    registerLocalSource,
+    notifyLocalSourceChanged,
     url: SDK_URL,
   };
 

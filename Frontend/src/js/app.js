@@ -110,7 +110,9 @@ async function recoverBoot() {
   return { needsOnboarding: true, needsSwitcher: false, users: [] };
 }
 
-async function mountWorkspace() {
+async function mountWorkspace(options = {}) {
+  const cleanSession = Boolean(options.cleanSession);
+
   if (window.UserGate && typeof window.UserGate.showBootLoader === 'function') {
     window.UserGate.showBootLoader('Carregando seu espaço…');
   }
@@ -125,6 +127,12 @@ async function mountWorkspace() {
 
   if (window.CursorControll && typeof window.CursorControll.init === 'function') {
     window.CursorControll.init();
+  }
+
+  // Conteúdo pendente (link / detach) — antes de restaurar sessão
+  let pendingApplied = false;
+  if (window.Janelas && typeof window.Janelas.applyPendingTab === 'function') {
+    pendingApplied = !!(await window.Janelas.applyPendingTab());
   }
 
   if (window.Tabline && typeof window.Tabline.init === 'function') {
@@ -164,13 +172,16 @@ async function mountWorkspace() {
   }
 
   let restored = false;
-  if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.restoreActiveGroup === 'function') {
+  // Nova janela por link/detach: só a aba pendente — não restaura sessão/grupos
+  if (pendingApplied || cleanSession) {
+    restored = pendingApplied;
+  } else if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.restoreActiveGroup === 'function') {
     restored = !!(await window.TabGroupsRuntime.restoreActiveGroup());
   } else if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
     restored = !!window.SessionTabs.restore();
   }
 
-  if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
+  if (!restored && !cleanSession && window.AppShell && typeof window.AppShell.showHome === 'function') {
     window.AppShell.showHome();
     if (!document.querySelector('.tab') && typeof window.createHomeTab === 'function') {
       window.createHomeTab();
@@ -197,20 +208,32 @@ async function initApp() {
     return;
   }
 
-  const bootPromise = window.UserSession.resolveForBoot();
-  await waitForUserSelection(bootPromise);
+  let inherit = { inherited: false, cleanSession: false };
+  if (window.Janelas && typeof window.Janelas.inheritBootSession === 'function') {
+    try {
+      inherit = await window.Janelas.inheritBootSession();
+    } catch (err) {
+      console.warn('[initApp] herança de sessão falhou', err);
+    }
+  }
+
+  if (!inherit.inherited) {
+    const bootPromise = window.UserSession.resolveForBoot();
+    await waitForUserSelection(bootPromise);
+  }
 
   if (!window.UserSession.getActiveUserId()) {
     console.error('[initApp] Nenhum usuário ativo após o gate');
     return;
   }
 
-  await mountWorkspace();
+  await mountWorkspace({ cleanSession: inherit.cleanSession });
 
   document.addEventListener('user:changed', async (event) => {
     const previousUserId = event.detail?.previousUserId;
     const reason = event.detail?.reason;
     if (reason === 'photo') return;
+    if (reason === 'window-inherit') return;
     if (!previousUserId && reason === 'create') return;
     if (!previousUserId && (reason === 'unlock' || reason === 'select')) return;
     if (!previousUserId) return;

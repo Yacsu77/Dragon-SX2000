@@ -58,6 +58,61 @@
     }
   }
 
+  const GOOGLE_SCROLLBAR_CSS = `
+    html, body {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    *::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  `;
+
+  function isGoogleUrl(url) {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return hostname === 'google.com' || hostname === 'www.google.com' ||
+        hostname.endsWith('.google.com');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function syncGoogleScrollbar(webview) {
+    if (!webview || typeof webview.getURL !== 'function') return;
+
+    let url = '';
+    try {
+      url = webview.getURL();
+    } catch (_) {
+      return;
+    }
+
+    if (!isGoogleUrl(url)) {
+      const previousKey = webview.__googleScrollbarCssKey;
+      webview.__googleScrollbarCssKey = null;
+      if (previousKey && typeof webview.removeInsertedCSS === 'function') {
+        try {
+          await webview.removeInsertedCSS(previousKey);
+        } catch (_) {
+          /* guest navegou antes da remoção */
+        }
+      }
+      return;
+    }
+
+    if (webview.__googleScrollbarCssKey || typeof webview.insertCSS !== 'function') return;
+    try {
+      webview.__googleScrollbarCssKey = await webview.insertCSS(GOOGLE_SCROLLBAR_CSS);
+    } catch (_) {
+      /* webview ainda não está pronto */
+    }
+  }
+
   // Criação centralizada do <webview> (DRY). Partition por usuário
   // (`persist:dragon-{userId}`) isola cookies/cache entre perfis.
   function buildWebview(url, tabId) {
@@ -118,6 +173,18 @@
   }
 
   function attachWebviewListeners(webview, tabId, titleSpan) {
+    webview.addEventListener('dom-ready', () => {
+      syncGoogleScrollbar(webview);
+    });
+
+    webview.addEventListener('did-navigate', () => {
+      syncGoogleScrollbar(webview);
+    });
+
+    webview.addEventListener('did-navigate-in-page', () => {
+      syncGoogleScrollbar(webview);
+    });
+
     webview.addEventListener('page-title-updated', (e) => {
       if (e.title && titleSpan) {
         titleSpan.textContent = e.title.length > 25 ? `${e.title.substring(0, 25)}...` : e.title;

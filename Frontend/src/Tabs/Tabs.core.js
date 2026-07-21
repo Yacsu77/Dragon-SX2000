@@ -212,7 +212,7 @@
     titleSpan.textContent = displayTitle;
     tabButton.appendChild(titleSpan);
 
-    tabButton.onclick = () => activateTab(tabId);
+    tabButton.onclick = () => (window.activateTab || activateTab)(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
@@ -224,7 +224,7 @@
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, false);
-    if (activate) activateTab(tabId);
+    if (activate) (window.activateTab || activateTab)(tabId);
     return tabId;
   }
 
@@ -256,7 +256,7 @@
     titleSpan.textContent = displayTitle;
     tabButton.appendChild(titleSpan);
 
-    tabButton.onclick = () => activateTab(tabId);
+    tabButton.onclick = () => (window.activateTab || activateTab)(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
@@ -266,7 +266,7 @@
     attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
     emitTabCreated(tabId, false);
-    if (activate !== false) activateTab(tabId);
+    if (activate !== false) (window.activateTab || activateTab)(tabId);
     return tabId;
   }
 
@@ -310,7 +310,7 @@
     if (state.currentActiveTab === tabId) {
       const remainingTabs = document.querySelectorAll('.tab');
       if (remainingTabs.length > 0) {
-        activateTab(remainingTabs[0].dataset.id);
+        (window.activateTab || activateTab)(remainingTabs[0].dataset.id);
       } else {
         state.currentActiveTab = null;
         window.currentActiveTab = null;
@@ -347,7 +347,7 @@
     titleSpan.textContent = 'New Tab';
     tabButton.appendChild(titleSpan);
 
-    tabButton.onclick = () => activateHomeTab(tabId);
+    tabButton.onclick = () => (window.activateHomeTab || activateHomeTab)(tabId);
 
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
@@ -356,7 +356,7 @@
     afterTabLayoutUpdate();
 
     emitTabCreated(tabId, true);
-    if (activate !== false) activateHomeTab(tabId);
+    if (activate !== false) (window.activateHomeTab || activateHomeTab)(tabId);
     return tabId;
   }
 
@@ -473,7 +473,7 @@
     state.tabCount += 1;
     const newTabId = `tab-${state.tabCount}`;
     tab.dataset.id = newTabId;
-    tab.onclick = () => activateTab(newTabId);
+    tab.onclick = () => (window.activateTab || activateTab)(newTabId);
 
     const titleSpan = tab.querySelector('.tab-title');
     if (titleSpan) titleSpan.textContent = title || 'Nova Aba';

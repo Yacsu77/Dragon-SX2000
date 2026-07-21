@@ -1,5 +1,6 @@
 /**
  * Reordenação de abas por drag-and-drop.
+ * Ghost único segue o cursor livremente (X/Y) — sem trava vertical.
  */
 (function () {
 function setupTabDragAndDrop(tabElement) {
@@ -12,224 +13,335 @@ function setupTabDragAndDrop(tabElement) {
   let currentIndex = 0;
   let tabsContainer = null;
   let placeholder = null;
-  let dragGhost = null; // Clone visual com informações da aba
-  let tabsOrder = []; // Array que mantém a ordem das abas
-  const DRAG_THRESHOLD = 5; // Pixels que o mouse precisa se mover para iniciar o drag
-  
+  let dragGhost = null;
+  let tabsOrder = [];
+  let ghostWidth = 0;
+  let ghostHeight = 0;
+  let dragShield = null;
+  let activePointerId = null;
+  let usingOsGhost = false;
+  const DRAG_THRESHOLD = 5;
+
+  function clearInlineDragStyles() {
+    tabElement.classList.remove('dragging');
+    tabElement.style.zIndex = '';
+    tabElement.style.position = '';
+    tabElement.style.left = '';
+    tabElement.style.top = '';
+    tabElement.style.width = '';
+    tabElement.style.height = '';
+    tabElement.style.pointerEvents = '';
+    tabElement.style.opacity = '';
+    tabElement.style.visibility = '';
+  }
+
+  function positionGhost(clientX, clientY) {
+    if (!dragGhost) return;
+    dragGhost.style.left = `${clientX - mouseOffsetX}px`;
+    dragGhost.style.top = `${clientY - mouseOffsetY}px`;
+  }
+
+  /** Impede o <webview> de roubar o mouse ao arrastar para baixo / fora. */
+  function ensureDragShield(pointerId) {
+    if (dragShield) return dragShield;
+    dragShield = document.createElement('div');
+    dragShield.className = 'janelas-drag-shield';
+    dragShield.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(dragShield);
+    if (pointerId != null && dragShield.setPointerCapture) {
+      try {
+        dragShield.setPointerCapture(pointerId);
+        activePointerId = pointerId;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return dragShield;
+  }
+
+  function removeDragShield() {
+    if (!dragShield) return;
+    if (activePointerId != null && dragShield.releasePointerCapture) {
+      try {
+        dragShield.releasePointerCapture(activePointerId);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    activePointerId = null;
+    dragShield.remove();
+    dragShield = null;
+  }
+
+  function startOsGhost(tabId, mode) {
+    const titleSpan = tabElement.querySelector('.tab-title');
+    const faviconImg = tabElement.querySelector('.tab-icon img');
+    const thumb = window.JanelasNS?.ThumbnailCache?.getCached?.(tabId) || null;
+    const nextMode = mode || 'tab';
+    usingOsGhost = !!window.JanelasNS?.OsDragGhost?.start?.({
+      title: titleSpan?.textContent?.trim() || 'Aba',
+      favicon: faviconImg?.src || null,
+      thumbnail: thumb,
+      mode: nextMode,
+      width: nextMode === 'detach' ? 168 : ghostWidth,
+      height: nextMode === 'detach' ? 128 : ghostHeight,
+      offsetX: mouseOffsetX,
+      offsetY: mouseOffsetY,
+    });
+    // Ghost local permanece SEMPRE visível (dentro da janela).
+    // OS ghost só cobre monitores externos — não ocultamos o local.
+  }
+
+  function syncOsGhostMode(clientX, clientY) {
+    const hovering = Boolean(
+      window.JanelasNS?.TransferController?.isHoveringTarget?.()
+    );
+    const armed = Boolean(window.JanelasNS?.DetachController?.isArmed?.());
+    const outside = Boolean(
+      window.JanelasNS?.DetachThreshold?.isOutsideViewport?.(clientX, clientY)
+    );
+    const inLocalTabs = Boolean(
+      window.JanelasNS?.DetachThreshold?.isInLocalTabsZone?.(clientX, clientY)
+    );
+
+    let mode = 'tab';
+    if (hovering) mode = 'transfer';
+    else if (armed) mode = 'detach';
+
+    // Fora da barra local o ghost OS precisa existir (outra janela / desktop).
+    // Senão o ghost local some ao sair desta BrowserWindow.
+    const needOs = !inLocalTabs || outside || hovering;
+
+    const tabId = tabElement.dataset.id;
+    const titleSpan = tabElement.querySelector('.tab-title');
+    const faviconImg = tabElement.querySelector('.tab-icon img');
+    const payload = {
+      thumbnail: window.JanelasNS?.ThumbnailCache?.getCached?.(tabId) || null,
+      title: titleSpan?.textContent?.trim() || 'Aba',
+      favicon: faviconImg?.src || null,
+      width: mode === 'detach' ? 168 : ghostWidth,
+      height: mode === 'detach' ? 128 : ghostHeight,
+    };
+
+    if (needOs) {
+      if (!usingOsGhost) startOsGhost(tabId, mode);
+      else window.JanelasNS?.OsDragGhost?.setMode?.(mode, payload);
+      if (dragGhost) {
+        dragGhost.style.opacity = '0';
+        dragGhost.style.pointerEvents = 'none';
+      }
+    } else {
+      if (usingOsGhost) endOsGhost();
+      if (dragGhost) {
+        dragGhost.style.opacity = '1';
+      }
+    }
+  }
+
+  function endOsGhost() {
+    if (!usingOsGhost) return;
+    window.JanelasNS?.OsDragGhost?.end?.();
+    usingOsGhost = false;
+  }
+
   const handleMouseDown = (e) => {
-    // Não iniciar drag se clicar no botão de fechar
     if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
       return;
     }
-    
-    // Não iniciar drag se clicar no ponto de nova aba
     if (e.target.classList.contains('new-tab-dot') || e.target.closest('.new-tab-dot')) {
       return;
     }
-    
-    // Preparar para possível drag, mas não iniciar ainda
+    if (e.button != null && e.button !== 0) return;
+
     hasStartedDrag = false;
+    activePointerId = e.pointerId != null ? e.pointerId : null;
     tabsContainer = tabElement.parentElement;
-    
-    // Criar array com a ordem inicial de todas as abas
+
     tabsOrder = Array.from(tabsContainer.children)
-      .filter(child => child.classList.contains('tab'))
-      .map(tab => tab);
-    
+      .filter((child) => child.classList.contains('tab'))
+      .map((tab) => tab);
+
     currentIndex = tabsOrder.indexOf(tabElement);
-    
+
     const rect = tabElement.getBoundingClientRect();
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-    // Usar offset menor para aba ficar mais próxima do cursor (centro da aba)
     mouseOffsetX = rect.width / 2;
     mouseOffsetY = rect.height / 2;
-    
+    ghostWidth = rect.width;
+    ghostHeight = rect.height;
+
     e.preventDefault();
   };
-  
+
   const handleMouseMove = (e) => {
-    // Se ainda não começou o drag, verificar se passou do threshold
     if (!hasStartedDrag && tabsContainer) {
       const deltaX = Math.abs(e.clientX - dragStartX);
       const deltaY = Math.abs(e.clientY - dragStartY);
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
+
       if (distance > DRAG_THRESHOLD) {
-        // Iniciar o drag
         hasStartedDrag = true;
         isDragging = true;
-        
-        const rect = tabElement.getBoundingClientRect();
-        const containerRect = tabsContainer.getBoundingClientRect();
-        
-        // Adicionar classe de arraste
+
+        window.JanelasNS?.TabPreview?.hide?.();
+        window.JanelasNS?.DetachController?.reset?.();
+        window.JanelasNS?.ThumbnailCache?.pause?.();
+        ensureDragShield(e.pointerId != null ? e.pointerId : activePointerId);
+
+        // Aba original some; ghost local fica oculto — o ghost OS segue o cursor entre monitores
         tabElement.classList.add('dragging');
-        tabElement.style.zIndex = '1000';
-        tabElement.style.position = 'fixed';
-        tabElement.style.left = `${e.clientX - mouseOffsetX}px`;
-        // Manter a aba no mesmo nível Y ou ligeiramente acima (nunca abaixo)
-        const originalTop = containerRect.top;
-        const maxTop = originalTop - 5; // Permitir apenas 5px acima
-        tabElement.style.top = `${Math.max(maxTop, e.clientY - mouseOffsetY)}px`;
-        tabElement.style.width = `${rect.width}px`;
-        tabElement.style.pointerEvents = 'none';
-        // Esconder o conteúdo da aba original
-        tabElement.style.opacity = '0.3';
-        
-        // Criar clone visual (ghost) com informações da aba
+
         dragGhost = document.createElement('div');
         dragGhost.classList.add('tab-drag-ghost');
-        
-        // Copiar informações da aba
+
         const iconSpan = tabElement.querySelector('.tab-icon');
         const titleSpan = tabElement.querySelector('.tab-title');
-        
-        // Criar estrutura do clone
+
         const ghostIcon = document.createElement('span');
         ghostIcon.classList.add('tab-icon');
         if (iconSpan) {
           if (iconSpan.querySelector('img')) {
-            const img = iconSpan.querySelector('img').cloneNode(true);
-            ghostIcon.appendChild(img);
+            ghostIcon.appendChild(iconSpan.querySelector('img').cloneNode(true));
           } else {
             ghostIcon.textContent = iconSpan.textContent;
           }
         }
-        
+
         const ghostTitle = document.createElement('span');
         ghostTitle.classList.add('tab-title');
-        if (titleSpan) {
-          ghostTitle.textContent = titleSpan.textContent;
-        }
-        
+        if (titleSpan) ghostTitle.textContent = titleSpan.textContent;
+
         dragGhost.appendChild(ghostIcon);
         dragGhost.appendChild(ghostTitle);
-        
-        // Posicionar o clone
-        dragGhost.style.left = `${e.clientX - mouseOffsetX}px`;
-        dragGhost.style.top = `${Math.max(maxTop, e.clientY - mouseOffsetY)}px`;
-        dragGhost.style.width = `${rect.width}px`;
-        dragGhost.style.height = `${rect.height}px`;
-        
+
+        dragGhost.style.width = `${ghostWidth}px`;
+        dragGhost.style.height = `${ghostHeight}px`;
+        dragGhost.style.opacity = '1';
+        positionGhost(e.clientX, e.clientY);
         document.body.appendChild(dragGhost);
-        
-        // Criar placeholder (bolha)
+
+        // OS ghost só quando sair da viewport / modo janela / transfer
+        syncOsGhostMode(e.clientX, e.clientY);
+
         placeholder = document.createElement('div');
         placeholder.classList.add('tab-placeholder');
-        placeholder.style.width = `${rect.width}px`;
-        placeholder.style.height = `${rect.height}px`;
+        placeholder.style.width = `${ghostWidth}px`;
+        placeholder.style.height = `${ghostHeight}px`;
         tabsContainer.insertBefore(placeholder, tabElement);
-        
-        // Adicionar classe ao container para efeitos nas outras abas
+
         tabsContainer.classList.add('dragging-tabs');
       } else {
-        // Ainda não passou do threshold, não fazer nada
         return;
       }
     }
-    
+
     if (!isDragging) return;
-    
-    // Calcular posição do mouse relativa ao container de abas
+
     const containerRect = tabsContainer.getBoundingClientRect();
     const mouseX = e.clientX - containerRect.left;
-    
-    // Atualizar posição da aba arrastada seguindo o mouse (X) e limitando Y
-    tabElement.style.left = `${e.clientX - mouseOffsetX}px`;
-    // Manter a aba no mesmo nível Y ou ligeiramente acima (nunca abaixo)
-    const originalTop = containerRect.top;
-    const maxTop = originalTop - 5; // Permitir apenas 5px acima
-    const calculatedTop = e.clientY - mouseOffsetY;
-    const finalTop = Math.max(maxTop, calculatedTop);
-    tabElement.style.top = `${finalTop}px`;
-    
-    // Atualizar posição do clone visual (ghost)
-    if (dragGhost) {
-      dragGhost.style.left = `${e.clientX - mouseOffsetX}px`;
-      dragGhost.style.top = `${finalTop}px`;
+    const tabId = tabElement.dataset.id;
+
+    // Movimento livre em X e Y (sem trava na barra de abas)
+    positionGhost(e.clientX, e.clientY);
+
+    const hoveringTransfer = Boolean(
+      window.JanelasNS?.TransferController?.isHoveringTarget?.()
+    );
+    const inLocalTabs = Boolean(
+      window.JanelasNS?.DetachThreshold?.isInLocalTabsZone?.(e.clientX, e.clientY)
+    );
+
+    if (window.JanelasNS?.DetachController) {
+      window.JanelasNS.DetachController.onDragMove({
+        clientX: e.clientX,
+        clientY: e.clientY,
+        tabId,
+        ghostEl: dragGhost,
+        hoveringTransfer,
+      });
     }
-    
-    // Obter todas as abas visíveis (exceto a arrastada) ordenadas por posição visual atual
+
+    if (window.JanelasNS?.TransferController?.onDragMove) {
+      window.JanelasNS.TransferController.onDragMove({
+        tabId,
+        ghostEl: dragGhost,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      });
+    }
+
+    syncOsGhostMode(e.clientX, e.clientY);
+
+    // Só reordena dentro da barra local; fora = modo janela / transfer
+    if (!inLocalTabs || hoveringTransfer) {
+      if (placeholder) {
+        placeholder.classList.add('tab-placeholder--hidden');
+      }
+      return;
+    }
+
+    if (placeholder) {
+      placeholder.classList.remove('tab-placeholder--hidden');
+    }
+
     const visibleTabs = tabsOrder
-      .filter(tab => tab !== tabElement)
-      .map(tab => ({
+      .filter((tab) => tab !== tabElement)
+      .map((tab) => ({
         element: tab,
         left: tab.getBoundingClientRect().left - containerRect.left,
         right: tab.getBoundingClientRect().right - containerRect.left,
-        mid: (tab.getBoundingClientRect().left + tab.getBoundingClientRect().right) / 2 - containerRect.left,
-        orderIndex: tabsOrder.indexOf(tab)
+        mid:
+          (tab.getBoundingClientRect().left + tab.getBoundingClientRect().right) / 2 -
+          containerRect.left,
+        orderIndex: tabsOrder.indexOf(tab),
       }))
       .sort((a, b) => a.left - b.left);
-    
-    // Calcular novo índice baseado na posição X do mouse
+
     let newIndex = currentIndex;
-    
+
     if (visibleTabs.length === 0) {
       newIndex = 0;
+    } else if (mouseX < visibleTabs[0].left) {
+      newIndex = 0;
+    } else if (mouseX > visibleTabs[visibleTabs.length - 1].right) {
+      newIndex = tabsOrder.length - 1;
     } else {
-      // Verificar se o mouse está antes da primeira aba
-      if (mouseX < visibleTabs[0].left) {
-        newIndex = 0;
-      }
-      // Verificar se o mouse está depois da última aba
-      else if (mouseX > visibleTabs[visibleTabs.length - 1].right) {
-        newIndex = tabsOrder.length - 1;
-      }
-      // Verificar sobre qual aba o mouse está
-      else {
-        for (let i = 0; i < visibleTabs.length; i++) {
-          const tab = visibleTabs[i];
-          
-          // Se o mouse está sobre esta aba
-          if (mouseX >= tab.left && mouseX <= tab.right) {
-            // Usar o índice original no array tabsOrder
-            if (mouseX < tab.mid) {
-              newIndex = tab.orderIndex;
-            } else {
-              newIndex = tab.orderIndex + 1;
-            }
-            break;
-          }
-          // Se o mouse está entre duas abas
-          else if (i < visibleTabs.length - 1 && mouseX > tab.right && mouseX < visibleTabs[i + 1].left) {
-            newIndex = tab.orderIndex + 1;
-            break;
-          }
+      for (let i = 0; i < visibleTabs.length; i++) {
+        const tab = visibleTabs[i];
+        if (mouseX >= tab.left && mouseX <= tab.right) {
+          newIndex = mouseX < tab.mid ? tab.orderIndex : tab.orderIndex + 1;
+          break;
+        }
+        if (
+          i < visibleTabs.length - 1 &&
+          mouseX > tab.right &&
+          mouseX < visibleTabs[i + 1].left
+        ) {
+          newIndex = tab.orderIndex + 1;
+          break;
         }
       }
     }
-    
-    // Limitar newIndex ao range válido
+
     newIndex = Math.max(0, Math.min(newIndex, tabsOrder.length - 1));
-    
-    // Sistema de array: reorganizar o array e aplicar ao DOM em tempo real
+
     if (newIndex !== currentIndex) {
-      // Remover a aba arrastada do array
       tabsOrder.splice(currentIndex, 1);
-      
-      // Inserir na nova posição
       tabsOrder.splice(newIndex, 0, tabElement);
-      
-      // Atualizar currentIndex
       currentIndex = newIndex;
-      
-      // Aplicar a nova ordem ao DOM em tempo real
-      // Remover placeholder se existir
+
       if (placeholder && placeholder.parentNode) {
         placeholder.remove();
       }
-      
-      // Criar placeholder na nova posição
+
       if (!placeholder) {
         placeholder = document.createElement('div');
         placeholder.classList.add('tab-placeholder');
-        const rect = tabElement.getBoundingClientRect();
-        placeholder.style.width = `${rect.width}px`;
-        placeholder.style.height = `${rect.height}px`;
+        placeholder.style.width = `${ghostWidth}px`;
+        placeholder.style.height = `${ghostHeight}px`;
       }
-      
-      // Inserir placeholder na posição correta
+
       if (newIndex === 0) {
         tabsContainer.insertBefore(placeholder, tabsContainer.firstChild);
       } else if (newIndex < tabsOrder.length - 1) {
@@ -242,24 +354,20 @@ function setupTabDragAndDrop(tabElement) {
       } else {
         tabsContainer.appendChild(placeholder);
       }
-      
-      // Reorganizar todas as abas no DOM de acordo com o array
+
       tabsOrder.forEach((tab, index) => {
         if (tab !== tabElement && tab.parentNode === tabsContainer) {
           const currentPos = Array.from(tabsContainer.children).indexOf(tab);
           if (currentPos !== index) {
-            // Aplicar transição suave
             if (!tab.style.transition || !tab.style.transition.includes('transform')) {
               tab.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             }
-            
-            // Encontrar onde inserir
+
             if (index === 0) {
               if (tabsContainer.firstChild !== tab && tabsContainer.firstChild !== placeholder) {
                 tabsContainer.insertBefore(tab, tabsContainer.firstChild);
               }
             } else {
-              // Encontrar o item anterior no array que já está no DOM
               let referenceNode = null;
               for (let i = index - 1; i >= 0; i--) {
                 const prevTab = tabsOrder[i];
@@ -281,35 +389,90 @@ function setupTabDragAndDrop(tabElement) {
         }
       });
     }
-    
-    const tabRect = tabElement.getBoundingClientRect();
-    const tabCenterX = tabRect.left + tabRect.width / 2;
 
     if (window.TabsAnim) {
-      window.TabsAnim.applyDragEffects(tabsContainer, tabElement, tabCenterX);
+      window.TabsAnim.applyDragEffects(tabsContainer, tabElement, e.clientX);
     }
   };
-  
-  const handleMouseUp = () => {
-    // Se não iniciou o drag, permitir o clique normal
+
+  const handleMouseUp = async () => {
     if (!hasStartedDrag) {
       tabsContainer = null;
       return;
     }
-    
+
     if (!isDragging) return;
-    
+
     isDragging = false;
     hasStartedDrag = false;
-    
-    // A aba já está na posição correta no array tabsOrder
-    // Apenas remover placeholder e inserir a aba arrastada no lugar
+
+    const tabId = tabElement.dataset.id;
+    let handled = false;
+
+    // 1) Transferência para outra janela (prioridade sobre detach)
+    if (window.JanelasNS?.TransferController?.onDragEnd) {
+      try {
+        handled = await window.JanelasNS.TransferController.onDragEnd({ tabId });
+      } catch (_) {
+        handled = false;
+      }
+    }
+
+    // 2) Detach → nova janela
+    if (!handled && window.JanelasNS?.DetachController) {
+      try {
+        handled = await window.JanelasNS.DetachController.onDragEnd({ tabId });
+      } catch (_) {
+        handled = false;
+      }
+    }
+
+    const cleanupDragUi = () => {
+      if (placeholder) {
+        if (placeholder.parentNode && !handled) {
+          tabsContainer.insertBefore(tabElement, placeholder);
+        }
+        placeholder.remove();
+        placeholder = null;
+      }
+
+      if (dragGhost) {
+        dragGhost.remove();
+        dragGhost = null;
+      }
+
+      removeDragShield();
+      endOsGhost();
+      window.JanelasNS?.WindowBridge?.clearDragHover?.();
+      window.JanelasNS?.DropIndicator?.hide?.();
+      window.JanelasNS?.DetachController?.reset?.();
+      window.JanelasNS?.ThumbnailCache?.resume?.();
+      clearInlineDragStyles();
+
+      if (tabsContainer) {
+        tabsContainer.classList.remove('dragging-tabs');
+        if (window.TabsAnim) {
+          window.TabsAnim.clearDragEffects(tabsContainer);
+        }
+      }
+
+      if (window.TabsVisibility) {
+        window.TabsVisibility.scheduleVisibilityUpdate();
+      }
+
+      tabsContainer = null;
+    };
+
+    if (handled) {
+      cleanupDragUi();
+      return;
+    }
+
     if (placeholder && placeholder.parentNode) {
       tabsContainer.insertBefore(tabElement, placeholder);
       placeholder.remove();
     }
-    
-    // Garantir que todas as abas estejam na ordem correta do array
+
     tabsOrder.forEach((tab, index) => {
       if (tab !== tabElement && tab.parentNode === tabsContainer) {
         const currentPos = Array.from(tabsContainer.children).indexOf(tab);
@@ -325,24 +488,23 @@ function setupTabDragAndDrop(tabElement) {
         }
       }
     });
-    
-    // Reordenar webviews correspondentes usando o array tabsOrder
+
     const finalIndex = tabsOrder.indexOf(tabElement);
     if (finalIndex !== -1) {
-      const tabId = tabElement.dataset.id;
       const webview = document.querySelector(`webview[data-id="${tabId}"]`);
       const browserContainer = document.getElementById('browser');
-      
+
       if (webview && browserContainer) {
-        const webviews = Array.from(browserContainer.children).filter(child => 
-          child.tagName === 'WEBVIEW'
+        const webviews = Array.from(browserContainer.children).filter(
+          (child) => child.tagName === 'WEBVIEW'
         );
-        
-        const webviewOldIndex = webviews.findIndex(w => w.dataset.id === tabId);
+
+        const webviewOldIndex = webviews.findIndex((w) => w.dataset.id === tabId);
         if (webviewOldIndex !== -1 && webviewOldIndex !== finalIndex) {
-          const targetWebviewIndex = finalIndex < webviews.length ? finalIndex : webviews.length - 1;
+          const targetWebviewIndex =
+            finalIndex < webviews.length ? finalIndex : webviews.length - 1;
           const targetWebview = webviews[targetWebviewIndex];
-          
+
           if (targetWebview && webview !== targetWebview) {
             if (finalIndex > webviewOldIndex) {
               browserContainer.insertBefore(webview, targetWebview.nextSibling);
@@ -353,31 +515,31 @@ function setupTabDragAndDrop(tabElement) {
         }
       }
     }
-    
-    // Remover placeholder
+
     if (placeholder) {
       placeholder.remove();
       placeholder = null;
     }
-    
-    // Remover clone visual (ghost)
+
     if (dragGhost) {
       dragGhost.remove();
       dragGhost = null;
     }
-    
-    // Limpar estilos de arraste
-    tabElement.classList.remove('dragging');
-    tabElement.style.zIndex = '';
-    tabElement.style.position = '';
-    tabElement.style.left = '';
-    tabElement.style.top = '';
-    tabElement.style.width = '';
-    tabElement.style.pointerEvents = '';
-    tabElement.style.opacity = '';
-    
+
+    removeDragShield();
+    endOsGhost();
+    window.JanelasNS?.WindowBridge?.clearDragHover?.();
+    window.JanelasNS?.DropIndicator?.hide?.();
+    window.JanelasNS?.DetachController?.reset?.();
+    window.JanelasNS?.ThumbnailCache?.resume?.();
+    clearInlineDragStyles();
+
     if (window.TabsAnim) {
       window.TabsAnim.clearDragEffects(tabsContainer);
+    }
+
+    if (tabsContainer) {
+      tabsContainer.classList.remove('dragging-tabs');
     }
 
     if (window.TabsVisibility) {
@@ -386,11 +548,12 @@ function setupTabDragAndDrop(tabElement) {
 
     tabsContainer = null;
   };
-  
-  // Adicionar event listeners
-  tabElement.addEventListener('mousedown', handleMouseDown);
-  document.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
+
+  // Pointer events + capture: mantém o drag mesmo fora da janela / monitor
+  tabElement.addEventListener('pointerdown', handleMouseDown);
+  document.addEventListener('pointermove', handleMouseMove);
+  document.addEventListener('pointerup', handleMouseUp);
+  document.addEventListener('pointercancel', handleMouseUp);
 }
 
   window.TabsReorder = { setupTabDragAndDrop };

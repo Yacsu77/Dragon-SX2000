@@ -156,31 +156,14 @@
   cursor: grabbing;
 }
 
-/* Efeito Liquid Glass durante o arraste - mais sutil */
+/* Efeito durante o arraste — aba original fica invisível; só o ghost segue o cursor */
 .tab.dragging {
-  background: linear-gradient(
-    to bottom,
-    rgba(100, 100, 100, 0.98) 0%,
-    rgba(80, 80, 80, 0.95) 100%
-  ) !important;
-  backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%) !important;
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: scale(1.02) rotate(0.5deg);
-  border-radius: 12px;
-  z-index: 10000 !important;
-  transition: none !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: flex !important;
-  color: #e0e0e0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
   pointer-events: none !important;
-  mix-blend-mode: normal !important;
-  -webkit-font-smoothing: antialiased !important;
-  font-smoothing: antialiased !important;
+  transition: none !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Clone visual (ghost) com informações da aba durante o arraste */

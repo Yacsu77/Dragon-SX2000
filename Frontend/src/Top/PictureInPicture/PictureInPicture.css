@@ -1,0 +1,346 @@
+.pip-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.pip-control[hidden] {
+  display: none !important;
+}
+
+.pip-control__button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(var(--chrome-border-rgb), var(--chrome-border-opacity));
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--app-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.pip-control__button:hover,
+.pip-control__button[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pip-control__button:active {
+  transform: scale(0.96);
+}
+
+.pip-control__button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pip-control__button.is-active {
+  color: #9dbdff;
+  border-color: rgba(120, 180, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(120, 180, 255, 0.1);
+}
+
+.pip-control__playing-dot {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #72d99b;
+  box-shadow: 0 0 6px rgba(114, 217, 155, 0.8);
+  pointer-events: none;
+}
+
+.pip-menu {
+  position: fixed;
+  z-index: 10120;
+  width: 300px;
+  padding: 12px;
+  border: 1px solid rgba(var(--chrome-border-rgb), calc(var(--chrome-border-opacity) + 0.08));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(120, 160, 255, 0.13), transparent 42%),
+    rgba(25, 26, 31, 0.9);
+  color: var(--app-text);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.44);
+  backdrop-filter: blur(30px) saturate(175%);
+  -webkit-backdrop-filter: blur(30px) saturate(175%);
+  opacity: 0;
+  transform: translateY(-5px) scale(0.98);
+  transform-origin: top left;
+  pointer-events: none;
+  transition: opacity 130ms ease, transform 130ms ease;
+}
+
+.pip-menu.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.pip-menu__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 10px;
+}
+
+.pip-menu__badge {
+  width: 38px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pip-menu__badge svg {
+  width: 21px;
+  height: 21px;
+}
+
+.pip-menu__header div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pip-menu__header strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pip-menu__header [data-role='pip-source'] {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+.pip-menu__now-playing {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.pip-menu__cover {
+  width: 64px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(145deg, rgba(120, 160, 255, 0.24), rgba(255, 255, 255, 0.06));
+}
+
+.pip-menu__cover img,
+.pip-menu__cover [data-role='pip-cover-fallback'] {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.pip-menu__cover img {
+  display: block;
+  object-fit: cover;
+}
+
+.pip-menu__cover [data-role='pip-cover-fallback'] {
+  display: grid;
+  place-items: center;
+}
+
+.pip-menu__cover [hidden],
+.pip-menu__transport [hidden] {
+  display: none !important;
+}
+
+.pip-menu__cover [data-role='pip-cover-fallback'] svg {
+  width: 25px;
+  height: 25px;
+}
+
+.pip-menu__media-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pip-menu__media-info > strong,
+.pip-menu__media-info > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pip-menu__media-info > strong {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pip-menu__media-info > span {
+  font-size: 9px;
+  opacity: 0.52;
+}
+
+.pip-menu__timeline {
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  opacity: 0.65;
+}
+
+.pip-menu__progress {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pip-menu__progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #82a9ff, #b08cff);
+  transition: width 220ms linear;
+}
+
+.pip-menu__transport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 0;
+}
+
+.pip-menu__transport button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.pip-menu__transport button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pip-menu__transport button:active {
+  transform: scale(0.92);
+}
+
+.pip-menu__transport button:disabled {
+  opacity: 0.42;
+}
+
+.pip-menu__transport button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pip-menu__transport .pip-menu__play {
+  width: 38px;
+  height: 38px;
+  color: #17191f;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.22);
+}
+
+.pip-menu__transport .pip-menu__play:hover {
+  background: #fff;
+}
+
+.pip-menu__transport .pip-menu__play svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pip-menu__action {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 11px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pip-menu__action:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.pip-menu__action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.pip-menu__action [data-role='pip-action-icon'] {
+  width: 22px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  position: relative;
+  opacity: 0.78;
+}
+
+.pip-menu__action [data-role='pip-action-icon']::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 8px;
+  height: 5px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.pip-menu__action.is-close {
+  color: #ffaaa5;
+}
+
+.pip-menu__message {
+  margin: 8px 4px 2px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #ffb6ae;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pip-control__button,
+  .pip-menu {
+    transition: none;
+  }
+}

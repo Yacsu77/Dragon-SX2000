@@ -14,6 +14,7 @@ Guia de referência do código em `Frontend/src/` após a refatoração v1.2.
 | `Top/` | [Top.MD](./Top.MD) |
 | `TopActions/` | [TopActions.MD](./TopActions.MD) |
 | `Tabs/` | [Tabs.MD](./Tabs.MD) |
+| `Janelas/` | [Janelas.MD](./Janelas.MD) |
 | `Tabline/` | [Tabline.MD](./Tabline.MD) |
 | `Home/` | [Home.MD](./Home.MD) |
 | `Browser/` | [Browser.MD](./Browser.MD) |
@@ -43,13 +44,14 @@ Frontend/src/
 ├── core/                   ← Bootstrap, CSS base, AppShell, montagem HTML
 ├── Top/                    ← Barra superior (menu, voltar/avançar, endereço, Editar)
 ├── TopActions/             ← Botões direitos (Downloads, Arquivos, Nova aba, Config)
-├── Tabs/                   ← Abas + grupos (TabGroups.*) + webviews (partition persistente)
+├── Tabs/                   ← Abas + grupos (TabGroups.*) + TabWarmth + webviews
+├── Janelas/                ← Multijanelas: preview, detach, transfer, split, layouts, anims
 ├── search/                 ← Busca Inteligente (SmartSearch: sugestões, autocomplete, navegação)
 ├── Passwords/              ← Gerenciador de senhas (Observer: bus, service, indicador, detecção)
 ├── settings/               ← perfSettings + chromeLayoutSettings (Layout Topo Global)
 ├── Tabline/                ← Barra lateral de idgets
 ├── Home/                   ← Área da home tab (transparente / wallpaper)
-├── Browser/                ← Container webview + eventos + modo perf-render-all
+├── Browser/                ← Container webview + crossfade + modo perf-render-all
 ├── Favoritos/              ← CRUD de favoritos (localStorage)
 ├── Wallpaper/              ← Markup do painel Wallpaper (lógica em UserINTer/)
 ├── js/                     ← Bootstrap, userApi (TabGroupsApi), histórico, media bridge
@@ -72,12 +74,13 @@ Frontend/MiniTelas/
 | Camada | Responsabilidade |
 |--------|------------------|
 | **Shell** (`index.html` + `core/Shell.js`) | Mount points vazios; carrega fragmentos HTML antes do bootstrap |
-| **AppShell** | Alterna home ↔ navegador; emite `app:home-shown` / `app:browser-shown` |
+| **AppShell** | Home ↔ browser com crossfade (`SURFACE_MS`); eventos `app:home-shown` / `app:browser-shown` |
 | **Top + TopActions** | Interação do usuário na barra superior |
-| **Tabs** | CRUD de abas, grupos (snapshots), webviews, drag, many-tabs, LED |
+| **Tabs** | CRUD de abas, grupos (snapshots), TabWarmth, drag, many-tabs, LED |
+| **Janelas** | Preview, detach OS, transfer, split, layouts Customise, tabTransition |
 | **ChromeLayout** | Layout Topo Global: busca, botões, Music, bordas, opacidade da aba |
 | **Tabline** | Idgets laterais; carrega scripts de `UserINTer/Tabline/idget/` |
-| **Home + Browser** | Área principal: wallpaper (home) ou webview (navegação) |
+| **Home + Browser** | Área principal: wallpaper (home) ou webview (navegação + crossfade) |
 | **Favoritos / Telas** | Features fullscreen (Favoritos em `src/`; Downloads/Arquivos/Atalhos/Editar em `Frontend/Telas/`) |
 | **js/ + settings/** | Serviços transversais (histórico API, TabGroupsApi, prefetch, Layout Topo Global, desempenho) |
 | **shortcuts/** | Atalhos globais (teclado, mouse extras, sync com webviews) |

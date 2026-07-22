@@ -15,7 +15,11 @@ const errorHandler = require('./Exceptions/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3333;
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+// Quando roda do runtime em Application Support, o boot define DSX_PROJECT_ROOT
+// para o probe do Electron ainda reconhecer esta instância.
+const PROJECT_ROOT = process.env.DSX_PROJECT_ROOT
+  ? path.resolve(process.env.DSX_PROJECT_ROOT)
+  : path.resolve(__dirname, '..', '..');
 const READY_FEATURES = [
   'users',
   'history',

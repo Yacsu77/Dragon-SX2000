@@ -1,20 +1,31 @@
 /**
  * Bootstrap da API-DSX.
  *
- * Em pastas sincronizadas (Desktop/Documents no iCloud, APFS dataless),
- * o primeiro require do dia pode falhar com ETIMEDOUT no readFileSync.
- * Este boot:
- *   1) materializa código local + deps críticas
- *   2) envolve o loader do Node com retry em ETIMEDOUT
- *   3) só então carrega app.js
+ * O projeto no Desktop/iCloud pode travar (ou ETIMEDOUT) ao ler node_modules.
+ * Solução: rodar a API a partir de
+ *   ~/Library/Application Support/Dragon-SX2000/API-DSX
+ * com node_modules instalado via npm (cache local), fora do iCloud.
  */
 'use strict';
 
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
+const os = require('os');
 const Module = require('module');
+const { spawnSync } = require('child_process');
 
-const ROOT = __dirname;
+const SOURCE_ROOT = __dirname;
+const PROJECT_ROOT = path.resolve(SOURCE_ROOT, '..', '..');
+const RUNTIME_ROOT = path.join(
+  os.homedir(),
+  'Library',
+  'Application Support',
+  'Dragon-SX2000',
+  'API-DSX'
+);
+
+const SOURCE_SKIP = new Set(['node_modules', '.git', 'coverage']);
 
 function sleepSync(ms) {
   try {
@@ -27,138 +38,143 @@ function sleepSync(ms) {
   }
 }
 
-function hydrateFile(filePath, retries = 10) {
-  for (let attempt = 0; attempt < retries; attempt += 1) {
-    try {
-      const fd = fs.openSync(filePath, 'r');
-      try {
-        const st = fs.fstatSync(fd);
-        const n = Math.min(Math.max(st.size || 1, 1), 256 * 1024);
-        fs.readSync(fd, Buffer.alloc(n), 0, n, 0);
-      } finally {
-        fs.closeSync(fd);
-      }
-      return true;
-    } catch (err) {
-      const code = err && err.code;
-      if (code === 'ENOENT') return false;
-      if (code === 'ETIMEDOUT' || code === 'EAGAIN' || code === 'EIO' || code === 'ENOTCONN') {
-        const wait = Math.min(500 * 2 ** attempt, 8000);
-        console.warn(
-          `[API-DSX] hydrate ${path.relative(ROOT, filePath) || filePath}: ${code} (tentativa ${attempt + 1}/${retries}, wait ${wait}ms)`
-        );
-        sleepSync(wait);
-        continue;
-      }
-      return false;
-    }
-  }
-  console.error(`[API-DSX] hydrate falhou após retries: ${filePath}`);
-  return false;
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => {
+      timer = setTimeout(
+        () => reject(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })),
+        ms
+      );
+    }),
+  ]);
 }
 
-function walkHydrate(dir, depth = 0, maxDepth = 10) {
-  if (depth > maxDepth) return;
+async function copyFileTimed(src, dest, timeoutMs = 8000) {
+  const data = await withTimeout(fsp.readFile(src), timeoutMs);
+  await fsp.mkdir(path.dirname(dest), { recursive: true });
+  await fsp.writeFile(dest, data);
+}
+
+async function copyTextIfExists(src, dest, timeoutMs = 4000) {
+  try {
+    await withTimeout(fsp.access(src, fs.constants.R_OK), 1000);
+  } catch {
+    return false;
+  }
+  try {
+    await copyFileTimed(src, dest, timeoutMs);
+    return true;
+  } catch (err) {
+    console.warn(
+      `[API-DSX] copy skip ${path.relative(SOURCE_ROOT, src)}: ${err.code || err.message}`
+    );
+    return false;
+  }
+}
+
+async function copyJsTree(srcDir, destDir) {
   let entries;
   try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries = await withTimeout(fsp.readdir(srcDir, { withFileTypes: true }), 3000);
   } catch {
     return;
   }
+  await fsp.mkdir(destDir, { recursive: true });
   for (const entry of entries) {
-    if (entry.name === '.' || entry.name === '..') continue;
-    const full = path.join(dir, entry.name);
+    if (SOURCE_SKIP.has(entry.name)) continue;
+    const from = path.join(srcDir, entry.name);
+    const to = path.join(destDir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === '.git' || entry.name === 'coverage') continue;
-      walkHydrate(full, depth + 1, maxDepth);
+      await copyJsTree(from, to);
       continue;
     }
-    if (/\.(js|cjs|mjs|node|json)$/i.test(entry.name)) {
-      hydrateFile(full);
-    }
+    if (!entry.isFile()) continue;
+    if (!/\.(js|cjs|mjs|json|sql)$/i.test(entry.name)) continue;
+    if (entry.name === 'boot.js') continue;
+    await copyTextIfExists(from, to);
   }
 }
 
-function hydrateCritical() {
-  const started = Date.now();
-  console.log('[API-DSX] materializando arquivos locais (anti-ETIMEDOUT)…');
+async function syncSourceTree() {
+  await fsp.mkdir(RUNTIME_ROOT, { recursive: true });
 
-  const localDirs = [
-    'DB',
-    'routes',
-    'services',
-    'utils',
-    'middleware',
-    'Exceptions',
-    'Models',
-    'controllers',
-  ];
-
-  hydrateFile(path.join(ROOT, 'app.js'));
-  for (const dir of localDirs) {
-    const full = path.join(ROOT, dir);
-    if (fs.existsSync(full)) walkHydrate(full, 0, 6);
-  }
-
-  // Deps que o app.js exige de imediato + nativo sqlite3.
-  const deps = [
-    'sqlite3',
-    'express',
-    'cors',
-    'dotenv',
-    'ioredis',
-    'body-parser',
-    'qs',
-    'debug',
-    'accepts',
-    'send',
-    'finalhandler',
-    'type-is',
-    'mime',
-    'mime-types',
-    'negotiator',
-    'proxy-addr',
-    'raw-body',
-    'content-type',
-    'cookie',
-    'encodeurl',
-    'escape-html',
-    'etag',
-    'fresh',
-    'http-errors',
-    'merge-descriptors',
-    'methods',
-    'on-finished',
-    'parseurl',
-    'path-to-regexp',
-    'range-parser',
-    'serve-static',
-    'statuses',
-    'utils-merge',
-    'vary',
-  ];
-  for (const dep of deps) {
-    const depRoot = path.join(ROOT, 'node_modules', dep);
-    if (fs.existsSync(depRoot)) walkHydrate(depRoot, 0, 8);
-  }
-
-  const sqliteBinding = path.join(
-    ROOT,
-    'node_modules',
-    'sqlite3',
-    'build',
-    'Release',
-    'node_sqlite3.node'
+  await copyTextIfExists(
+    path.join(SOURCE_ROOT, 'package.json'),
+    path.join(RUNTIME_ROOT, 'package.json')
   );
-  if (fs.existsSync(sqliteBinding)) hydrateFile(sqliteBinding);
+  await copyTextIfExists(
+    path.join(SOURCE_ROOT, 'package-lock.json'),
+    path.join(RUNTIME_ROOT, 'package-lock.json')
+  );
+  await copyTextIfExists(path.join(SOURCE_ROOT, '.env'), path.join(RUNTIME_ROOT, '.env'));
+  await copyTextIfExists(path.join(SOURCE_ROOT, 'app.js'), path.join(RUNTIME_ROOT, 'app.js'));
 
-  console.log(`[API-DSX] hydrate ok em ${Date.now() - started}ms`);
+  // Copia árvore de código (Controller, Services, routes, DB/*.js, …)
+  await copyJsTree(SOURCE_ROOT, RUNTIME_ROOT);
+
+  // Migra DB uma vez para fora do Desktop (dados do usuário).
+  const srcDb = path.join(SOURCE_ROOT, 'DB', 'dsx-browser.db');
+  const dstDb = path.join(RUNTIME_ROOT, 'DB', 'dsx-browser.db');
+  try {
+    await fsp.access(dstDb, fs.constants.R_OK);
+  } catch {
+    await copyTextIfExists(srcDb, dstDb, 30000);
+  }
 }
 
-/** Retry de Module._load quando o SO ainda está materializando o arquivo. */
+function expressInstalled() {
+  try {
+    fs.accessSync(path.join(RUNTIME_ROOT, 'node_modules', 'express', 'package.json'));
+    fs.accessSync(path.join(RUNTIME_ROOT, 'node_modules', 'sqlite3', 'package.json'));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureRuntimeDeps() {
+  if (expressInstalled()) {
+    console.log('[API-DSX] runtime deps ok (Application Support)');
+    return true;
+  }
+
+  console.log('[API-DSX] instalando deps em Application Support (fora do iCloud)…');
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(
+    npmCmd,
+    ['install', '--omit=dev', '--no-fund', '--no-audit'],
+    {
+      cwd: RUNTIME_ROOT,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      encoding: 'utf8',
+      timeout: 300000,
+    }
+  );
+
+  if (result.error) {
+    console.error('[API-DSX] npm install falhou:', result.error.message);
+    return false;
+  }
+  if (result.status !== 0) {
+    console.error('[API-DSX] npm install exit=', result.status);
+    if (result.stderr) console.error(result.stderr.slice(-2000));
+    return false;
+  }
+
+  if (!expressInstalled()) {
+    console.error('[API-DSX] deps ainda ausentes após npm install');
+    return false;
+  }
+
+  console.log('[API-DSX] deps instaladas no runtime');
+  return true;
+}
+
 function installRequireRetry() {
   const originalLoad = Module._load;
-  Module._load = function patchedLoad(request, parent, isMain) {
+  Module._load = function patchedLoad(request) {
     let lastErr;
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
@@ -169,9 +185,9 @@ function installRequireRetry() {
         if (code !== 'ETIMEDOUT' && code !== 'EAGAIN' && code !== 'EIO' && code !== 'ENOTCONN') {
           throw err;
         }
-        const wait = Math.min(500 * 2 ** attempt, 8000);
+        const wait = Math.min(400 * 2 ** attempt, 8000);
         console.warn(
-          `[API-DSX] require retry "${request}": ${code} (tentativa ${attempt + 1}/8, wait ${wait}ms)`
+          `[API-DSX] require retry "${request}": ${code} (${attempt + 1}/8, wait ${wait}ms)`
         );
         sleepSync(wait);
       }
@@ -180,11 +196,27 @@ function installRequireRetry() {
   };
 }
 
-try {
-  hydrateCritical();
-  installRequireRetry();
-  require('./app.js');
-} catch (err) {
-  console.error('[API-DSX] boot falhou:', err && err.stack ? err.stack : err);
-  process.exit(1);
-}
+(async () => {
+  try {
+    console.log('[API-DSX] preparando runtime em Application Support…');
+    await syncSourceTree();
+    if (!ensureRuntimeDeps()) {
+      console.warn(
+        '[API-DSX] fallback: tentando app.js no Desktop (pode travar no iCloud)'
+      );
+      process.env.DSX_PROJECT_ROOT = PROJECT_ROOT;
+      installRequireRetry();
+      require('./app.js');
+      return;
+    }
+
+    process.env.DSX_PROJECT_ROOT = PROJECT_ROOT;
+    process.chdir(RUNTIME_ROOT);
+    installRequireRetry();
+    console.log('[API-DSX] carregando app do runtime…');
+    require(path.join(RUNTIME_ROOT, 'app.js'));
+  } catch (err) {
+    console.error('[API-DSX] boot falhou:', err && err.stack ? err.stack : err);
+    process.exit(1);
+  }
+})();

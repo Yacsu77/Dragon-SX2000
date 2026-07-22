@@ -23,16 +23,69 @@ webview {
   background: var(--content-bg);
 }
 
-webview.active {
+/* Crossfade de telas: a anterior fica por cima e some; a nova já está opaca por baixo.
+ * Sem véu sólido e sem baixar opacity do container (isso causava “piscar”). */
+.browser-container.active webview {
   display: flex;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  filter: none;
+  transition: opacity 320ms ease-in-out;
+  background: var(--content-bg);
+  transform: translateZ(0);
 }
 
-/* ─── Modo de desempenho (opcional): manter todas as abas renderizadas ─────
- * Quando ativo (body.perf-render-all), os webviews inativos NÃO usam
- * display:none — ficam empilhados e apenas transparentes/atrás, permanecendo
- * pintados. A troca de aba vira um toggle instantâneo (sem repaint), ao custo
- * de mais uso de CPU/GPU e RAM (todas as abas seguem renderizando).
- */
+.browser-container.active webview.active {
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
+  z-index: 1;
+  /* Sem animation de enter 0→1 — a saída por cima já faz o crossfade */
+  animation: none;
+}
+
+.browser-container.active webview.active.is-leaving {
+  opacity: 0;
+  filter: none;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 320ms ease-in-out;
+}
+
+/* Split / multi */
+html[data-janelas-mode='split'] #browser webview,
+html[data-janelas-mode='split'] #browser webview.active,
+html[data-janelas-mode='split'] #browser webview.is-leaving,
+html[data-janelas-mode='split'] #browser webview.active.is-leaving,
+html[data-janelas-mode='split'] #browser webview.active.is-entering,
+body.janelas-multi-floating #browser webview.janelas-pane-visible,
+body.janelas-multi-floating #browser webview.janelas-pane-visible.is-leaving {
+  filter: none !important;
+  opacity: 1 !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.browser-container.tab-switch-veil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(12, 14, 18, 0.28);
+  opacity: 1;
+  transition: opacity 160ms ease;
+}
+
+.browser-container.tab-switch-veil.tab-switch-veil-out::after {
+  opacity: 0;
+}
+
 body.perf-render-all .browser-container.active webview {
   display: flex;
   position: absolute;

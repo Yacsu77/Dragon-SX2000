@@ -1,5 +1,6 @@
 /**
  * Transferência de aba entre janelas OS + feedback na barra destino.
+ * Bounds reportados sob demanda (resize/move/tabs/drag) — sem setInterval.
  */
 (function () {
   const NS = (window.JanelasNS = window.JanelasNS || {});
@@ -7,11 +8,11 @@
 
   let hoveringTarget = false;
   let lastTargetWindowId = null;
-  let reportTimer = null;
   let resolveTimer = null;
   let lastGhostEl = null;
   let lastHoverId = null;
   let pendingResolve = false;
+  let dragging = false;
 
   function getTabsScreenBounds() {
     const bar = document.querySelector('.tabs-bar');
@@ -21,7 +22,6 @@
     const r = el.getBoundingClientRect();
     const padX = 16;
     const padY = 20;
-    // screenX/Y do Electron + rect de conteúdo
     return {
       x: Math.round(window.screenX + r.left - padX),
       y: Math.round(window.screenY + r.top - padY),
@@ -34,6 +34,15 @@
     const bounds = getTabsScreenBounds();
     if (!bounds) return;
     NS.WindowBridge?.reportTabsBounds?.(bounds);
+  }
+
+  function beginDrag() {
+    dragging = true;
+    reportBounds();
+  }
+
+  function endDrag() {
+    dragging = false;
   }
 
   function setHovering(next, targetWindowId, ghostEl, screenX) {
@@ -71,6 +80,7 @@
   }
 
   function onDragMove(ctx) {
+    if (!dragging) beginDrag();
     lastGhostEl = ctx?.ghostEl || lastGhostEl;
     reportBounds();
 
@@ -116,6 +126,7 @@
       resolveTimer = null;
     }
     NS.WindowBridge?.clearDragHover?.();
+    endDrag();
 
     if (!ctx?.tabId) return false;
 
@@ -162,14 +173,15 @@
     reportBounds();
     window.addEventListener('resize', reportBounds);
     window.addEventListener('move', reportBounds);
-    reportTimer = setInterval(reportBounds, 400);
     document.addEventListener('app:tab-created', reportBounds);
     document.addEventListener('app:tab-closed', reportBounds);
+    NS.PerfIdle?.onChange?.((active) => {
+      if (active) reportBounds();
+    });
   }
 
   function dispose() {
-    if (reportTimer) clearInterval(reportTimer);
-    reportTimer = null;
+    endDrag();
     NS.WindowBridge?.clearDragHover?.();
   }
 
@@ -181,5 +193,7 @@
     transferTab,
     isHoveringTarget,
     reportBounds,
+    beginDrag,
+    endDrag,
   };
 })();

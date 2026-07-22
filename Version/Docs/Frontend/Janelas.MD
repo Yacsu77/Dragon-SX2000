@@ -96,7 +96,8 @@ UserINTer/.../Customise/components/janelas/
 | Sair | `mouseleave` ou início de drag |
 
 **Módulo:** `preview/TabPreview.js` + `preview/ThumbnailCache.js`  
-**Captura:** `webview.capturePage()` — cache da aba ativa (refresh ~2.5s + ao navegar); sob demanda com classe `janelas-capturing` se não houver cache. Home tabs: cartão sintético (sem webview).
+**Captura:** `webview.capturePage()` — cache event-driven (deactivate, navigate, tab-changed, hover); sem loop periódico no idle. Sob demanda com classe `janelas-capturing` se não houver cache. Home tabs: cartão sintético (sem webview).  
+**Perf (P0):** `Janelas/core/PerfIdle.js` — pausa trabalho quando a janela está hidden/blur.
 
 **Status:** ✅ Fase 1 implementada (2026-07-20). Hover: `PREVIEW_HOVER_MS = 500`.
 
@@ -125,7 +126,7 @@ UserINTer/.../Customise/components/janelas/
 | Feedback | Ghost com borda azul (`janelas-transfer-ghost`) ao pairar sobre a barra destino |
 | Prioridade | Transfer > Detach > Reorder |
 
-**Pré-requisito Electron:** bounds da barra reportados (`janelas:report-tabs-bounds`) + `screen.getCursorScreenPoint()` no main.
+**Pré-requisito Electron:** bounds da barra reportados sob demanda (`janelas:report-tabs-bounds` em resize/move/tabs/drag — sem intervalo idle) + `screen.getCursorScreenPoint()` no main.
 
 **Status:** ✅ Fase 3 implementada (2026-07-20).
 
@@ -286,4 +287,13 @@ Janelas.NS                         // JanelasNS
 | 2026-07-20 | Fix drag: Y livre + aba original oculta (sem fantasma duplicado) |
 | 2026-07-20 | Fase 3: transferir aba entre janelas OS (`move-tab` / `receive-tab`) |
 | 2026-07-20 | Nova janela herda usuário + sessão limpa (só aba pendente); shield no drag; feedback transfer; Fase 4 split |
-| 2026-07-20 | Split: marca na aba focada; ghost OS entre monitores; pause capturePage no drag; Fase 5 layouts |
+| 2026-07-22 | Perf P0: PerfIdle; ThumbnailCache sem loop 2.5s; Transfer bounds só em eventos/drag; PiP poll só com menu/PiP ativo |
+| 2026-07-22 | Perf P1: 1 listener global de drag + rAF; drag sem backdrop-filter por frame |
+| 2026-07-22 | Perf P2: blur só na barra/aba ativa; pause RGB/LED/anel floating sem foco (`perf-window-idle`); aviso render-all |
+| 2026-07-22 | Nota P3: com N abas, troca de aba ainda tem hitch ~0.5–1s até o conteúdo “acordar” (activate/scans) |
+| 2026-07-22 | Fix: não pausar animation no `<webview>` (RGB grudava após idle); reinício ao focar |
+| 2026-07-22 | Perf P3: activateTab por refs/id; sem restore duplicado; thumb capture só se cache frio; dots incrementais |
+| 2026-07-22 | RGB: pausa só com `perf-window-hidden` (minimizada); continua em outro monitor |
+| 2026-07-22 | Boot linear: Session/TabGroups com deferLoad + fila TabWarmth; véu blur na troca; discard frio (>8 abas) |
+| 2026-07-22 | Many-tabs: só CSS vars (sem inline em todas as abas); sem tabTransition com 7+; RGB via RgbClock + backgroundThrottling off |
+| 2026-07-22 | Investiga hitch→conteúdo: sem filter:blur em webview/flip; hydrate adiado; tab chrome sólido na troca; capturePage defer |

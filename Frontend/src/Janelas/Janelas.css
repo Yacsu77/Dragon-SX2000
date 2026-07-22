@@ -231,11 +231,16 @@ html[data-janelas-mode='split'] #browser webview {
   min-width: 0;
   position: relative !important;
   opacity: 1 !important;
+  filter: none !important;
   pointer-events: auto !important;
+  transition: none !important;
+  animation: none !important;
 }
 
 html[data-janelas-mode='split'] #browser webview.janelas-pane-visible {
   display: flex !important;
+  opacity: 1 !important;
+  filter: none !important;
 }
 
 html[data-janelas-mode='split'] #browser webview.janelas-pane-focus {
@@ -360,8 +365,8 @@ body.janelas-window-floating #homePage:not(.hidden)::before {
   pointer-events: none;
   z-index: -1;
   background: transparent;
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -400,8 +405,8 @@ body.janelas-window-floating #browser.browser-container.active::before {
   inset: -12px;
   border-radius: 28px;
   padding: 12px;
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
   z-index: -1;
   pointer-events: none;
   background: transparent;
@@ -523,6 +528,11 @@ html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.h
   outline: none !important;
 }
 
+html[data-janelas-borders-rgb='1']:not([data-janelas-mode='split']) #browser.browser-container.active.janelas-anim-restart::after,
+html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.hidden).janelas-anim-restart::after {
+  animation: none !important;
+}
+
 html[data-janelas-borders-rgb='1']:not([data-janelas-mode='split']) #browser.browser-container.active::after,
 html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.hidden)::after {
   content: '';
@@ -539,7 +549,7 @@ html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.h
     #c050ff,
     #ff5080
   );
-  animation: janelas-rgb-spin 2.8s linear infinite;
+  /* Ângulo vem do RgbClock (JS) — CSS animation pausa em janela sem foco */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -550,6 +560,13 @@ html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.h
   mask-composite: exclude;
   pointer-events: none;
   z-index: 6;
+}
+
+/* RGB / anel: sem pause por foco — RgbClock para quando document.hidden */
+body.perf-window-hidden.janelas-window-floating #homePage:not(.hidden)::before,
+body.perf-window-hidden.janelas-window-floating #browser.browser-container.active::before {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* RGB — por painel no split/multi (webview não aceita ::after bem → pulse) */
@@ -565,30 +582,30 @@ html[data-janelas-borders-rgb='1'] body.janelas-multi-floating #browser.browser-
   content: none !important;
 }
 
-/* Animações leves (só transform/opacity, curtas) */
+/* Animações leves: só translate — sem baixar opacity (evita piscar a tela) */
 @keyframes janelas-flip-right {
-  from { opacity: 0.72; transform: translate3d(10px, 0, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { transform: translate3d(10px, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 @keyframes janelas-flip-left {
-  from { opacity: 0.72; transform: translate3d(-10px, 0, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { transform: translate3d(-10px, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 @keyframes janelas-file-drop {
-  from { opacity: 0.65; transform: translate3d(0, -10px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { transform: translate3d(0, -8px, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 @keyframes janelas-float-in {
-  from { opacity: 0.6; transform: translate3d(0, 6px, 0) scale(0.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from { transform: translate3d(0, 5px, 0) scale(0.99); }
+  to { transform: translate3d(0, 0, 0) scale(1); }
 }
 
 @keyframes janelas-float-drop {
-  from { opacity: 0.55; transform: translate3d(0, -8px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { transform: translate3d(0, -6px, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 .janelas-anim-flip-right,
@@ -596,28 +613,28 @@ html[data-janelas-borders-rgb='1'] body.janelas-multi-floating #browser.browser-
 .janelas-anim-file-drop,
 .janelas-anim-float-in,
 .janelas-anim-float-drop {
-  will-change: transform, opacity;
+  will-change: transform;
   backface-visibility: hidden;
 }
 
 .janelas-anim-flip-right {
-  animation: janelas-flip-right 0.22s ease-out;
+  animation: janelas-flip-right 0.32s ease-in-out;
 }
 
 .janelas-anim-flip-left {
-  animation: janelas-flip-left 0.22s ease-out;
+  animation: janelas-flip-left 0.32s ease-in-out;
 }
 
 .janelas-anim-file-drop {
-  animation: janelas-file-drop 0.24s ease-out;
+  animation: janelas-file-drop 0.32s ease-in-out;
 }
 
 .janelas-anim-float-in {
-  animation: janelas-float-in 0.24s ease-out;
+  animation: janelas-float-in 0.32s ease-in-out;
 }
 
 .janelas-anim-float-drop {
-  animation: janelas-float-drop 0.24s ease-out;
+  animation: janelas-float-drop 0.32s ease-in-out;
 }
 
 /* Indicador de drop remoto na barra de abas */

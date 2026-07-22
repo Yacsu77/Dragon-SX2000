@@ -112,7 +112,13 @@
     }, SAVE_DEBOUNCE_MS);
   }
 
-  function restore() {
+  function yieldFrame() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+  }
+
+  async function restore() {
     if (!isEnabled()) return false;
     if (typeof window.createTab !== 'function' || typeof window.createHomeTab !== 'function') {
       return false;
@@ -124,36 +130,41 @@
     restoring = true;
     let activeId = null;
     let lastId = null;
+    const deferOpts = { deferLoad: true };
 
     try {
-      snapshot.tabs.forEach((entry) => {
-        if (!entry) return;
+      for (const entry of snapshot.tabs) {
+        if (!entry) continue;
 
         if (entry.isHomeTab) {
           const id = window.createHomeTab(false);
           lastId = id;
           if (entry.active) activeId = id;
-          return;
+          await yieldFrame();
+          continue;
         }
 
-        if (!entry.url) return;
+        if (!entry.url) continue;
         const id = window.createTabAfter
-          ? window.createTabAfter(lastId, entry.url, entry.title || null, null, false)
-          : window.createTab(entry.url, entry.title || null, null, false);
+          ? window.createTabAfter(lastId, entry.url, entry.title || null, null, false, deferOpts)
+          : window.createTab(entry.url, entry.title || null, null, false, deferOpts);
         lastId = id;
         if (entry.active) activeId = id;
-      });
+        await yieldFrame();
+      }
 
       if (!lastId) {
         restoring = false;
         return false;
       }
 
-      if (activeId && typeof window.activateTab === 'function') {
-        window.activateTab(activeId);
-      } else if (lastId && typeof window.activateTab === 'function') {
-        window.activateTab(lastId);
+      const targetId = activeId || lastId;
+      if (targetId && typeof window.activateTab === 'function') {
+        window.activateTab(targetId);
       }
+
+      // Hidrata o restante em fila (não bloqueia o boot)
+      window.TabWarmth?.warmDeferredQueue?.(targetId);
 
       if (typeof updateTabsBarVisibility === 'function') {
         updateTabsBarVisibility();
@@ -164,7 +175,6 @@
       return false;
     } finally {
       restoring = false;
-      // Regrava com os IDs novos da sessão atual.
       scheduleSave();
     }
   }

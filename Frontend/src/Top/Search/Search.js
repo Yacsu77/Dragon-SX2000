@@ -113,14 +113,40 @@
     }
   }
 
+  function reloadActivePage() {
+    const reloadBtn = document.getElementById('addressReloadBtn');
+    const activeWebview = document.querySelector('webview.active');
+    if (!activeWebview || typeof activeWebview.reload !== 'function') return;
+    try {
+      activeWebview.reload();
+      if (reloadBtn) {
+        reloadBtn.classList.remove('is-spinning');
+        void reloadBtn.offsetWidth;
+        reloadBtn.classList.add('is-spinning');
+        setTimeout(() => reloadBtn.classList.remove('is-spinning'), 700);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   function init() {
     const addressBar = document.getElementById('addressBar');
     const addressInput = document.getElementById('addressInput');
+    const reloadBtn = document.getElementById('addressReloadBtn');
 
     if (addressBar) {
       addressBar.addEventListener('submit', (e) => {
         e.preventDefault();
         handleAddressBar();
+      });
+    }
+
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        reloadActivePage();
       });
     }
 

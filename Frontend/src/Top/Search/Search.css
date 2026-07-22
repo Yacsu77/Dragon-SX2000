@@ -35,6 +35,7 @@
 
 .address-input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -45,4 +46,37 @@
 
 .address-input::placeholder {
   color: var(--input-placeholder);
+}
+
+.address-reload-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: -4px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  color: #9aa0a6;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.2s ease;
+}
+
+.address-reload-btn:hover {
+  color: var(--app-text, #e8eaf2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.address-reload-btn:active {
+  transform: rotate(-45deg);
+}
+
+.address-reload-btn.is-spinning svg {
+  animation: address-reload-spin 0.7s linear;
+}
+
+@keyframes address-reload-spin {
+  to { transform: rotate(360deg); }
 }

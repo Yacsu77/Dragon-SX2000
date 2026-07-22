@@ -1,32 +1,23 @@
 /**
  * Visibilidade da barra de abas e ponto "+" (nova aba).
- * Com 7+ abas, a ativa mantém a largura equivalente a 1/5 do container
- * e as demais dividem o espaço restante para preencher a barra.
+ * Com 7+ abas: só CSS variables no container — a troca de .active anima via CSS,
+ * sem reescrever inline style em todas as abas (causava travamento).
  */
 (function () {
   const MANY_TABS_THRESHOLD = 7;
   const REFERENCE_TAB_COUNT = 5;
   const INACTIVE_MIN_WIDTH = 36;
 
+  let lastSignature = '';
+
   function resetTabSizing(tabsContainer) {
     if (!tabsContainer) return;
     tabsContainer.classList.remove('many-tabs');
     tabsContainer.style.removeProperty('--many-active-tab-width');
     tabsContainer.style.removeProperty('--many-inactive-tab-width');
-    tabsContainer.querySelectorAll('.tab').forEach((tab) => {
-      tab.style.minWidth = '';
-      tab.style.maxWidth = '';
-      tab.style.width = '';
-      tab.style.flexGrow = '';
-      tab.style.flexShrink = '';
-      tab.style.flexBasis = '';
-    });
+    lastSignature = '';
   }
 
-  /**
-   * Largura que cada aba teria com 5 abas ocupando o container.
-   * Usada como alvo da aba selecionada quando há 7+.
-   */
   function computeActiveWidthForManyTabs(containerWidth, tabCount) {
     if (containerWidth <= 0 || tabCount < MANY_TABS_THRESHOLD) return null;
 
@@ -46,47 +37,49 @@
   }
 
   function updateLastTabDot() {
-    document.querySelectorAll('.new-tab-dot').forEach((dot) => dot.remove());
-
-    const tabs = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('#tabs .tab');
     tabs.forEach((tab) => {
       ensureLedRing(tab);
+      if (tab.querySelector('.new-tab-dot')) return;
+
       const titleSpan = tab.querySelector('.tab-title');
-
-      if (!tab.querySelector('.new-tab-dot')) {
-        const dotContainer = document.createElement('div');
-        dotContainer.classList.add('new-tab-dot');
-        dotContainer.onclick = (e) => {
-          e.stopPropagation();
-          if (typeof window.createNewTab === 'function') {
-            window.createNewTab();
-          }
-        };
-
-        const dot = document.createElement('span');
-        dot.classList.add('dot');
-        dotContainer.appendChild(dot);
-
-        const plusIcon = document.createElement('span');
-        plusIcon.classList.add('plus-icon');
-        plusIcon.textContent = '+';
-        dotContainer.appendChild(plusIcon);
-
-        if (titleSpan && titleSpan.nextSibling) {
-          tab.insertBefore(dotContainer, titleSpan.nextSibling);
-        } else {
-          tab.appendChild(dotContainer);
+      const dotContainer = document.createElement('div');
+      dotContainer.classList.add('new-tab-dot');
+      dotContainer.onclick = (e) => {
+        e.stopPropagation();
+        if (typeof window.createNewTab === 'function') {
+          window.createNewTab();
         }
+      };
+
+      const dot = document.createElement('span');
+      dot.classList.add('dot');
+      dotContainer.appendChild(dot);
+
+      const plusIcon = document.createElement('span');
+      plusIcon.classList.add('plus-icon');
+      plusIcon.textContent = '+';
+      dotContainer.appendChild(plusIcon);
+
+      if (titleSpan && titleSpan.nextSibling) {
+        tab.insertBefore(dotContainer, titleSpan.nextSibling);
+      } else {
+        tab.appendChild(dotContainer);
       }
     });
   }
 
   function updateTabsBarVisibility() {
     const tabsBar = document.querySelector('.tabs-bar');
-    const tabs = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('#tabs .tab');
     const hasGroupsButton = Boolean(document.getElementById('tabGroupsBtn'));
 
-    if (!hasGroupsButton && tabs.length === 1 && tabs[0].dataset.id && tabs[0].dataset.id.startsWith('home-tab')) {
+    if (
+      !hasGroupsButton &&
+      tabs.length === 1 &&
+      tabs[0].dataset.id &&
+      tabs[0].dataset.id.startsWith('home-tab')
+    ) {
       if (tabsBar) tabsBar.classList.add('hidden');
     } else if (tabsBar) {
       tabsBar.classList.remove('hidden');
@@ -99,13 +92,12 @@
       return;
     }
 
-    tabsContainer.offsetHeight;
-
     const containerWidth = tabsContainer.clientWidth;
     const shouldCondense = tabs.length >= MANY_TABS_THRESHOLD;
 
     if (!shouldCondense) {
       resetTabSizing(tabsContainer);
+      tabs.forEach((tab) => ensureLedRing(tab));
       return;
     }
 
@@ -117,48 +109,40 @@
 
     const inactiveCount = Math.max(1, tabs.length - 1);
     const remaining = Math.max(0, containerWidth - activeWidth);
-    // Divide o espaço restante igualmente — sem teto artificial, para preencher a barra.
-    const inactiveWidth = Math.max(INACTIVE_MIN_WIDTH, Math.floor(remaining / inactiveCount));
-    const leftover = Math.max(0, remaining - inactiveWidth * inactiveCount);
+    const inactiveWidth = Math.max(
+      INACTIVE_MIN_WIDTH,
+      Math.floor(remaining / inactiveCount)
+    );
 
-    tabsContainer.classList.add('many-tabs');
-    tabsContainer.style.setProperty('--many-active-tab-width', `${activeWidth}px`);
-    tabsContainer.style.setProperty('--many-inactive-tab-width', `${inactiveWidth}px`);
+    const signature = `${tabs.length}|${containerWidth}|${activeWidth}|${inactiveWidth}`;
+    if (signature !== lastSignature) {
+      lastSignature = signature;
+      tabsContainer.classList.add('many-tabs');
+      tabsContainer.style.setProperty('--many-active-tab-width', `${activeWidth}px`);
+      tabsContainer.style.setProperty('--many-inactive-tab-width', `${inactiveWidth}px`);
+    } else if (!tabsContainer.classList.contains('many-tabs')) {
+      tabsContainer.classList.add('many-tabs');
+    }
 
-    let inactiveIndex = 0;
-    tabsContainer.querySelectorAll('.tab').forEach((tab) => {
-      ensureLedRing(tab);
-      if (tab.classList.contains('active')) {
-        tab.style.minWidth = `${activeWidth}px`;
-        tab.style.maxWidth = `${activeWidth}px`;
-        tab.style.width = `${activeWidth}px`;
-        tab.style.flexBasis = `${activeWidth}px`;
-        tab.style.flexGrow = '0';
-        tab.style.flexShrink = '0';
-      } else {
-        // Distribui 1px extra nos primeiros itens para fechar o espaço restante.
-        const width = inactiveWidth + (inactiveIndex < leftover ? 1 : 0);
-        inactiveIndex += 1;
-        tab.style.minWidth = `${width}px`;
-        tab.style.maxWidth = `${width}px`;
-        tab.style.width = `${width}px`;
-        tab.style.flexBasis = `${width}px`;
-        tab.style.flexGrow = '0';
-        tab.style.flexShrink = '0';
-      }
-    });
+    tabs.forEach((tab) => ensureLedRing(tab));
   }
 
+  let visibilityRaf = 0;
   function scheduleVisibilityUpdate() {
-    requestAnimationFrame(() => {
-      setTimeout(() => updateTabsBarVisibility(), 0);
+    if (visibilityRaf) return;
+    visibilityRaf = requestAnimationFrame(() => {
+      visibilityRaf = 0;
+      updateTabsBarVisibility();
     });
   }
 
   let resizeTimeout;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => updateTabsBarVisibility(), 150);
+    resizeTimeout = setTimeout(() => {
+      lastSignature = '';
+      updateTabsBarVisibility();
+    }, 120);
   });
 
   window.TabsVisibility = {
@@ -166,6 +150,7 @@
     updateTabsBarVisibility,
     scheduleVisibilityUpdate,
     computeActiveWidthForManyTabs,
+    MANY_TABS_THRESHOLD,
   };
 
   window.updateTabsBarVisibility = updateTabsBarVisibility;

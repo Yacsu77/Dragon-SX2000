@@ -60,7 +60,7 @@
     document.body.style.setProperty('--active-tab-group-color', group?.color || '#7a8cff');
   }
 
-  function recreateTabsFromGroup(group) {
+  async function recreateTabsFromGroup(group) {
     const tabs = normalizeTabs(group?.tabs || []);
     let lastId = null;
     let activeId = null;
@@ -69,12 +69,13 @@
     try {
       window.clearTabsForGroupSwitch?.(false);
 
-      tabs.forEach((snapshot) => {
+      for (const snapshot of tabs) {
         const id = window.createTabFromSnapshot?.(snapshot, false, lastId);
-        if (!id) return;
+        if (!id) continue;
         lastId = id;
         if (snapshot.active) activeId = id;
-      });
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      }
 
       const targetId = activeId || lastId;
       if (targetId) {
@@ -83,6 +84,7 @@
         } else {
           window.activateTab?.(targetId);
         }
+        window.TabWarmth?.warmDeferredQueue?.(targetId);
         return true;
       }
 

@@ -21,3 +21,47 @@
   order: 30;
 }
 
+/* Crossfade new-tab ↔ conteúdo — só opacity (blur no leave piscava o fundo) */
+body.surface-crossfade #homePage,
+body.surface-crossfade #browser {
+  position: absolute !important;
+  left: var(--sidebar-dock-width, 52px);
+  right: 0;
+  top: var(--sidebar-dock-top, 84px);
+  bottom: 0;
+  margin-left: 0 !important;
+  display: flex !important;
+  opacity: 1;
+  filter: none;
+  transition: opacity 320ms ease-in-out;
+  z-index: 1;
+  pointer-events: none;
+}
+
+body.surface-crossfade #homePage.surface-entering,
+body.surface-crossfade #browser.surface-entering {
+  opacity: 1; /* destino já visível por baixo */
+  z-index: 1;
+}
+
+body.surface-crossfade #homePage.surface-entering.is-shown,
+body.surface-crossfade #browser.surface-entering.is-shown {
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
+}
+
+body.surface-crossfade #homePage.surface-leaving,
+body.surface-crossfade #browser.surface-leaving {
+  z-index: 2;
+  opacity: 1;
+  filter: none;
+  background: var(--content-bg, #12141a) !important;
+}
+
+body.surface-crossfade #homePage.surface-leaving.is-fading,
+body.surface-crossfade #browser.surface-leaving.is-fading {
+  opacity: 0;
+  filter: none;
+}
+

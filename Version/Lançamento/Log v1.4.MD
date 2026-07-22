@@ -21,8 +21,10 @@
 - **Busca Inteligente** compartilhada (topo, AutoTune, Shortcuts) com autocomplete por domínio e sugestões do Google
 - **Gerenciador de senhas** estilo Safari (Observer) com login automático por formulário e por URL
 - **Music minimal** com posições: esquerda, direita (entre busca e botões) ou embaixo
+- **Multijanelas (Janelas)** — preview, detach, transfer, split in-window, layouts e animações no Customise
+- **Desempenho P0–P4** — idle, drag leve, TabWarmth, troca de tela sem piscar, RGB estável em multi-monitor
 - Barra de abas mais estável: destaque, condensação com 7+, borda LED opcional
-- Isolamento correto da API SQLite (evita processo stale / `SQLITE_READONLY`)
+- Isolamento correto da API SQLite + boot resiliente (`boot.js`, `/ready` com `starting`)
 
 ---
 
@@ -151,6 +153,53 @@
 
 ---
 
+### Multijanelas — módulo `Frontend/src/Janelas/` (SOLID)
+
+| Feature | Descrição |
+|---|---|
+| **1 · Preview** | Hover ≥ 0.5s em aba inativa → miniatura (`TabPreview` + `ThumbnailCache`); RMB/drag cancelam; aba ativa sem preview |
+| **2 · Detach** | Arrastar aba abaixo do limiar Y → ghost + nova `BrowserWindow` com snapshot (`DetachController` / IPC) |
+| **3 · Transfer** | Drop na barra de outra janela OS → move snapshot (`TransferController` / `receive-tab`) |
+| **4 · Split** | Menu Dividir E/D; dois painéis no `#browser`; divisor bolinha→X; fechar volta à aba esquerda (`SplitHost`) |
+| **5 · Customise** | Abas Janela / Multi / Geral: layouts padrão/flutuante, bordas, RGB, `tabTransition` none\|flip\|file-drop |
+
+**Arquivos:** `Frontend/src/Janelas/**`, `UserINTer/.../Customise/components/janelas/`, IPC em `main.js` / `WindowBridge.js`  
+**Docs:** [`Janelas.MD`](../Docs/Frontend/Janelas.MD)
+
+---
+
+### Desempenho e troca de tela (P0–P4)
+
+| Fase | O que mudou |
+|---|---|
+| **P0** | `PerfIdle`; ThumbnailCache sem loop 2.5s; Transfer bounds sob demanda; PiP poll só com menu/PiP ativo |
+| **P1** | Um listener global de drag + rAF; sem `backdrop-filter` por frame no arraste |
+| **P2** | Blur só na barra/aba ativa; `perf-window-idle` / `perf-window-hidden` |
+| **P3** | `activateTab` por refs; `capturePage` só com cache frio |
+| **P4 · TabWarmth** | `deferLoad`, fila de hidratação, discard frio (>8); hydrate **depois** do 1º paint na troca |
+| **Crossfade** | Conteúdo↔conteúdo: tela nova opaca por baixo, anterior some por cima (~320ms, só opacity — sem `filter:blur` no guest) |
+| **New Tab ↔ conteúdo** | `AppShell` crossfade home↔browser (`surface-crossfade`) |
+| **Flip/drop** | Só quando a troca envolve New Tab/home; sem baixar opacity do `#browser` (evita piscar) |
+| **Split** | Limpa `is-leaving`/filter residual; painéis sempre legíveis |
+| **RGB** | `RgbClock` (ângulo via JS) + `backgroundThrottling: false`; continua em outro monitor |
+| **Many-tabs** | Larguras só via CSS vars; chrome sólido durante `janelas-content-switching` |
+
+**Arquivos:** `TabWarmth.js`, `Tabs.core.js`, `Browser.css`, `AppShell.js`, `shell.css`, `AnimationHook.js`, `RgbClock.js`, `PerfIdle.js`, `main.js`
+
+---
+
+### API-DSX — boot e cold-start
+
+| Item | Descrição |
+|---|---|
+| **`boot.js`** | Runtime em Application Support; hydrate + retry; spawn estável |
+| **`/ready`** | Responde `starting` cedo; features incluem `tab-groups`, `smart-suggestions`, `janelas`, `tab-warmth` |
+| **main.js** | Espera mais longa / retries; macOS mantém API ao fechar janela |
+
+**Arquivos:** `Backend/API-DSX/boot.js`, `app.js`, `main.js`
+
+---
+
 ## Persistência de dados (atualizado)
 
 | Módulo | Armazenamento | O que salva |
@@ -158,6 +207,7 @@
 | **Grupos de abas** | SQLite `tab_groups` / `tab_group_tabs` | Nome, cor, ícone, posição, abas (url/title/favicon/home/active) |
 | **Layout Topo Global** | `dragonsx.chrome.layout` | Busca, botões (`rightItems`/`rightOrder`), Music, bordas, opacidade/LED |
 | **Busca Inteligente** | `customiseSettings['dragonsx.smart-search']` + Redis `smart-search:rank:{userId}` | Borda/opacidade/fonte/animação + ranking de URLs por frecência |
+| **Janelas** | `customiseSettings` / Store Janelas (`version`, layouts, bordas, `tabTransition`) | Preferências de layout/animação por usuário |
 | **AutoTune Music minimal** | `settingsAUTO.music` | `minimal`, `minimalOffsetX`, `minimalVolumeLevel` |
 | **Demais módulos** | Sem alteração em relação à v1.3 | Ver [`Log v1.3.MD`](Log%20v1.3.MD) |
 
@@ -167,8 +217,11 @@
 
 | Arquivo | Descrição |
 |---|---|
+| [`Janelas.MD`](../Docs/Frontend/Janelas.MD) | Multijanelas, split, layouts, animações, perf |
 | [`Top.MD`](../Docs/Frontend/Top.MD) | Grid do Top, Music slots, ChromeLayout |
-| [`Tabs.MD`](../Docs/Frontend/Tabs.MD) | Grupos de abas, many-tabs, LED |
+| [`Tabs.MD`](../Docs/Frontend/Tabs.MD) | Grupos, many-tabs, TabWarmth, LED |
+| [`Browser.MD`](../Docs/Frontend/Browser.MD) | Crossfade de webviews, perf-render-all |
+| [`core.MD`](../Docs/Frontend/core.MD) | AppShell home↔browser |
 | [`Autotune.md`](../Docs/Autotune.md) | Music minimal e posições no Topo Global |
 | [`Customise.md`](../Docs/Customise.md) | Customise modular (Factory + Adapters) |
 | [`BuscaInteligente.md`](../Docs/BuscaInteligente.md) | Busca inteligente, autocomplete e sugestões |

@@ -418,6 +418,8 @@ function createBrowserWindow(pending = null) {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true,
       contextIsolation: true,
+      // Mantém timers/compositor ativos com foco em outro monitor (RGB, UI).
+      backgroundThrottling: false,
     },
   });
 
@@ -454,6 +456,12 @@ function createBrowserWindow(pending = null) {
   }
 
   attachWebviewPopupHandler(win);
+
+  try {
+    win.webContents.setBackgroundThrottling(false);
+  } catch (_) {
+    /* Electron antigo */
+  }
 
   win.on('closed', () => {
     pendingWindowUrls.delete(win.webContents.id);

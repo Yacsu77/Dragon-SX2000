@@ -55,9 +55,11 @@
     NS.TransferController?.init?.();
     NS.DropIndicator?.init?.();
     NS.AnimationHook?.init?.();
+    NS.RgbClock?.init?.();
 
     NS.Bus?.on(NS.Types?.EVENTS?.SETTINGS_CHANGED, () => {
       NS.LayoutRegistry?.apply?.();
+      NS.RgbClock?.sync?.();
     });
 
     NS.WindowBridge?.onReceiveTab?.((snapshot) => {

@@ -67,12 +67,17 @@ Frontend/src/Janelas/
 │   ├── MultiStandard.js      ← Split 50/50 padrão
 │   └── MultiFloating.js      ← Split + gap + bordas arredondadas + divisor
 ├── animations/
-│   ├── AnimationRegistry.js  ← none | flip | file-drop
-│   ├── FlipTransition.js     ← Giro ≤ 1s (direção por índice da aba)
-│   └── FileDropTransition.js ← Nova aba “desce” como arquivo
+│   ├── AnimationRegistry.js  ← none | flip | file-drop (`delaySatisfied`)
+│   ├── FlipTransition.js     ← translate sutil (sem baixar opacity)
+│   ├── FileDropTransition.js ← “arquivo” descendo / float-drop
+│   └── AnimationHook.js      ← escuta `app:tab-changed`; flip só New Tab↔conteúdo
+├── effects/
+│   └── RgbClock.js           ← ângulo RGB via JS (multi-monitor)
+├── core/
+│   └── PerfIdle.js           ← idle / hidden → pausa trabalho cosmético
 ├── bridge/
 │   └── WindowBridge.js       ← IPC create / move-tab / list / focus
-├── Janelas.css               ← Classes de layout / preview / divider
+├── Janelas.css               ← Classes de layout / preview / divider / anims
 └── index.js                  ← Init + API pública window.Janelas
 
 UserINTer/.../Customise/components/janelas/
@@ -266,6 +271,23 @@ Janelas.NS                         // JanelasNS
 
 ---
 
+## Animações de transição (`tabTransition`)
+
+| Id | Comportamento |
+|----|---------------|
+| `none` | Só crossfade de webview / AppShell |
+| `flip` | Translate L/R conforme índice das abas (≤ ~320ms) |
+| `file-drop` | Translate de cima para baixo |
+
+**Hook (`AnimationHook.js`):** escuta `app:tab-changed`.  
+**Conteúdo ↔ conteúdo:** não dispara flip/drop no `#browser` (evita piscar — o crossfade dos webviews já é a transição).  
+**New Tab/home ↔ conteúdo:** dispara flip/drop no destino (`getSurface` prioriza `#browser.active`).  
+**Split:** `shouldAnimate` retorna false.
+
+Crossfade de conteúdo: ver [`Browser.MD`](./Browser.MD) e [`Tabs.MD`](./Tabs.MD) (TabWarmth + activate).
+
+---
+
 ## Critérios de aceite (por feature)
 
 1. Hover 0.5s em aba inativa → preview; ativa → não; RMB → some.  
@@ -297,3 +319,9 @@ Janelas.NS                         // JanelasNS
 | 2026-07-22 | Boot linear: Session/TabGroups com deferLoad + fila TabWarmth; véu blur na troca; discard frio (>8 abas) |
 | 2026-07-22 | Many-tabs: só CSS vars (sem inline em todas as abas); sem tabTransition com 7+; RGB via RgbClock + backgroundThrottling off |
 | 2026-07-22 | Investiga hitch→conteúdo: sem filter:blur em webview/flip; hydrate adiado; tab chrome sólido na troca; capturePage defer |
+| 2026-07-22 | Crossfade sem piscar: leave por cima / enter opaco; flip só New Tab↔conteúdo; AppShell 320ms |
+| 2026-07-22 | Release **1.4.0**: docs + package.json + CI build/release |
+
+## Ver também
+
+- [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD) · [`Tabs.MD`](./Tabs.MD) · [`Browser.MD`](./Browser.MD) · [`core.MD`](./core.MD)

@@ -118,20 +118,25 @@
   async function localSignals(query) {
     const term = query.toLowerCase();
     const values = await loadAccessSignals();
-    return values.filter((item) =>
-      `${item.url} ${item.title || siteName(item.url)}`.toLowerCase().includes(term)
-    );
+    return values.filter((item) => {
+      const host = siteName(item.url).toLowerCase();
+      const title = String(item.title || '').toLowerCase();
+      const url = String(item.url || '').toLowerCase();
+      if (host.includes(term) || title.includes(term) || url.includes(term)) return true;
+      // Prefixo em labels do domínio (ex.: "sen" → senac.br / autenticacao.sp.senac.br)
+      return host.split('.').some((part) => part.startsWith(term));
+    });
   }
 
   async function suggestions(query) {
     const raw = String(query || '').trim();
     if (!raw) return { sites: [], google: [] };
-    const [remote, signals] = await Promise.all([
-      window.HistoryApi?.smartSuggestions
-        ? window.HistoryApi.smartSuggestions(raw).catch(() => ({ sites: [], google: [] }))
-        : Promise.resolve({ sites: [], google: [] }),
-      localSignals(raw),
-    ]);
+    // Google em paralelo; não espera sinais locais para começar.
+    const remotePromise = window.HistoryApi?.smartSuggestions
+      ? window.HistoryApi.smartSuggestions(raw).catch(() => ({ sites: [], google: [] }))
+      : Promise.resolve({ sites: [], google: [] });
+    const signalsPromise = localSignals(raw);
+    const [remote, signals] = await Promise.all([remotePromise, signalsPromise]);
     const sites = new Map();
     (remote.sites || []).forEach((item) => sites.set(originKey(item.url), item));
     signals.forEach((item) => {
@@ -149,9 +154,19 @@
           : item
       );
     });
-    // No máximo 2 sites (os mais acessados, já ranqueados pelo backend).
-    const local = Array.from(sites.values()).slice(0, 2);
-    const googleLimit = local.length ? 5 : 7;
+    const ranked = Array.from(sites.values()).sort((a, b) => {
+      const aScore =
+        (a.visit_count || 0) +
+        (a.has_session ? 40 : 0) +
+        (a.has_saved_login ? 20 : 0);
+      const bScore =
+        (b.visit_count || 0) +
+        (b.has_session ? 40 : 0) +
+        (b.has_saved_login ? 20 : 0);
+      return bScore - aScore;
+    });
+    const local = ranked.slice(0, 6);
+    const googleLimit = local.length ? 6 : 8;
     const google = Array.from(new Set(remote.google || [])).slice(0, googleLimit);
     if (!google.length) google.push(raw);
     return { sites: local, google };
@@ -222,6 +237,8 @@
     let activeIndex = -1;
     let inlineItem = null;
     let deleting = false;
+    let lastFetchedLen = 0;
+    let lastFetchedQuery = '';
 
     function close() {
       panel.classList.remove('is-open');
@@ -353,11 +370,19 @@
       const query = input.value.trim();
       const id = ++requestId;
       if (!query) {
+        lastFetchedLen = 0;
+        lastFetchedQuery = '';
         close();
         return;
       }
+      lastFetchedLen = query.length;
+      lastFetchedQuery = query;
       const result = await suggestions(query);
-      if (id !== requestId || input.value.trim() !== query) return;
+      // Aceita resultado se ainda for o request mais recente OU se o texto
+      // atual ainda começa com a query pedida (digitação rápida).
+      const current = input.value.trim();
+      if (id !== requestId && !(current.startsWith(query) && query.length >= 3)) return;
+      if (id === requestId && current !== query && !current.startsWith(query)) return;
       const settings = readPanelSettings();
       const wasOpen = panel.classList.contains('is-open');
       panel.innerHTML = '';
@@ -397,7 +422,19 @@
 
     function schedule() {
       clearTimeout(timer);
-      timer = setTimeout(refresh, 120);
+      const query = input.value.trim();
+      if (!query) {
+        timer = setTimeout(refresh, 40);
+        return;
+      }
+      const len = query.length;
+      if (len < 3) {
+        timer = setTimeout(refresh, 120);
+        return;
+      }
+      // A cada 3 letras (3/6/9…): quase imediato; entre marcos: debounce curto.
+      const atMilestone = len % 3 === 0 || len - lastFetchedLen >= 3;
+      timer = setTimeout(refresh, atMilestone ? 28 : 75);
     }
 
     function submit() {

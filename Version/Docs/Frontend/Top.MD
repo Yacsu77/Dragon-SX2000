@@ -94,7 +94,7 @@ window.PictureInPictureControl = {
 - O menu moderno mostra metadata/capa, progresso, play/pause e anterior/próxima.
 - Registra uma fonte local prioritária no `DragonMedia`; Music completo e minimal passam a reconhecer e controlar o PiP.
 - Sites sem Media Session recebem metadata e handlers básicos de play/pause/seek; handlers existentes do site não são substituídos.
-- Reavalia o estado em eventos de mídia, aba, navegação e por um intervalo leve.
+- Reavalia o estado em eventos de mídia, aba e navegação; intervalo 750ms só com menu aberto ou PiP nativo ativo.
 - Sites que isolam o vídeo em iframe cross-origin ou usam DRM podem bloquear o PiP.
 - A moldura da janela PiP é nativa do Chromium/SO e não aceita CSS, raio ou HTML do app.
 

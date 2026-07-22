@@ -3,6 +3,36 @@
  */
 (function () {
   const state = window.TabsState;
+  /** Ordem MRU de abas ativadas (mais recente no fim). */
+  const activationHistory = [];
+
+  function rememberActivation(tabId) {
+    if (!tabId) return;
+    const idx = activationHistory.lastIndexOf(tabId);
+    if (idx >= 0) activationHistory.splice(idx, 1);
+    activationHistory.push(tabId);
+    if (activationHistory.length > 48) {
+      activationHistory.splice(0, activationHistory.length - 48);
+    }
+  }
+
+  function forgetTab(tabId) {
+    if (!tabId) return;
+    for (let i = activationHistory.length - 1; i >= 0; i -= 1) {
+      if (activationHistory[i] === tabId) activationHistory.splice(i, 1);
+    }
+  }
+
+  /** Última aba visitada que ainda existe (exclui a fechada). */
+  function pickTabAfterClose(closedId) {
+    forgetTab(closedId);
+    for (let i = activationHistory.length - 1; i >= 0; i -= 1) {
+      const id = activationHistory[i];
+      if (document.querySelector(`#tabs .tab[data-id="${id}"]`)) return id;
+    }
+    const remaining = document.querySelectorAll('#tabs .tab');
+    return remaining.length ? remaining[0].dataset.id : null;
+  }
 
   function emitTabCreated(tabId, isHomeTab) {
     document.dispatchEvent(new CustomEvent('app:tab-created', {
@@ -19,6 +49,7 @@
   function emitTabChanged(tabId, isHomeTab) {
     state.currentActiveTab = tabId;
     window.currentActiveTab = tabId;
+    rememberActivation(tabId);
     document.dispatchEvent(new CustomEvent('app:tab-changed', {
       detail: { tabId, isHomeTab },
     }));
@@ -463,6 +494,7 @@
     if (webview) webview.remove();
 
     emitTabClosed(tabId);
+    forgetTab(tabId);
 
     if (window.TabsVisibility) {
       window.TabsVisibility.updateLastTabDot();
@@ -470,9 +502,9 @@
     }
 
     if (state.currentActiveTab === tabId) {
-      const remainingTabs = document.querySelectorAll('.tab');
-      if (remainingTabs.length > 0) {
-        (window.activateTab || activateTab)(remainingTabs[0].dataset.id);
+      const nextId = pickTabAfterClose(tabId);
+      if (nextId) {
+        (window.activateTab || activateTab)(nextId);
       } else {
         state.currentActiveTab = null;
         window.currentActiveTab = null;

@@ -1,6 +1,6 @@
 /**
  * Cache de miniaturas de abas via webview.capturePage.
- * Mantém snapshot da aba ativa e captura sob demanda (classe temp) para inativas.
+ * Snapshots event-driven (deactivate / navigate / hover) — sem loop 2.5s no idle.
  */
 (function () {
   const NS = (window.JanelasNS = window.JanelasNS || {});
@@ -9,10 +9,14 @@
   const cache = new Map();
   const inflight = new Map();
   const CAPTURE_CLASS = 'janelas-capturing';
-  const ACTIVE_REFRESH_MS = 2500;
-  let refreshTimer = null;
   let hookedActivate = false;
   let paused = false;
+
+  function canWork() {
+    if (paused) return false;
+    if (NS.PerfIdle && !NS.PerfIdle.isActive()) return false;
+    return !document.hidden;
+  }
 
   function getWebview(tabId) {
     if (!tabId || String(tabId).startsWith('home-tab')) return null;
@@ -45,6 +49,8 @@
    * @returns {Promise<string|null>} data URL ou null
    */
   async function capture(tabId, opts) {
+    // Hover/preview pode pedir force mesmo com pause de drag — só bloqueia pause de drag
+    // se não for force explícito do preview… pause() no drag deve bloquear captures pesadas.
     if (paused) return getCached(tabId);
     if (!tabId || String(tabId).startsWith('home-tab')) return null;
 
@@ -71,9 +77,7 @@
         if (!image) return null;
         if (typeof image.isEmpty === 'function' && image.isEmpty()) return null;
         const dataUrl =
-          typeof image.toDataURL === 'function'
-            ? image.toDataURL()
-            : null;
+          typeof image.toDataURL === 'function' ? image.toDataURL() : null;
         if (!dataUrl) return null;
         setCached(tabId, dataUrl);
         return dataUrl;
@@ -93,7 +97,7 @@
   }
 
   async function refreshActive() {
-    if (paused || document.hidden) return;
+    if (!canWork()) return;
     const activeId = window.TabsState?.currentActiveTab || window.currentActiveTab;
     if (!activeId || String(activeId).startsWith('home-tab')) return;
     const webview = getWebview(activeId);
@@ -106,6 +110,7 @@
     webview.dataset.janelasThumbBound = '1';
 
     const bump = () => {
+      if (!canWork()) return;
       const activeId = window.TabsState?.currentActiveTab || window.currentActiveTab;
       if (activeId === tabId) {
         capture(tabId, { force: true });
@@ -135,17 +140,24 @@
     function wrapped(tabId) {
       const prev = window.TabsState?.currentActiveTab || window.currentActiveTab;
       if (prev && prev !== tabId && !String(prev).startsWith('home-tab')) {
-        const wv = getWebview(prev);
-        if (wv && wv.classList.contains('active') && typeof wv.capturePage === 'function') {
-          // Inicia captura enquanto ainda está .active; race mitigada pelo refresh periódico.
-          wv.capturePage()
-            .then((image) => {
-              if (!image || (typeof image.isEmpty === 'function' && image.isEmpty())) return;
-              if (typeof image.toDataURL === 'function') {
-                setCached(prev, image.toDataURL());
-              }
-            })
-            .catch(() => {});
+        const existing = cache.get(prev);
+        const fresh = existing && Date.now() - (existing.at || 0) < 4000;
+        if (!fresh) {
+          const wv = getWebview(prev);
+          if (wv && wv.classList.contains('active') && typeof wv.capturePage === 'function') {
+            // Fora do caminho crítico: capturePage no mesmo tick da troca compete com a barra
+            window.setTimeout(() => {
+              if (!wv.isConnected) return;
+              wv.capturePage()
+                .then((image) => {
+                  if (!image || (typeof image.isEmpty === 'function' && image.isEmpty())) return;
+                  if (typeof image.toDataURL === 'function') {
+                    setCached(prev, image.toDataURL());
+                  }
+                })
+                .catch(() => {});
+            }, 320);
+          }
         }
       }
       return orig.call(this, tabId);
@@ -155,19 +167,6 @@
     window.activateTab = wrapped;
     if (window.TabsCore) window.TabsCore.activateTab = wrapped;
     hookedActivate = true;
-  }
-
-  function startRefreshLoop() {
-    if (refreshTimer) return;
-    refreshTimer = setInterval(() => {
-      refreshActive();
-    }, ACTIVE_REFRESH_MS);
-  }
-
-  function stopRefreshLoop() {
-    if (!refreshTimer) return;
-    clearInterval(refreshTimer);
-    refreshTimer = null;
   }
 
   function pause() {
@@ -181,7 +180,6 @@
   function init() {
     hookActivateTab();
     bindExistingWebviews();
-    startRefreshLoop();
     refreshActive();
 
     document.addEventListener('app:tab-created', (e) => {
@@ -189,7 +187,6 @@
       if (!tabId) return;
       const wv = getWebview(tabId);
       if (wv) attachWebviewHooks(wv, tabId);
-      // Nova aba ativa: capturar após paint inicial.
       setTimeout(() => refreshActive(), 400);
     });
 
@@ -200,11 +197,16 @@
     document.addEventListener('app:tabs-cleared', () => clear());
 
     document.addEventListener('app:tab-changed', () => {
-      setTimeout(() => refreshActive(), 300);
+      // Snapshot da nova aba só se ainda não houver cache (evita capturePage
+      // pesado nos primeiros ms em que o usuário quer usar o conteúdo).
+      const activeId = window.TabsState?.currentActiveTab || window.currentActiveTab;
+      if (!activeId || String(activeId).startsWith('home-tab')) return;
+      if (getCached(activeId)) return;
+      setTimeout(() => refreshActive(), 450);
     });
 
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refreshActive();
+    NS.PerfIdle?.onChange?.((active) => {
+      if (active) refreshActive();
     });
   }
 

@@ -115,7 +115,7 @@
 
   // Criação centralizada do <webview> (DRY). Partition por usuário
   // (`persist:dragon-{userId}`) isola cookies/cache entre perfis.
-  function buildWebview(url, tabId) {
+  function buildWebview(url, tabId, opts) {
     const webview = document.createElement('webview');
     webview.setAttribute('allowpopups', '');
     const partition =
@@ -124,34 +124,132 @@
         : null) || 'persist:dragon-pending';
     webview.setAttribute('partition', partition);
     webview.dataset.id = tabId;
-    webview.src = url;
+    if (opts?.deferLoad && url) {
+      webview.dataset.pendingSrc = url;
+      webview.src = 'about:blank';
+    } else {
+      webview.src = url;
+    }
     return webview;
   }
 
-  function finishActivateBrowserTab(targetTab, targetWebview, tabId) {
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
+  // Refs da aba/webview ativa — evita querySelectorAll em toda troca.
+  let activeTabEl = null;
+  let activeWebviewEl = null;
 
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
+  function clearAdjacentAround(tab) {
+    if (!tab) return;
+    const prev = tab.previousElementSibling;
+    const next = tab.nextElementSibling;
+    if (prev && prev.classList?.contains('tab')) prev.classList.remove('adjacent-to-active');
+    if (next && next.classList?.contains('tab')) next.classList.remove('adjacent-to-active');
+  }
+
+  function isSplitMode() {
+    return document.documentElement.dataset.janelasMode === 'split';
+  }
+
+  function finishActivateBrowserTab(targetTab, targetWebview, tabId) {
+    const surfaceMs = 320;
+    const split = isSplitMode();
+
+    document.body.classList.add('janelas-content-switching');
+    window.clearTimeout(finishActivateBrowserTab._chromeTimer);
+    finishActivateBrowserTab._chromeTimer = window.setTimeout(() => {
+      document.body.classList.remove('janelas-content-switching');
+    }, surfaceMs + 60);
+
+    if (activeTabEl && activeTabEl !== targetTab && activeTabEl.isConnected) {
+      activeTabEl.classList.remove('active', 'adjacent-to-active');
+      clearAdjacentAround(activeTabEl);
+    } else if (!activeTabEl) {
+      document.querySelectorAll('#tabs .tab.active, #tabs .tab.adjacent-to-active').forEach((tab) => {
+        if (tab !== targetTab) tab.classList.remove('active', 'adjacent-to-active');
+      });
+    }
 
     targetTab.classList.add('active');
-    targetWebview.classList.add('active');
-
+    activeTabEl = targetTab;
     if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(targetTab);
 
-    emitTabChanged(tabId, false);
-    window.showBrowser();
+    const prevWebview = activeWebviewEl;
 
-    if (typeof window.updateAddressBar === 'function') window.updateAddressBar();
-    if (typeof window.updateNavigationButtons === 'function') window.updateNavigationButtons();
+    // Nova tela já opaca por baixo; a anterior some por cima (crossfade sem piscar)
+    targetWebview.classList.remove('is-leaving', 'is-entering');
+    targetWebview.classList.add('active');
+    activeWebviewEl = targetWebview;
+
+    if (split) {
+      if (prevWebview && prevWebview !== targetWebview && prevWebview.isConnected) {
+        prevWebview.classList.remove('active', 'is-leaving', 'is-entering');
+      }
+    } else if (prevWebview && prevWebview !== targetWebview && prevWebview.isConnected) {
+      // Força opacity 1 → depois is-leaving (senão o browser pula o transition)
+      prevWebview.classList.remove('is-leaving');
+      prevWebview.classList.add('active');
+      void prevWebview.offsetWidth;
+      prevWebview.classList.add('is-leaving');
+      window.setTimeout(() => {
+        if (!prevWebview.isConnected) return;
+        prevWebview.classList.remove('active', 'is-leaving');
+      }, surfaceMs + 40);
+    } else if (!prevWebview) {
+      document.querySelectorAll('#browser webview.active').forEach((view) => {
+        if (view !== targetWebview) {
+          view.classList.remove('active', 'is-leaving', 'is-entering');
+        }
+      });
+    }
+
+    window.showBrowser();
+    window.TabWarmth?.markActive?.(tabId);
+    emitTabChanged(tabId, false);
+
+    requestAnimationFrame(() => {
+      if (typeof window.updateAddressBar === 'function') window.updateAddressBar();
+      if (typeof window.updateNavigationButtons === 'function') window.updateNavigationButtons();
+      if (window.TabsVisibility) window.TabsVisibility.scheduleVisibilityUpdate();
+      requestAnimationFrame(() => {
+        window.TabWarmth?.hydrateWebview?.(targetWebview);
+      });
+    });
+
+    setTimeout(() => window.TabWarmth?.maybeDiscardCold?.(), surfaceMs + 120);
   }
 
   function finishActivateHomeTab(tab, tabId) {
-    document.querySelectorAll('webview').forEach((view) => view.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active', 'adjacent-to-active'));
+    const prevWebview = activeWebviewEl;
+    const surfaceMs = window.AppShell?.SURFACE_MS || 280;
+    const split = isSplitMode();
+
+    if (prevWebview && prevWebview.isConnected) {
+      if (split) {
+        prevWebview.classList.remove('active', 'is-leaving', 'is-entering');
+      } else {
+        prevWebview.classList.add('is-leaving');
+        window.setTimeout(() => {
+          if (!prevWebview.isConnected) return;
+          prevWebview.classList.remove('active', 'is-leaving');
+        }, surfaceMs + 40);
+      }
+    } else {
+      document.querySelectorAll('#browser webview.active').forEach((view) => {
+        view.classList.remove('active', 'is-leaving', 'is-entering');
+      });
+    }
+    activeWebviewEl = null;
+
+    if (activeTabEl && activeTabEl !== tab && activeTabEl.isConnected) {
+      activeTabEl.classList.remove('active', 'adjacent-to-active');
+      clearAdjacentAround(activeTabEl);
+    } else if (!activeTabEl) {
+      document.querySelectorAll('#tabs .tab.active, #tabs .tab.adjacent-to-active').forEach((t) => {
+        if (t !== tab) t.classList.remove('active', 'adjacent-to-active');
+      });
+    }
 
     tab.classList.add('active');
+    activeTabEl = tab;
 
     if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(tab);
 
@@ -162,13 +260,14 @@
     if (typeof window.updateNavigationButtons === 'function') window.updateNavigationButtons();
   }
 
-  // Reafirma o botão de aba ativo ao fim da animação cosmética. A webview já
-  // foi ativada de forma instantânea, então isto só ajusta a barra de abas.
+  // Reafirma o botão de aba ativo (ex.: fim de animação cosmética).
   function restoreActiveTabButton(targetTab) {
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
+    if (activeTabEl && activeTabEl !== targetTab && activeTabEl.isConnected) {
+      activeTabEl.classList.remove('active', 'adjacent-to-active');
+      clearAdjacentAround(activeTabEl);
+    }
     targetTab.classList.add('active');
+    activeTabEl = targetTab;
     if (window.TabsAnim) window.TabsAnim.setAdjacentToActive(targetTab);
   }
 
@@ -251,10 +350,11 @@
     }
   }
 
-  function createTabAfter(referenceTabId, url, title = null, icon = null, activate = true) {
+  function createTabAfter(referenceTabId, url, title = null, icon = null, activate = true, opts = null) {
     state.tabCount += 1;
     const tabId = `tab-${state.tabCount}`;
     const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
+    const deferLoad = Boolean(opts?.deferLoad) && !activate;
 
     const tabButton = document.createElement('div');
     tabButton.classList.add('tab');
@@ -284,7 +384,7 @@
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
-    const webview = buildWebview(url, tabId);
+    const webview = buildWebview(url, tabId, { deferLoad });
     // Precisa estar no DOM antes de listeners/activate chamarem APIs do guest.
     insertTabElements(tabButton, webview, referenceTabId);
     attachWebviewListeners(webview, tabId, titleSpan);
@@ -295,10 +395,11 @@
     return tabId;
   }
 
-  function createTab(url, title = null, icon = null, activate = true) {
+  function createTab(url, title = null, icon = null, activate = true, opts = null) {
     state.tabCount += 1;
     const tabId = `tab-${state.tabCount}`;
     const displayTitle = title || (url.includes('google.com/search') ? 'Busca' : 'Nova Aba');
+    const deferLoad = Boolean(opts?.deferLoad) && !activate;
 
     const tabButton = document.createElement('div');
     tabButton.classList.add('tab');
@@ -328,7 +429,7 @@
     if (window.TabsReorder) window.TabsReorder.setupTabDragAndDrop(tabButton);
     if (window.CursorMouseEventService) window.CursorMouseEventService.attachTabEvents(tabButton);
 
-    const webview = buildWebview(url, tabId);
+    const webview = buildWebview(url, tabId, { deferLoad });
     insertTabElements(tabButton, webview, null);
     attachWebviewListeners(webview, tabId, titleSpan);
     afterTabLayoutUpdate();
@@ -343,26 +444,20 @@
       return;
     }
 
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-    const targetIndex = tabs.findIndex((tab) => tab.dataset.id === tabId);
-    if (targetIndex === -1) return;
-
-    const targetTab = tabs[targetIndex];
-    const targetWebview = document.querySelector(`webview[data-id="${tabId}"]`);
+    // Lookup direto por id (sem varrer todas as abas).
+    const targetTab = document.querySelector(`#tabs .tab[data-id="${tabId}"]`);
+    const targetWebview = document.querySelector(`#browser webview[data-id="${tabId}"]`);
     if (!targetTab || !targetWebview) return;
 
-    // Troca de conteúdo IMEDIATA: alterna a webview visível agora, sem esperar
-    // a animação da barra de abas. Antes, a webview alvo só era ativada no
-    // onComplete (~250–400ms depois), deixando a área de conteúdo vazia nesse
-    // intervalo — o que causava o "flash" do fundo e a lentidão percebida.
     finishActivateBrowserTab(targetTab, targetWebview, tabId);
-
-    restoreActiveTabButton(targetTab);
   }
 
   function closeTab(tabId) {
     const tab = document.querySelector(`.tab[data-id="${tabId}"]`);
     const webview = document.querySelector(`webview[data-id="${tabId}"]`);
+
+    if (activeTabEl && activeTabEl.dataset.id === tabId) activeTabEl = null;
+    if (activeWebviewEl && activeWebviewEl.dataset.id === tabId) activeWebviewEl = null;
 
     if (tab) tab.remove();
     if (webview) webview.remove();
@@ -509,9 +604,10 @@
     const url = snapshot.url;
     if (!url) return null;
 
+    const deferOpts = activate ? null : { deferLoad: true };
     const id = referenceTabId
-      ? createTabAfter(referenceTabId, url, snapshot.title || null, null, activate)
-      : createTab(url, snapshot.title || null, null, activate);
+      ? createTabAfter(referenceTabId, url, snapshot.title || null, null, activate, deferOpts)
+      : createTab(url, snapshot.title || null, null, activate, deferOpts);
 
     if (id && snapshot.favicon_url) {
       updateTabIcon(id, snapshot.favicon_url);
@@ -524,6 +620,8 @@
     document.querySelectorAll('#browser webview').forEach((view) => view.remove());
     state.currentActiveTab = null;
     window.currentActiveTab = null;
+    activeTabEl = null;
+    activeWebviewEl = null;
 
     if (showHome) {
       window.showHome();

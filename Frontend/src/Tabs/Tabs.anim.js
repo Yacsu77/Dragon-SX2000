@@ -97,23 +97,19 @@
       (child) => child.classList.contains('tab') && child !== draggedTab
     );
 
+    // Só transform/opacity — backdrop-filter por frame no drag era custo alto de GPU.
     allTabs.forEach((tab) => {
       const rect = tab.getBoundingClientRect();
       const tabMidX = rect.left + rect.width / 2;
       const distance = Math.abs(tabCenterX - tabMidX);
-      const maxDistance = tabsContainer.offsetWidth;
+      const maxDistance = tabsContainer.offsetWidth || 1;
       const influence = Math.max(0, 1 - (distance / maxDistance) * 2);
 
       const scale = 0.96 + influence * 0.02;
       const translateX = (tabCenterX - tabMidX) * influence * 0.15;
-      const blur = influence * 6;
-      const saturation = 180 + influence * 30;
-      const brightness = 105 + influence * 8;
 
       tab.style.transform = `translateX(${translateX}px) scale(${scale})`;
-      tab.style.backdropFilter = `blur(${blur}px) saturate(${saturation}%) brightness(${brightness}%)`;
-      tab.style.webkitBackdropFilter = `blur(${blur}px) saturate(${saturation}%) brightness(${brightness}%)`;
-      tab.style.opacity = 0.75 + influence * 0.25;
+      tab.style.opacity = String(0.75 + influence * 0.25);
       tab.classList.add('drag-affected');
     });
   }

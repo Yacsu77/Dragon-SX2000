@@ -34,6 +34,7 @@
   let ownerTabId = null;
   let unregisterMediaSource = null;
   let lastPublishedKey = '';
+  let unbindPerfIdle = null;
 
   let state = emptyState();
 
@@ -52,6 +53,38 @@
       position: 0,
       duration: 0,
     };
+  }
+
+  /** Poll só com menu aberto ou PiP nativo ativo — não a cada 750ms no idle. */
+  function wantsPoll() {
+    if (document.hidden) return false;
+    return Boolean(isOpen || state.active);
+  }
+
+  function stopPoll() {
+    if (!refreshTimer) return;
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+
+  function startPoll() {
+    if (refreshTimer || !wantsPoll()) return;
+    refreshTimer = setInterval(() => {
+      if (!wantsPoll()) {
+        stopPoll();
+        return;
+      }
+      refresh();
+    }, REFRESH_MS);
+  }
+
+  function syncPoll() {
+    if (wantsPoll()) startPoll();
+    else stopPoll();
+  }
+
+  function scheduleRefresh() {
+    setTimeout(refresh, 60);
   }
 
   const INSPECT_SCRIPT = `
@@ -419,6 +452,7 @@
     state = next;
     paint();
     publishState(activeChanged);
+    syncPoll();
   }
 
   async function command(action) {
@@ -442,6 +476,7 @@
     if (!state.available || !menu) return;
     setMessage('');
     isOpen = true;
+    syncPoll();
     positionMenu();
     menu.classList.add('is-open');
     menu.setAttribute('aria-hidden', 'false');
@@ -455,6 +490,7 @@
     menu.setAttribute('aria-hidden', 'true');
     button?.setAttribute('aria-expanded', 'false');
     setMessage('');
+    syncPoll();
   }
 
   function errorMessage(error) {
@@ -496,13 +532,12 @@
   function bindWebview(webview) {
     if (!webview || webview.dataset.pipControlBound === '1') return;
     webview.dataset.pipControlBound = '1';
-    const schedule = () => setTimeout(refresh, 60);
-    webview.addEventListener('media-started-playing', schedule);
-    webview.addEventListener('media-paused', schedule);
-    webview.addEventListener('dom-ready', schedule);
-    webview.addEventListener('did-navigate', schedule);
-    webview.addEventListener('did-navigate-in-page', schedule);
-    webview.addEventListener('destroyed', schedule);
+    webview.addEventListener('media-started-playing', scheduleRefresh);
+    webview.addEventListener('media-paused', scheduleRefresh);
+    webview.addEventListener('dom-ready', scheduleRefresh);
+    webview.addEventListener('did-navigate', scheduleRefresh);
+    webview.addEventListener('did-navigate-in-page', scheduleRefresh);
+    webview.addEventListener('destroyed', scheduleRefresh);
   }
 
   function bindWebviews() {
@@ -570,22 +605,38 @@
       if (event.key === 'Escape') close();
     });
 
-    const scheduleRefresh = () => {
-      close();
-      setTimeout(refresh, 40);
+    const onTabSurfaceChange = () => {
+      if (isOpen) close();
+      // Um único refresh leve — sem poll; botão PiP atualiza sob demanda.
+      scheduleRefresh();
     };
     document.addEventListener('app:tab-created', () => {
       bindWebviews();
-      scheduleRefresh();
+      onTabSurfaceChange();
     });
-    document.addEventListener('app:tab-changed', scheduleRefresh);
-    document.addEventListener('app:tab-closed', scheduleRefresh);
-    document.addEventListener('app:tabs-cleared', scheduleRefresh);
-    document.addEventListener('app:webview-navigated', scheduleRefresh);
-    document.addEventListener('app:home-shown', scheduleRefresh);
+    document.addEventListener('app:tab-changed', onTabSurfaceChange);
+    document.addEventListener('app:tab-closed', onTabSurfaceChange);
+    document.addEventListener('app:tabs-cleared', onTabSurfaceChange);
+    document.addEventListener('app:webview-navigated', onTabSurfaceChange);
+    document.addEventListener('app:home-shown', onTabSurfaceChange);
     window.addEventListener('resize', () => {
       if (isOpen) positionMenu();
     });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopPoll();
+      else {
+        scheduleRefresh();
+        syncPoll();
+      }
+    });
+    unbindPerfIdle = window.JanelasNS?.PerfIdle?.onChange?.((active) => {
+      if (active) {
+        scheduleRefresh();
+        syncPoll();
+      } else if (!state.active) {
+        stopPoll();
+      }
+    }) || null;
 
     const browser = document.getElementById('browser');
     if (browser) {
@@ -600,12 +651,12 @@
 
     bindWebviews();
     refresh();
-    refreshTimer = setInterval(refresh, REFRESH_MS);
   }
 
   function dispose() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = null;
+    stopPoll();
+    unbindPerfIdle?.();
+    unbindPerfIdle = null;
     unregisterMediaSource?.();
     unregisterMediaSource = null;
     close();

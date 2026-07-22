@@ -58,8 +58,8 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             const pkg = require('./package.json');
-            if (pkg.version !== '1.3.0') {
-              console.error('Expected package.json version 1.3.0, got', pkg.version);
+            if (pkg.version !== '1.4.0') {
+              console.error('Expected package.json version 1.4.0, got', pkg.version);
               process.exit(1);
             }
             if (pkg.build.productName !== 'DSX') {
@@ -81,6 +81,17 @@ jobs:
               'Frontend/MiniTelas/MiniAtalhos/MiniAtalhos.js',
               'Frontend/src/Browser/Browser.css',
               'Frontend/src/Tabs/Tabs.core.js',
+              'Frontend/src/Tabs/TabWarmth.js',
+              'Frontend/src/Tabs/TabGroups.runtime.js',
+              'Frontend/src/core/AppShell.js',
+              'Frontend/src/Janelas/index.js',
+              'Frontend/src/Janelas/animations/AnimationHook.js',
+              'Frontend/src/Janelas/split/SplitHost.js',
+              'Frontend/src/Janelas/effects/RgbClock.js',
+              'Frontend/src/search/SmartSearch.js',
+              'Backend/API-DSX/boot.js',
+              'Backend/API-DSX/app.js',
+              'Version/Lançamento/Log v1.4.MD',
             ];
             const missing = required.filter((f) => !fs.existsSync(path.join(process.cwd(), f)));
             if (missing.length) {
@@ -135,7 +146,7 @@ jobs:
 
             Instaladores: `DSX-${{ steps.pkg.outputs.version }}-*`
 
-            Changelog: `Version/Lançamento/Log v1.3.MD`
+            Changelog: `Version/Lançamento/Log v1.4.MD`
           files: artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

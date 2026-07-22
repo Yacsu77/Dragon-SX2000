@@ -112,7 +112,13 @@ Opacidade da ativa e LED: `ChromeLayoutSettings` (`activeTabOpacity`, `activeTab
 
 ## Desempenho opcional
 
-`body.perf-render-all` — ver [`Editar.MD`](./Editar.MD).
+`body.perf-render-all` — ver [`Editar.MD`](./Editar.MD). Default **off**; com muitas abas o custo sobe rápido.
+
+**Perf P2:** blur de aba só na **barra** + **aba ativa** (inativas são sólido); `body.perf-window-idle` pausa LED/RGB da moldura (não no webview).
+
+**Perf P3:** `activateTab` usa refs da aba/webview ativa; `capturePage` no switch só se o cache estiver frio (>4s).
+
+**Perf P4 (TabWarmth):** restauração com `deferLoad`; discard frio (>8). Troca de tela 310ms com blur na saída; New Tab↔conteúdo via AppShell; flip/drop no mesmo gesto do blur; split limpa filter residual.
 
 ## Ver também
 

@@ -123,10 +123,24 @@
     if (!userId || !token || !window.VaultApi?.create) {
       throw new Error('Vault locked or unavailable');
     }
+    const normalizedOrigin = normalizeOrigin(origin) || origin;
+    const targetUser = normalizeUsername(username);
+
+    // Se já existe a mesma conta, remove e recria (permite atualizar senha).
+    try {
+      const existing = await listByOrigin(normalizedOrigin);
+      const match = existing.find((item) => normalizeUsername(item.username) === targetUser);
+      if (match?.id && window.VaultApi?.remove) {
+        await window.VaultApi.remove(match.id, userId);
+      }
+    } catch (_) {
+      /* segue para create */
+    }
+
     return window.VaultApi.create({
       user_id: userId,
       token,
-      origin: normalizeOrigin(origin) || origin,
+      origin: normalizedOrigin,
       username,
       password,
       meta: meta || null,

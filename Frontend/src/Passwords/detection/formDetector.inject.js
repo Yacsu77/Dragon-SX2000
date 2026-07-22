@@ -256,6 +256,10 @@
     loginCheckTicks += 1;
 
     if (looksLikeLoginError()) {
+      emit(
+        'credentials:login-failed',
+        Object.assign({}, pendingLogin.draft, { source: pendingLogin.source })
+      );
       clearPendingLogin();
       return;
     }
@@ -270,6 +274,10 @@
     // Ainda no form de login: espera (erro ou sucesso).
     if (!formGone && origin === pendingLogin.startOrigin && !navigated) {
       if (elapsed > 10000 || loginCheckTicks > 24) {
+        emit(
+          'credentials:login-failed',
+          Object.assign({}, pendingLogin.draft, { source: pendingLogin.source })
+        );
         clearPendingLogin();
         return;
       }

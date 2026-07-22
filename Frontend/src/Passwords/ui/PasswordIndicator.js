@@ -1,5 +1,5 @@
 /**
- * Indicador 3×3 fora da busca + popovers (só nome do site).
+ * Indicador 3×3 fora da busca + popovers (site + usuário, sem Editar).
  */
 (function () {
   if (window.PasswordIndicator) return;
@@ -9,6 +9,13 @@
   let suggestEl = null;
   let saveEl = null;
   let bound = false;
+
+  const LOCK_ICON = `
+    <svg class="password-popover__lock-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  `;
 
   function siteOf(origin) {
     return window.PasswordVaultAdapter?.siteLabel?.(origin) || 'site';
@@ -100,58 +107,10 @@
     return action();
   }
 
-  function renderCredentialSettings(detail, item) {
-    if (!suggestEl || !item) return;
-    const meta = item.meta || {};
-    const mode = meta.autoLoginForm ? 'form' : meta.autoLoginUrl ? 'url' : 'manual';
-    suggestEl.innerHTML = `
-      <div class="password-popover__eyebrow">Editar login</div>
-      <p class="password-popover__site">${escapeHtml(detail.site || siteOf(detail.origin))}</p>
-      <p class="password-popover__account">${escapeHtml(item.usernamePreview || 'Conta salva')}</p>
-      <fieldset class="password-popover__modes">
-        <label>
-          <input type="radio" name="password-auto-mode" value="manual" ${mode === 'manual' ? 'checked' : ''}>
-          <span><strong>Ao selecionar</strong><small>Preenche e entra quando você escolher a conta.</small></span>
-        </label>
-        <label>
-          <input type="radio" name="password-auto-mode" value="form" ${mode === 'form' ? 'checked' : ''}>
-          <span><strong>Automático por formulário</strong><small>Entra ao detectar um login neste site.</small></span>
-        </label>
-        <label>
-          <input type="radio" name="password-auto-mode" value="url" ${mode === 'url' ? 'checked' : ''}>
-          <span><strong>Automático nesta URL</strong><small>Entra somente nesta página de login.</small></span>
-        </label>
-      </fieldset>
-      <div class="password-popover__actions">
-        <button type="button" data-role="back">Voltar</button>
-        <button type="button" data-role="save-settings">Salvar</button>
-      </div>
-    `;
-    positionPopover(suggestEl);
-
-    suggestEl.querySelector('[data-role="back"]')?.addEventListener('click', () => renderSuggest(detail));
-    suggestEl.querySelector('[data-role="save-settings"]')?.addEventListener('click', async () => {
-      const selected = suggestEl.querySelector('input[name="password-auto-mode"]:checked')?.value || 'manual';
-      await withVault(async () => {
-        try {
-          const updated = await window.PasswordVaultAdapter.updateMeta(item.id, {
-            autoLoginForm: selected === 'form',
-            autoLoginUrl: selected === 'url',
-            loginUrl: selected === 'url' ? detail.href || meta.loginUrl || null : meta.loginUrl || null,
-          });
-          item.meta = updated?.meta || {
-            ...meta,
-            autoLoginForm: selected === 'form',
-            autoLoginUrl: selected === 'url',
-          };
-          renderSuggest(detail);
-        } catch (_) { /* ignore */ }
-      });
-    });
-  }
-
   function renderSuggest(detail) {
     if (!ensureDom()) return;
+    // Não sobrescrever o prompt de salvar.
+    if (saveEl) return;
     closePopovers();
     const items = Array.isArray(detail?.items) ? detail.items : [];
     if (!items.length) {
@@ -164,19 +123,19 @@
     suggestEl = document.createElement('div');
     suggestEl.className = 'password-popover password-popover--suggest';
     suggestEl.innerHTML = `
-      <div class="password-popover__eyebrow">Entrar em</div>
-      <p class="password-popover__site">${escapeHtml(site)}</p>
+      <div class="password-popover__eyebrow">Recomendação de senha</div>
       <ul class="password-popover__list">
         ${items
           .map(
             (item) => `
           <li>
-            <div class="password-popover__item">
-              <button type="button" class="password-popover__use" data-role="use" data-vault-id="${item.id}">
-                <span class="password-popover__preview">${escapeHtml(item.usernamePreview || '…')}</span>
-              </button>
-              <button type="button" class="password-popover__edit" data-role="edit" data-vault-id="${item.id}" aria-label="Editar login" title="Editar login">Editar</button>
-            </div>
+            <button type="button" class="password-popover__item password-popover__item--row" data-role="use" data-vault-id="${item.id}">
+              <span class="password-popover__lock">${LOCK_ICON}</span>
+              <span class="password-popover__copy">
+                <span class="password-popover__site">${escapeHtml(site)}</span>
+                <span class="password-popover__preview">${escapeHtml(item.usernamePreview || item.username || '…')}</span>
+              </span>
+            </button>
           </li>
         `
           )
@@ -193,12 +152,6 @@
         await withVault(() => window.PasswordService?.useCredential?.(item));
       });
     });
-    suggestEl.querySelectorAll('[data-role="edit"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const item = items.find((entry) => entry.id === btn.getAttribute('data-vault-id'));
-        renderCredentialSettings(detail, item);
-      });
-    });
   }
 
   function renderSave(detail) {
@@ -206,21 +159,37 @@
     closePopovers();
     setVisible(true, 'save');
     const site = detail.site || siteOf(detail.origin);
+    const username = String(detail.username || '').trim() || 'Conta';
     saveEl = document.createElement('div');
     saveEl.className = 'password-popover password-popover--save';
     saveEl.innerHTML = `
       <div class="password-popover__eyebrow">Salvar senha</div>
-      <p class="password-popover__site">${escapeHtml(site)}</p>
-      <div class="password-popover__actions">
-        <button type="button" data-role="save">Salvar</button>
+      <div class="password-popover__identity">
+        <span class="password-popover__lock">${LOCK_ICON}</span>
+        <div class="password-popover__copy">
+          <p class="password-popover__site">${escapeHtml(site)}</p>
+          <p class="password-popover__account">${escapeHtml(username)}</p>
+        </div>
+      </div>
+      <p class="password-popover__hint" data-role="hint" hidden></p>
+      <div class="password-popover__actions password-popover__actions--save">
+        <button type="button" class="password-popover__save-primary" data-role="save">Salvar senha</button>
         <button type="button" data-role="decline">Não</button>
       </div>
     `;
     popoverRoot.appendChild(saveEl);
     positionPopover(saveEl);
 
+    const hint = saveEl.querySelector('[data-role="hint"]');
+
     saveEl.querySelector('[data-role="save"]')?.addEventListener('click', async () => {
-      await withVault(async () => {
+      const btn = saveEl.querySelector('[data-role="save"]');
+      if (btn) btn.disabled = true;
+      if (hint) {
+        hint.hidden = true;
+        hint.textContent = '';
+      }
+      const ok = await withVault(async () => {
         try {
           await window.PasswordVaultAdapter.create({
             origin: detail.origin,
@@ -237,8 +206,16 @@
           window.PasswordBus?.notify('save:accepted', detail);
           closePopovers();
           setVisible(false);
-        } catch (_) { /* ignore */ }
+          return true;
+        } catch (err) {
+          if (hint) {
+            hint.hidden = false;
+            hint.textContent = 'Não foi possível salvar. Desbloqueie o cofre e tente de novo.';
+          }
+          return false;
+        }
       });
+      if (!ok && btn && saveEl) btn.disabled = false;
     });
 
     saveEl.querySelector('[data-role="decline"]')?.addEventListener('click', () => {
@@ -253,6 +230,14 @@
     });
   }
 
+  function onSaveCancel() {
+    if (!saveEl) return;
+    closePopovers();
+    if (rootBtn && !rootBtn.hidden) {
+      rootBtn.classList.remove('is-save');
+    }
+  }
+
   function bind() {
     if (bound || !window.PasswordBus) return;
     bound = true;
@@ -262,6 +247,7 @@
     window.PasswordBus.subscribe('indicator:hide', () => setVisible(false));
     window.PasswordBus.subscribe('credentials:candidates', renderSuggest);
     window.PasswordBus.subscribe('save:prompt', renderSave);
+    window.PasswordBus.subscribe('save:cancel', onSaveCancel);
 
     rootBtn?.addEventListener('click', (event) => {
       event.preventDefault();

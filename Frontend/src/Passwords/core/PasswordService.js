@@ -122,7 +122,9 @@
       await window.PasswordVaultAdapter?.ensureUnlocked?.();
       const exists = await window.PasswordVaultAdapter?.hasCredential?.(detail.origin, username);
       if (exists) return;
-    } catch (_) { /* ignore */ }
+    } catch (_) {
+      /* ignore */
+    }
 
     lastSavePromptKey = key;
     lastSavePromptAt = now;
@@ -143,9 +145,10 @@
     if (!isActiveTab(detail)) return;
     lastForm = detail;
 
-    // Ainda no form após tentativa → provável senha errada; cancela save.
+    // Ainda no form após tentativa → senha errada / form remount; cancela save.
     if (pendingAttempt && Date.now() - pendingAttempt.at < 12000) {
       clearPendingAttempt();
+      window.PasswordBus.notify('save:cancel', { reason: 'still-on-form', tabId: detail.tabId });
     }
 
     window.PasswordBus.notify('indicator:show', {
@@ -195,13 +198,17 @@
       reason: detail?.reason || 'gone',
       tabId: detail?.tabId,
     });
+    // Não pedir save aqui: SPAs remountam o form após senha errada e
+    // geravam prompt falso. Save vem só de submitted/login-navigated.
+  }
 
-    // Form sumiu após tentativa recente → login provavelmente ok (SPA).
-    if (pendingAttempt && Date.now() - pendingAttempt.at < 12000) {
-      const attempt = pendingAttempt;
-      clearPendingAttempt();
-      promptSaveIfNeeded({ ...attempt, confirmed: true });
-    }
+  function onLoginFailed(detail) {
+    if (!isActiveTab(detail)) return;
+    clearPendingAttempt();
+    window.PasswordBus.notify('save:cancel', {
+      reason: 'login-failed',
+      tabId: detail?.tabId,
+    });
   }
 
   function onSessionAuthenticated(detail) {
@@ -229,6 +236,7 @@
     // Timeout: se o form continuar na tela, assume falha.
     pendingTimer = setTimeout(() => {
       clearPendingAttempt();
+      window.PasswordBus.notify('save:cancel', { reason: 'attempt-timeout' });
     }, 12000);
   }
 
@@ -278,6 +286,7 @@
     window.PasswordBus.subscribe('session:authenticated', onSessionAuthenticated);
     window.PasswordBus.subscribe('credentials:attempt', onAttempt);
     window.PasswordBus.subscribe('credentials:submitted', onSubmitted);
+    window.PasswordBus.subscribe('credentials:login-failed', onLoginFailed);
     window.PasswordBus.subscribe('credentials:login-navigated', onNavigationAfterAttempt);
     window.PasswordBus.subscribe('indicator:used', () => {
       window.PasswordBus.notify('indicator:hide', { reason: 'used' });

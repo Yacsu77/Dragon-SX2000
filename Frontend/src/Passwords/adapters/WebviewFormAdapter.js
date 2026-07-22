@@ -53,6 +53,9 @@
       case 'credentials:submitted':
         window.PasswordBus.notify('credentials:submitted', detail);
         break;
+      case 'credentials:login-failed':
+        window.PasswordBus.notify('credentials:login-failed', detail);
+        break;
       case 'indicator:used':
         window.PasswordBus.notify('indicator:used', detail);
         break;
@@ -120,13 +123,18 @@
     webview.addEventListener('did-finish-load', () => {
       runInject().then(async () => {
         if (!window.PasswordService?.hasPendingAttempt?.()) return;
+        // Espera o form remountar (SPAs / reload de login com erro).
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        if (!window.PasswordService?.hasPendingAttempt?.()) return;
         try {
           const stillLogin = await webview.executeJavaScript(
             '!!document.querySelector(\'input[type="password"]\')',
             true
           );
           if (stillLogin) return;
-        } catch (_) { /* ignore */ }
+        } catch (_) {
+          /* ignore */
+        }
         window.PasswordBus?.notify('credentials:login-navigated', { tabId, webview });
       });
     });

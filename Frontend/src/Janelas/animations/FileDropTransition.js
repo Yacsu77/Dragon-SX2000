@@ -33,7 +33,7 @@
       await runClassAnimation(
         el,
         floating ? 'janelas-anim-float-drop' : 'janelas-anim-file-drop',
-        280
+        320
       );
     },
   });

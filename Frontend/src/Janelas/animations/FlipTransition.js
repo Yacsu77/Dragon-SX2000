@@ -38,7 +38,7 @@
       if (!el) return;
 
       if (floating) {
-        await runClassAnimation(el, 'janelas-anim-float-in', 280);
+        await runClassAnimation(el, 'janelas-anim-float-in', 320);
         return;
       }
 
@@ -48,7 +48,7 @@
       await runClassAnimation(
         el,
         dir === 'right' ? 'janelas-anim-flip-right' : 'janelas-anim-flip-left',
-        260
+        320
       );
     },
   });

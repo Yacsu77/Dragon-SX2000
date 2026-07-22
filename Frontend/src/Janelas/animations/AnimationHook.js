@@ -1,79 +1,80 @@
 /**
- * Liga animações de transição ao activateTab / activateHomeTab.
+ * Liga animações de transição à troca de aba.
+ *
+ * Conteúdo↔conteúdo: o crossfade dos webviews já é a transição — rodar flip
+ * no #browser (opacity 0.72→1) causava piscar. Flip/drop só em New Tab↔conteúdo.
  */
 (function () {
   const NS = (window.JanelasNS = window.JanelasNS || {});
-  if (NS.AnimationHook) return;
+  const HOOK_VERSION = 10;
 
-  let hooked = false;
+  if (NS.AnimationHook?.__v === HOOK_VERSION) {
+    NS.AnimationHook.init?.();
+    return;
+  }
+
   let playing = false;
+  let previousTabId = null;
+  let listenersBound = false;
+
+  function isHomeId(id) {
+    return Boolean(id && String(id).startsWith('home-tab'));
+  }
 
   function shouldAnimate(fromId, toId) {
     const settings = NS.Store?.getSettings?.() || {};
     const transition = settings.tabTransition || 'none';
     if (transition === 'none') return false;
     if (!fromId || !toId || fromId === toId) return false;
-    if (playing) return false;
     if (NS.Store?.getRuntime?.()?.mode === 'split') return false;
+    // Só anima superfície quando envolve New Tab (home). Conteúdo↔conteúdo = webview crossfade.
+    if (!isHomeId(fromId) && !isHomeId(toId)) return false;
     return true;
   }
 
   function playTransition(fromId, toId) {
-    if (!shouldAnimate(fromId, toId)) return;
+    window.TabWarmth?.releaseTabSwitchVeil?.();
+    if (!shouldAnimate(fromId, toId) || playing) return;
+
     playing = true;
-    // Próximo frame: conteúdo já trocou
-    requestAnimationFrame(() => {
-      Promise.resolve(NS.AnimationRegistry?.play?.({ fromId, toId }))
-        .catch(() => {})
-        .finally(() => {
-          playing = false;
-        });
-    });
+    Promise.resolve(
+      NS.AnimationRegistry?.play?.({
+        fromId,
+        toId,
+        delaySatisfied: true,
+        syncedWithSurface: true,
+      })
+    )
+      .catch(() => {})
+      .finally(() => {
+        playing = false;
+      });
   }
 
-  function wrapFn(name) {
-    const current = window[name];
-    if (typeof current !== 'function') return;
-    // Já somos o wrapper mais externo
-    if (current.__janelasAnimHooked) return;
-
-    function wrapped(tabId) {
-      const fromId = window.TabsState?.currentActiveTab || window.currentActiveTab;
-      const result = current.call(this, tabId);
-      playTransition(fromId, tabId);
-      return result;
-    }
-    wrapped.__janelasAnimHooked = true;
-    wrapped.__janelasAnimInner = current;
-    window[name] = wrapped;
-    if (window.TabsCore && name in window.TabsCore) {
-      window.TabsCore[name] = wrapped;
-    }
+  function onTabChanged(e) {
+    const toId = e?.detail?.tabId;
+    if (!toId) return;
+    const fromId = previousTabId;
+    previousTabId = toId;
+    playTransition(fromId, toId);
   }
 
-  function hookActivateTab() {
-    wrapFn('activateTab');
-    wrapFn('activateHomeTab');
+  function bindListeners() {
+    if (listenersBound) return;
+    listenersBound = true;
+    document.addEventListener('app:tab-changed', onTabChanged);
   }
 
   function init() {
-    hookActivateTab();
-    // Re-hook se Split/Thumbnail envolverem depois
-    setTimeout(() => {
-      const a = window.activateTab;
-      if (a && !a.__janelasAnimHooked) hookActivateTab();
-      const h = window.activateHomeTab;
-      if (h && !h.__janelasAnimHooked) wrapFn('activateHomeTab');
-    }, 0);
-    setTimeout(() => {
-      if (window.activateTab && !window.activateTab.__janelasAnimHooked) {
-        wrapFn('activateTab');
-      }
-      if (window.activateHomeTab && !window.activateHomeTab.__janelasAnimHooked) {
-        wrapFn('activateHomeTab');
-      }
-    }, 300);
+    bindListeners();
+    previousTabId =
+      window.TabsState?.currentActiveTab || window.currentActiveTab || previousTabId;
   }
 
-  NS.AnimationHook = { init };
+  NS.AnimationHook = {
+    init,
+    OPEN_DELAY_MS: 0,
+    CONTENT_OPEN_MS: 0,
+    __v: HOOK_VERSION,
+  };
 })();

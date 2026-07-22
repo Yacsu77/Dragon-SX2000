@@ -17,11 +17,11 @@ CSS base, montagem de fragmentos HTML, estado global home/navegador e agregador 
 | `manifest.css` | Único `@import` de todos os CSS do Frontend (linkado no `index.html`) |
 | `reset.css` | Reset global (`*`, `body` flex column, `100vh`) |
 | `variables.css` | Tokens CSS (`:root`, `[data-theme="light"]`) — inclui `--content-bg` |
-| `background.css` | `.background`, `.background-video` (fixo atrás da UI) |
-| `shell.css` | Visibilidade inicial: esconde nav, tabs, home, browser até ativação |
+| `background.css` | `.background`, `.background-video` (fundo atrás da UI) |
+| `shell.css` | Visibilidade inicial + **crossfade home↔browser** (`surface-crossfade`) |
 | `background.html` | Fragmento do vídeo de fundo |
 | `Shell.js` | `Shell.mountAll()` — fetch dos fragmentos nos mount points |
-| `AppShell.js` | `showHome()` / `showBrowser()` + CustomEvents |
+| `AppShell.js` | `showHome()` / `showBrowser()` + CustomEvents + crossfade 320ms |
 
 ---
 
@@ -29,7 +29,7 @@ CSS base, montagem de fragmentos HTML, estado global home/navegador e agregador 
 
 ```js
 window.Shell = { mountAll() }
-window.AppShell = { showHome(), showBrowser(), init() }
+window.AppShell = { showHome(), showBrowser(), SURFACE_MS, init() }
 window.showHome / window.showBrowser  // compatibilidade legada
 ```
 
@@ -41,6 +41,20 @@ window.showHome / window.showBrowser  // compatibilidade legada
 |--------|--------|
 | `app:home-shown` | Home tab visível; limpa barra de endereço; mostra AutoTune |
 | `app:browser-shown` | Webview visível; esconde widgets AutoTune na home |
+
+---
+
+## AppShell — New Tab ↔ conteúdo (v1.4)
+
+| Comportamento | Detalhe |
+|---------------|---------|
+| `SURFACE_MS` | 320 |
+| Home → browser | Empilha superfícies; home sai por cima (opacity); browser já opaco por baixo |
+| Browser → home | Simétrico |
+| Floating | Swap instantâneo (sem absolute overlay — layouts Janelas usam insets próprios) |
+| `currentActiveTab` | Não zera se `TabsState` aponta para `home-tab-*` |
+
+Classes: `body.surface-crossfade`, `.surface-leaving` / `.surface-entering` / `.is-fading` / `.is-shown` (em `shell.css`).
 
 ---
 
@@ -62,17 +76,13 @@ Editar `variables.css` — tokens `--app-bg`, `--nav-bg`, `--app-text`, `--conte
 
 | Token | Uso |
 |-------|-----|
-| `--content-bg` | Fundo opaco de `.browser-container` / `webview` enquanto o site carrega (evita wallpaper vazando) |
+| `--content-bg` | Fundo opaco de `.browser-container` / `webview` / leave do crossfade |
 
 Tema claro/escuro alternado pelo idget Tema (`UserINTer/Tabline/idget/Tema/`).
 
 ### Mudar o que acontece ao entrar na home
 
-Editar `AppShell.js` → função `showHome()`:
-
-- Limpar barra: `NavSearch.clearAddressBar()`
-- Visibilidade AutoTune: `setAutoTuneHomeVisible(true)`
-- Adicionar listeners: escutar `app:home-shown` em outro módulo (preferível)
+Editar `AppShell.js` → função `showHome()` — preferir escutar `app:home-shown` em outros módulos.
 
 ### Adicionar CSS de um módulo novo
 
@@ -85,3 +95,9 @@ Incluir linha em `manifest.css`:
 ### Esconder/mostrar painéis no boot
 
 `shell.css` define `display: none` inicial para `.nav-bar`, `.tabs-bar`, `.home-page`, `.browser-container`. Módulos removem/adicionam classes (`hidden`, `active`) em runtime.
+
+---
+
+## Ver também
+
+- [`Browser.MD`](./Browser.MD) · [`Janelas.MD`](./Janelas.MD) · [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD)

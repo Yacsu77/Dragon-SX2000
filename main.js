@@ -94,6 +94,10 @@ function httpGetJson(urlPath, timeoutMs = 1500) {
   });
 }
 
+function isSameApiProject(payload) {
+  return path.resolve(payload?.project_root || '') === path.resolve(__dirname);
+}
+
 function isApiFromCurrentProject(payload) {
   // Exigir a feature mais recente força restart de instâncias antigas que
   // ficaram rodando sem as rotas novas (ex.: /history/suggestions).
@@ -101,24 +105,37 @@ function isApiFromCurrentProject(payload) {
     return false;
   }
 
-  return path.resolve(payload.project_root || '') === path.resolve(__dirname);
+  return isSameApiProject(payload);
 }
 
-/** @returns {'ready'|'stale'|'down'} */
+/** @returns {'ready'|'starting'|'stale'|'down'} */
 async function probeApiDsx() {
   const ready = await httpGetJson('/ready');
-  if (ready && ready.status === 200 && ready.json?.success) {
-    return isApiFromCurrentProject(ready.json) ? 'ready' : 'stale';
+  if (ready?.json) {
+    if (ready.status === 200 && ready.json.success) {
+      return isApiFromCurrentProject(ready.json) ? 'ready' : 'stale';
+    }
+
+    // Listen cedo: DB/Redis ainda subindo (ou hydrate demorado no cold start).
+    if (
+      ready.json.starting === true &&
+      isSameApiProject(ready.json) &&
+      Array.isArray(ready.json.features) &&
+      ready.json.features.includes('smart-suggestions')
+    ) {
+      return 'starting';
+    }
   }
 
   // Uma API sem /ready compatível é antiga ou de outra pasta; libere a porta.
+  // Não tratar /health sozinho como stale — a API nova responde health enquanto starting.
   const users = await httpGetJson('/users');
   if (users && users.status === 200 && users.json?.success === true) {
     return 'stale';
   }
 
   const health = await httpGetJson('/health');
-  if (health && health.status === 200) {
+  if (health && health.status === 200 && health.json?.starting !== true) {
     return 'stale';
   }
 
@@ -159,25 +176,54 @@ function freePort3333() {
   });
 }
 
-async function waitForApiReady(timeoutMs = 20000) {
+async function waitForApiReady(timeoutMs = 90000) {
   const started = Date.now();
+  let lastStatus = 'down';
   while (Date.now() - started < timeoutMs) {
     const status = await probeApiDsx();
+    lastStatus = status;
     if (status === 'ready') return true;
-    await new Promise((r) => setTimeout(r, 250));
+    // starting = processo vivo materializando/DB; down = ainda pode estar no hydrate.
+    const delay = status === 'starting' ? 350 : 500;
+    await new Promise((r) => setTimeout(r, delay));
   }
+  console.warn(`[API-DSX] waitForApiReady esgotou (último status=${lastStatus})`);
   return false;
 }
 
+let apiRestartAttempt = 0;
+let apiStartInFlight = null;
+
 async function startApiDsx() {
+  if (apiStartInFlight) return apiStartInFlight;
+  apiStartInFlight = startApiDsxInner().finally(() => {
+    apiStartInFlight = null;
+  });
+  return apiStartInFlight;
+}
+
+async function startApiDsxInner() {
   if (apiDsxProcess) {
-    await waitForApiReady(15000);
+    await waitForApiReady(90000);
     return;
   }
 
   const status = await probeApiDsx();
   if (status === 'ready') {
     console.log('[API-DSX] já em execução (pronta) em http://localhost:3333');
+    apiRestartAttempt = 0;
+    return;
+  }
+
+  if (status === 'starting') {
+    console.log('[API-DSX] já em execução (inicializando)…');
+    const ready = await waitForApiReady(90000);
+    if (ready) {
+      console.log('[API-DSX] pronta em http://localhost:3333');
+      apiRestartAttempt = 0;
+    } else {
+      console.warn('[API-DSX] ainda não respondeu /ready a tempo');
+    }
     return;
   }
 
@@ -190,7 +236,8 @@ async function startApiDsx() {
   await freePort3333();
   await new Promise((r) => setTimeout(r, 500));
 
-  const apiEntry = path.join(__dirname, 'Backend', 'API-DSX', 'app.js');
+  // boot.js materializa arquivos (iCloud/Desktop) antes do require — evita ETIMEDOUT no cold start.
+  const apiEntry = path.join(__dirname, 'Backend', 'API-DSX', 'boot.js');
 
   try {
     apiDsxProcess = spawn(process.execPath, [apiEntry], {
@@ -211,9 +258,17 @@ async function startApiDsx() {
       apiDsxProcess = null;
 
       if (!isAppQuitting && code !== 0) {
+        apiRestartAttempt += 1;
+        const delay = Math.min(2000 * 2 ** Math.min(apiRestartAttempt - 1, 4), 30000);
+        console.warn(
+          `[API-DSX] reinício em ${delay}ms (tentativa ${apiRestartAttempt})` +
+            (code === 1
+              ? ' — se o erro for ETIMEDOUT, o projeto pode estar em pasta iCloud/Desktop ainda hidratando'
+              : '')
+        );
         setTimeout(() => {
           startApiDsx();
-        }, 2000);
+        }, delay);
       }
     });
     apiDsxProcess.on('error', (err) => {
@@ -227,9 +282,10 @@ async function startApiDsx() {
     apiDsxProcess = null;
   }
 
-  const ready = await waitForApiReady(20000);
+  const ready = await waitForApiReady(90000);
   if (ready) {
     console.log('[API-DSX] pronta em http://localhost:3333');
+    apiRestartAttempt = 0;
   } else {
     console.warn('[API-DSX] ainda não respondeu /ready a tempo');
   }
@@ -1061,9 +1117,20 @@ app.whenReady().then(async () => {
   createWindow();
 });
 
+app.on('activate', async () => {
+  // macOS: reabrir janela sem matar a API (fica no dock).
+  if (BrowserWindow.getAllWindows().length === 0) {
+    await startApiDsx();
+    createWindow();
+  }
+});
+
 app.on('window-all-closed', () => {
+  // No macOS o app costuma ficar vivo no dock — manter API/SDK ligados
+  // evita cold start lento (e ETIMEDOUT) ao reabrir no mesmo dia/noite.
+  if (process.platform === 'darwin') return;
   stopBackgroundServices();
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 app.on('before-quit', () => {

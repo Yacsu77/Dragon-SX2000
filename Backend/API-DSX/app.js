@@ -28,6 +28,8 @@ const READY_FEATURES = [
   'vault',
   'tab-groups',
   'smart-suggestions',
+  'janelas',
+  'tab-warmth',
 ];
 
 /** false até SQLite/Redis concluírem — /ready responde starting sem derrubar o listen. */

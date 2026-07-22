@@ -261,7 +261,7 @@ async function googleSuggestions(query) {
   const cached = await getSessionCache(key);
   if (cached) return cached;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2000);
+  const timer = setTimeout(() => controller.abort(), 900);
   try {
     let values = [];
     try {
@@ -305,8 +305,10 @@ async function smartSuggestions(query, userId) {
   const matches = rows
     .filter((row) => {
       if (isSearchResultUrl(row.url)) return false;
+      const host = siteLabel(row.url).toLowerCase();
       const haystack = `${searchableUrl(row.url)} ${safeHistoryTitle(row)}`.toLowerCase();
-      return haystack.includes(term);
+      if (haystack.includes(term) || host.includes(term)) return true;
+      return host.split('.').some((part) => part.startsWith(term));
     })
     .sort((a, b) => {
       const rankA = rankPosition.has(a.url) ? rankPosition.get(a.url) : Number.MAX_SAFE_INTEGER;
@@ -359,7 +361,7 @@ async function smartSuggestions(query, userId) {
         (b.visit_count || 0) - (a.visit_count || 0) ||
         Number(b.has_saved_login) - Number(a.has_saved_login)
     )
-    .slice(0, 5);
+    .slice(0, 8);
 
   return {
     sites,

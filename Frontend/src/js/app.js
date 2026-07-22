@@ -52,7 +52,7 @@ async function reloadForActiveUser() {
   if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.reload === 'function') {
     restored = !!(await window.TabGroupsRuntime.reload());
   } else if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
-    restored = !!window.SessionTabs.restore();
+    restored = !!(await window.SessionTabs.restore());
   }
   if (!restored && window.AppShell && typeof window.AppShell.showHome === 'function') {
     window.AppShell.showHome();
@@ -178,7 +178,7 @@ async function mountWorkspace(options = {}) {
   } else if (window.TabGroupsRuntime && typeof window.TabGroupsRuntime.restoreActiveGroup === 'function') {
     restored = !!(await window.TabGroupsRuntime.restoreActiveGroup());
   } else if (window.SessionTabs && typeof window.SessionTabs.restore === 'function') {
-    restored = !!window.SessionTabs.restore();
+    restored = !!(await window.SessionTabs.restore());
   }
 
   if (!restored && !cleanSession && window.AppShell && typeof window.AppShell.showHome === 'function') {

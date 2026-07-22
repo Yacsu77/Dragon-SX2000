@@ -20,7 +20,17 @@
 
   function clearPaneClasses() {
     document.querySelectorAll('#browser webview').forEach((wv) => {
-      wv.classList.remove('janelas-pane-visible', 'janelas-pane-focus', 'janelas-pane-left', 'janelas-pane-right');
+      wv.classList.remove(
+        'janelas-pane-visible',
+        'janelas-pane-focus',
+        'janelas-pane-left',
+        'janelas-pane-right',
+        'is-leaving',
+        'is-entering'
+      );
+      // Garante que nenhum blur residual do crossfade de abas fique no painel
+      wv.style.removeProperty('filter');
+      wv.style.removeProperty('opacity');
     });
   }
 
@@ -29,17 +39,18 @@
     const browser = document.getElementById('browser');
     if (!browser) return;
 
-    document.querySelectorAll('#tabs .tab').forEach((tab) => {
-      tab.classList.remove(
-        'janelas-tab-pane-left',
-        'janelas-tab-pane-right',
-        'janelas-tab-pane-focus',
-        'janelas-tab-in-split'
-      );
-    });
-
     if (state.mode !== 'split') {
       clearPaneClasses();
+      document.querySelectorAll(
+        '#tabs .tab.janelas-tab-in-split, #tabs .tab.janelas-tab-pane-left, #tabs .tab.janelas-tab-pane-right, #tabs .tab.janelas-tab-pane-focus'
+      ).forEach((tab) => {
+        tab.classList.remove(
+          'janelas-tab-pane-left',
+          'janelas-tab-pane-right',
+          'janelas-tab-pane-focus',
+          'janelas-tab-in-split'
+        );
+      });
       return;
     }
 
@@ -56,17 +67,27 @@
       if (state.focusPane === 'right') right.classList.add('janelas-pane-focus');
     }
 
-    // Mantém classe active na webview do painel focado (address bar / nav)
-    document.querySelectorAll('#browser webview').forEach((wv) => wv.classList.remove('active'));
+    document.querySelectorAll('#browser webview.active').forEach((wv) => wv.classList.remove('active'));
     const focusWv = state.focusPane === 'right' ? right : left;
     if (focusWv) focusWv.classList.add('active');
 
-    document.querySelectorAll('#tabs .tab').forEach((tab) => {
-      tab.classList.remove('active', 'adjacent-to-active');
-    });
-
     const leftTab = document.querySelector(`#tabs .tab[data-id="${state.leftTabId}"]`);
     const rightTab = document.querySelector(`#tabs .tab[data-id="${state.rightTabId}"]`);
+
+    document.querySelectorAll('#tabs .tab.active, #tabs .tab.adjacent-to-active').forEach((tab) => {
+      tab.classList.remove('active', 'adjacent-to-active');
+    });
+    document.querySelectorAll(
+      '#tabs .tab.janelas-tab-in-split, #tabs .tab.janelas-tab-pane-left, #tabs .tab.janelas-tab-pane-right, #tabs .tab.janelas-tab-pane-focus'
+    ).forEach((tab) => {
+      tab.classList.remove(
+        'janelas-tab-pane-left',
+        'janelas-tab-pane-right',
+        'janelas-tab-pane-focus',
+        'janelas-tab-in-split'
+      );
+    });
+
     if (leftTab) {
       leftTab.classList.add('janelas-tab-in-split', 'janelas-tab-pane-left');
       if (state.focusPane === 'left') leftTab.classList.add('janelas-tab-pane-focus', 'active');

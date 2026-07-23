@@ -25,6 +25,7 @@
 - **Desempenho P0–P4** — idle, drag leve, TabWarmth, troca de tela sem piscar, RGB estável em multi-monitor
 - Barra de abas mais estável: destaque, condensação com 7+, borda LED opcional
 - Isolamento correto da API SQLite + boot resiliente (`boot.js`, `/ready` com `starting`)
+- **Build empacotado**: API-DSX + Media SDK e deps nativas vão em `extraResources`; wallpapers WWP incluídos
 
 ---
 
@@ -192,11 +193,12 @@
 
 | Item | Descrição |
 |---|---|
-| **`boot.js`** | Runtime em Application Support; hydrate + retry; spawn estável |
+| **`boot.js`** | Empacotado: usa deps bundled (`DSX_PACKAGED=1`); Dev/iCloud: runtime em userData + npm |
 | **`/ready`** | Responde `starting` cedo; features incluem `tab-groups`, `smart-suggestions`, `janelas`, `tab-warmth` |
-| **main.js** | Espera mais longa / retries; macOS mantém API ao fechar janela |
+| **main.js** | Paths via `extraResources`; DB em `userData/API-DSX`; espera/retries; macOS mantém API ao fechar janela |
+| **Build** | `prepare-backend.js` + `extraResources` (API + SDK + `node_modules`); wallpapers WWP no asar |
 
-**Arquivos:** `Backend/API-DSX/boot.js`, `app.js`, `main.js`
+**Arquivos:** `Backend/API-DSX/boot.js`, `app.js`, `main.js`, `scripts/prepare-backend.js`, `package.json`
 
 ---
 

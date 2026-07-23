@@ -668,7 +668,16 @@
     const settings = loadSettings();
     TYPES.forEach((t) => {
       const s = settings[t];
-      if (!s || s.active === false || !window.AutoTuneWidgets || !window.AutoTuneWidgets[t]) return;
+      if (!s || s.active === false) return;
+      // Music só existe como minimal — nunca restaura o card flutuante.
+      if (t === "music") {
+        if (!settings.music.minimal) {
+          settings.music = { ...settings.music, minimal: true };
+          saveSettings(settings);
+        }
+        return;
+      }
+      if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[t]) return;
       spawnWidget(t, root, {
         id: s.id,
         x: s.x,
@@ -681,7 +690,28 @@
 
   function setPanelTypeActive(type, active, root) {
     const settings = loadSettings();
-    if (!TYPES.includes(type) || !window.AutoTuneWidgets || !window.AutoTuneWidgets[type]) return;
+    if (!TYPES.includes(type)) return;
+
+    // Music existe apenas no modo minimal — nunca spawna o card flutuante.
+    if (type === "music") {
+      if (!settings.music || typeof settings.music !== "object") {
+        settings.music = { id: "music-minimal", active: false };
+      }
+      settings.music = {
+        ...settings.music,
+        active: !!active,
+        minimal: true,
+      };
+      saveSettings(settings);
+      syncPanelToggles();
+      syncMusicWidgetPresentation(root);
+      if (window.AutoTuneMusicMinimal) {
+        window.AutoTuneMusicMinimal.setEnabled(!!active);
+      }
+      return;
+    }
+
+    if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[type]) return;
 
     if (!active && (type === "timer" || type === "tasklist")) {
       const fusion = root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
@@ -700,8 +730,6 @@
     } else {
       const el = root.querySelector(`.floating-widget[data-widget-type="${type}"]`);
       if (el) {
-        const prevMinimal = type === "music" ? settings[type]?.minimal : undefined;
-        const prevOffset = type === "music" ? settings[type]?.minimalOffsetX : undefined;
         settings[type] = {
           id: el.dataset.widgetId,
           x: parseFloat(el.style.left) || 0,
@@ -710,12 +738,6 @@
           h: el.offsetHeight,
           active: false
         };
-        if (type === "music" && prevMinimal === true) {
-          settings[type].minimal = true;
-        }
-        if (type === "music" && typeof prevOffset === "number") {
-          settings[type].minimalOffsetX = prevOffset;
-        }
         el.remove();
         saveSettings(settings);
       } else if (settings[type]) {
@@ -785,59 +807,33 @@
 
   function isMusicMinimalEnabled() {
     const settings = loadSettings();
-    return !!(settings.music && settings.music.minimal === true);
+    return !!(settings.music && settings.music.active === true);
   }
 
   function setMusicMinimalEnabled(enabled, root) {
-    const settings = loadSettings();
-    if (!settings.music) {
-      settings.music = { id: "music-minimal", active: false, minimal: !!enabled };
-    } else {
-      settings.music = { ...settings.music, minimal: !!enabled };
-    }
-    saveSettings(settings);
-    syncMusicMinimalPanel();
-    syncMusicWidgetPresentation(root);
-    if (window.AutoTuneMusicMinimal) {
-      window.AutoTuneMusicMinimal.setEnabled(!!enabled);
-    }
+    setPanelTypeActive("music", !!enabled, root);
   }
 
   /**
    * Alterna visibilidade entre o widget Music flutuante e o modo minimalista.
-   * Quando minimal está ativo, o card flutuante fica oculto.
+   * O card flutuante fica sempre oculto — só o minimal permanece.
    */
   window.syncMusicWidgetPresentation = function syncMusicWidgetPresentation(rootEl) {
     const root = rootEl || document.getElementById("floating-cosmetics-root");
     if (!root) return;
     const musicEl = root.querySelector('.floating-widget[data-widget-type="music"]');
-    if (!musicEl) return;
-    const minimalOn = isMusicMinimalEnabled();
-    const active = hasActiveMedia();
-    if (minimalOn) {
-      musicEl.style.display = "none";
-    } else {
-      musicEl.style.display = active ? "" : "none";
-    }
+    if (musicEl) musicEl.style.display = "none";
   };
 
   function syncMusicMinimalPanel() {
-    const on = isMusicMinimalEnabled();
-    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
-      input.checked = on;
-    });
-    document.querySelectorAll('[data-autotune-panel-label="music-minimal"]').forEach((label) => {
-      label.textContent = on ? "On" : "Off";
-    });
+    /* toggle music-minimal removido do catálogo — no-op */
   }
 
   function initMusicMinimalToggle(root) {
-    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
-      input.addEventListener("change", () => {
-        setMusicMinimalEnabled(input.checked, root);
-      });
-    });
-    syncMusicMinimalPanel();
+    syncMusicWidgetPresentation(root);
+    if (window.AutoTuneMusicMinimal) {
+      window.AutoTuneMusicMinimal.setEnabled(isMusicMinimalEnabled());
+    }
   }
 
   function hasActiveMedia() {

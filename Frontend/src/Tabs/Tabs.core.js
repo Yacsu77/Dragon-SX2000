@@ -89,7 +89,7 @@
     }
   }
 
-  const GOOGLE_SCROLLBAR_CSS = `
+  const PAGE_SCROLLBAR_CSS = `
     html, body {
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
@@ -103,45 +103,93 @@
     }
   `;
 
-  function isGoogleUrl(url) {
-    try {
-      const hostname = new URL(url).hostname.toLowerCase();
-      return hostname === 'google.com' || hostname === 'www.google.com' ||
-        hostname.endsWith('.google.com');
-    } catch (_) {
-      return false;
+  async function syncPageScrollbar(webview) {
+    if (!webview || typeof webview.insertCSS !== 'function') return;
+    if (webview.__pageScrollbarCssKey && typeof webview.removeInsertedCSS === 'function') {
+      try {
+        await webview.removeInsertedCSS(webview.__pageScrollbarCssKey);
+      } catch (_) { /* ignore */ }
+      webview.__pageScrollbarCssKey = null;
     }
-  }
-
-  async function syncGoogleScrollbar(webview) {
-    if (!webview || typeof webview.getURL !== 'function') return;
-
-    let url = '';
     try {
-      url = webview.getURL();
-    } catch (_) {
-      return;
-    }
-
-    if (!isGoogleUrl(url)) {
-      const previousKey = webview.__googleScrollbarCssKey;
-      webview.__googleScrollbarCssKey = null;
-      if (previousKey && typeof webview.removeInsertedCSS === 'function') {
-        try {
-          await webview.removeInsertedCSS(previousKey);
-        } catch (_) {
-          /* guest navegou antes da remoção */
-        }
-      }
-      return;
-    }
-
-    if (webview.__googleScrollbarCssKey || typeof webview.insertCSS !== 'function') return;
-    try {
-      webview.__googleScrollbarCssKey = await webview.insertCSS(GOOGLE_SCROLLBAR_CSS);
+      webview.__pageScrollbarCssKey = await webview.insertCSS(PAGE_SCROLLBAR_CSS);
     } catch (_) {
       /* webview ainda não está pronto */
     }
+  }
+
+  const SIDE_MOUSE_INJECT = `
+    (function () {
+      if (window.__dsxSideMouseBound) return;
+      window.__dsxSideMouseBound = true;
+      function stopNav(e) {
+        if (!e || typeof e.button !== 'number' || e.button < 3) return;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      function report(e) {
+        if (!e || typeof e.button !== 'number' || e.button < 3) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          console.log('__DSX_MOUSE__' + JSON.stringify({
+            button: e.button,
+            ctrl: !!e.ctrlKey,
+            shift: !!e.shiftKey,
+            alt: !!e.altKey,
+            meta: !!e.metaKey,
+            type: e.type
+          }));
+        } catch (_) {}
+      }
+      window.addEventListener('mousedown', stopNav, true);
+      window.addEventListener('mouseup', stopNav, true);
+      window.addEventListener('auxclick', report, true);
+    })();
+  `;
+
+  function attachSideMouseBridge(webview) {
+    if (!webview || webview.dataset.dsxSideMouse === 'true') return;
+    webview.dataset.dsxSideMouse = 'true';
+
+    const inject = () => {
+      if (typeof webview.executeJavaScript !== 'function') return;
+      webview.executeJavaScript(SIDE_MOUSE_INJECT, true).catch(() => {});
+    };
+
+    webview.addEventListener('dom-ready', inject);
+    webview.addEventListener('did-navigate', inject);
+    webview.addEventListener('did-navigate-in-page', inject);
+    webview.addEventListener('console-message', (event) => {
+      const msg = String(event.message || '');
+      if (!msg.startsWith('__DSX_MOUSE__')) return;
+      try {
+        const payload = JSON.parse(msg.slice('__DSX_MOUSE__'.length));
+        if (!payload || payload.button < 3) return;
+        if (!window.ShortcutManager?.comboFromMouseEvent || !window.ShortcutManager?.triggerCombo) return;
+        const fake = {
+          button: payload.button,
+          ctrlKey: payload.ctrl,
+          shiftKey: payload.shift,
+          altKey: payload.alt,
+          metaKey: payload.meta,
+        };
+        const combo = window.ShortcutManager.comboFromMouseEvent(fake);
+        if (combo) window.ShortcutManager.triggerCombo(combo, { source: 'webview-mouse' });
+      } catch (_) { /* ignore */ }
+    });
+
+    // Também tenta no host (quando o evento sobe até o <webview>).
+    const hostSide = (e) => {
+      if (e.button < 3) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!window.ShortcutManager) return;
+      const combo = window.ShortcutManager.comboFromMouseEvent(e);
+      if (combo) window.ShortcutManager.triggerCombo(combo, { source: 'webview-host' });
+    };
+    webview.addEventListener('mousedown', hostSide, true);
+    webview.addEventListener('auxclick', hostSide, true);
   }
 
   // Criação centralizada do <webview> (DRY). Partition por usuário
@@ -183,12 +231,16 @@
   function finishActivateBrowserTab(targetTab, targetWebview, tabId) {
     const surfaceMs = 320;
     const split = isSplitMode();
+    const animate =
+      (window.JanelasNS?.Store?.getSettings?.()?.tabTransition || 'none') !== 'none';
 
-    document.body.classList.add('janelas-content-switching');
-    window.clearTimeout(finishActivateBrowserTab._chromeTimer);
-    finishActivateBrowserTab._chromeTimer = window.setTimeout(() => {
-      document.body.classList.remove('janelas-content-switching');
-    }, surfaceMs + 60);
+    if (animate) {
+      document.body.classList.add('janelas-content-switching');
+      window.clearTimeout(finishActivateBrowserTab._chromeTimer);
+      finishActivateBrowserTab._chromeTimer = window.setTimeout(() => {
+        document.body.classList.remove('janelas-content-switching');
+      }, surfaceMs + 60);
+    }
 
     if (activeTabEl && activeTabEl !== targetTab && activeTabEl.isConnected) {
       activeTabEl.classList.remove('active', 'adjacent-to-active');
@@ -215,15 +267,18 @@
         prevWebview.classList.remove('active', 'is-leaving', 'is-entering');
       }
     } else if (prevWebview && prevWebview !== targetWebview && prevWebview.isConnected) {
-      // Força opacity 1 → depois is-leaving (senão o browser pula o transition)
-      prevWebview.classList.remove('is-leaving');
-      prevWebview.classList.add('active');
-      void prevWebview.offsetWidth;
-      prevWebview.classList.add('is-leaving');
-      window.setTimeout(() => {
-        if (!prevWebview.isConnected) return;
-        prevWebview.classList.remove('active', 'is-leaving');
-      }, surfaceMs + 40);
+      if (animate) {
+        prevWebview.classList.remove('is-leaving');
+        prevWebview.classList.add('active');
+        void prevWebview.offsetWidth;
+        prevWebview.classList.add('is-leaving');
+        window.setTimeout(() => {
+          if (!prevWebview.isConnected) return;
+          prevWebview.classList.remove('active', 'is-leaving');
+        }, surfaceMs + 40);
+      } else {
+        prevWebview.classList.remove('active', 'is-leaving', 'is-entering');
+      }
     } else if (!prevWebview) {
       document.querySelectorAll('#browser webview.active').forEach((view) => {
         if (view !== targetWebview) {
@@ -252,9 +307,11 @@
     const prevWebview = activeWebviewEl;
     const surfaceMs = window.AppShell?.SURFACE_MS || 280;
     const split = isSplitMode();
+    const animate =
+      (window.JanelasNS?.Store?.getSettings?.()?.tabTransition || 'none') !== 'none';
 
     if (prevWebview && prevWebview.isConnected) {
-      if (split) {
+      if (split || !animate) {
         prevWebview.classList.remove('active', 'is-leaving', 'is-entering');
       } else {
         prevWebview.classList.add('is-leaving');
@@ -304,17 +361,18 @@
 
   function attachWebviewListeners(webview, tabId, titleSpan) {
     webview.addEventListener('dom-ready', () => {
-      syncGoogleScrollbar(webview);
+      syncPageScrollbar(webview);
     });
 
     webview.addEventListener('did-navigate', () => {
-      syncGoogleScrollbar(webview);
+      syncPageScrollbar(webview);
     });
 
     webview.addEventListener('did-navigate-in-page', () => {
-      syncGoogleScrollbar(webview);
+      syncPageScrollbar(webview);
     });
 
+    attachSideMouseBridge(webview);
     webview.addEventListener('page-title-updated', (e) => {
       if (e.title && titleSpan) {
         titleSpan.textContent = e.title.length > 25 ? `${e.title.substring(0, 25)}...` : e.title;
@@ -381,6 +439,33 @@
     }
   }
 
+  function bindTabClose(closeBtn, tabId) {
+    let closing = false;
+    const onClose = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      if (closing) return;
+      if (!document.querySelector(`.tab[data-id="${CSS.escape(tabId)}"]`)) return;
+      closing = true;
+      closeTab(tabId);
+    };
+    // pointerdown (capture) fecha antes do drag/reorder engolir o clique.
+    closeBtn.addEventListener('pointerdown', onClose, true);
+    closeBtn.addEventListener('click', onClose, true);
+  }
+
+  function createCloseButton(tabId) {
+    const closeBtn = document.createElement('span');
+    closeBtn.classList.add('tab-close');
+    closeBtn.setAttribute('role', 'button');
+    closeBtn.setAttribute('aria-label', 'Fechar aba');
+    closeBtn.title = 'Fechar';
+    closeBtn.innerHTML = '×';
+    bindTabClose(closeBtn, tabId);
+    return closeBtn;
+  }
+
   function createTabAfter(referenceTabId, url, title = null, icon = null, activate = true, opts = null) {
     state.tabCount += 1;
     const tabId = `tab-${state.tabCount}`;
@@ -391,14 +476,7 @@
     tabButton.classList.add('tab');
     tabButton.dataset.id = tabId;
 
-    const closeBtn = document.createElement('span');
-    closeBtn.classList.add('tab-close');
-    closeBtn.innerHTML = '×';
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeTab(tabId);
-    };
-    tabButton.appendChild(closeBtn);
+    tabButton.appendChild(createCloseButton(tabId));
 
     const iconSpan = document.createElement('span');
     iconSpan.classList.add('tab-icon');
@@ -436,14 +514,7 @@
     tabButton.classList.add('tab');
     tabButton.dataset.id = tabId;
 
-    const closeBtn = document.createElement('span');
-    closeBtn.classList.add('tab-close');
-    closeBtn.innerHTML = '×';
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeTab(tabId);
-    };
-    tabButton.appendChild(closeBtn);
+    tabButton.appendChild(createCloseButton(tabId));
 
     const iconSpan = document.createElement('span');
     iconSpan.classList.add('tab-icon');
@@ -522,14 +593,7 @@
     tabButton.classList.add('tab');
     tabButton.dataset.id = tabId;
 
-    const closeBtn = document.createElement('span');
-    closeBtn.classList.add('tab-close');
-    closeBtn.innerHTML = '×';
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeTab(tabId);
-    };
-    tabButton.appendChild(closeBtn);
+    tabButton.appendChild(createCloseButton(tabId));
 
     const iconSpan = document.createElement('span');
     iconSpan.classList.add('tab-icon');

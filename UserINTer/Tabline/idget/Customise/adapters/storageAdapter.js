@@ -1,23 +1,36 @@
 /**
- * Adapter — persistência UserStorage | localStorage.
+ * Adapter — persistência sempre namespaced por usuário (UserStorage).
+ * Migra chaves legadas globais na primeira leitura do usuário ativo.
  */
 (function () {
   const NS = (window.CustomiseNS = window.CustomiseNS || {});
   if (NS.StorageAdapter) return;
 
+  function migrateLegacy(key) {
+    try {
+      if (!window.UserStorage?.getItem || !window.UserStorage?.setItem) return;
+      if (window.UserStorage.getItem(key) != null) return;
+      const legacy = localStorage.getItem(key);
+      if (legacy == null) return;
+      window.UserStorage.setItem(key, legacy);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   NS.StorageAdapter = {
     getItem(key) {
       try {
-        return window.UserStorage
-          ? window.UserStorage.getItem(key)
-          : localStorage.getItem(key);
+        migrateLegacy(key);
+        if (window.UserStorage?.getItem) return window.UserStorage.getItem(key);
+        return localStorage.getItem(key);
       } catch (_) {
         return null;
       }
     },
     setItem(key, value) {
       try {
-        if (window.UserStorage) {
+        if (window.UserStorage?.setItem) {
           window.UserStorage.setItem(key, value);
         } else {
           localStorage.setItem(key, value);

@@ -18,6 +18,14 @@
   }
 
   function reloadFromStorage() {
+    const keys = NS.Keys
+      ? [NS.Keys.RADIAL, NS.Keys.SEARCH, NS.Keys.CHROME, NS.Keys.SMART, NS.Keys.SIDEBAR, NS.Keys.JANELAS]
+      : [];
+    keys.forEach((key) => {
+      try {
+        NS.RuntimeAdapter.notifyKey(key);
+      } catch (_) { /* ignore */ }
+    });
     NS.RuntimeAdapter.emitReloaded();
   }
 

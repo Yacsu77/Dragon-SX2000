@@ -51,7 +51,25 @@ function buildChromeUserAgent() {
   );
 }
 
+/** Client Hints alinhados ao UA Chrome — Google rejeita Electron/Chromium genérico. */
+function buildChromeClientHints(ua) {
+  const chrome = process.versions.chrome || '146.0.7680.65';
+  const major = String(chrome).split('.')[0] || '146';
+  let platform = '"Windows"';
+  if (process.platform === 'darwin') platform = '"macOS"';
+  else if (process.platform === 'linux') platform = '"Linux"';
+  return {
+    ua,
+    secChUa: `"Google Chrome";v="${major}", "Chromium";v="${major}", "Not A(Brand";v="24"`,
+    secChUaMobile: '?0',
+    secChUaPlatform: platform,
+    secChUaFullVersionList: `"Google Chrome";v="${chrome}", "Chromium";v="${chrome}", "Not A(Brand";v="10.0.0.0"`,
+    secChUaFullVersion: `"${chrome}"`,
+  };
+}
+
 const DSX_BROWSER_UA = buildChromeUserAgent();
+const DSX_CLIENT_HINTS = buildChromeClientHints(DSX_BROWSER_UA);
 
 function hardenSession(ses) {
   if (!ses || ses.__dsxHardened) return;
@@ -61,6 +79,22 @@ function hardenSession(ses) {
     ses.setUserAgent(DSX_BROWSER_UA);
   } catch (_) {
     /* ignore */
+  }
+
+  // Alinha Sec-CH-UA* com o UA Chrome (login Google / accounts.google.com).
+  try {
+    ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      const headers = { ...(details.requestHeaders || {}) };
+      headers['User-Agent'] = DSX_CLIENT_HINTS.ua;
+      headers['Sec-CH-UA'] = DSX_CLIENT_HINTS.secChUa;
+      headers['Sec-CH-UA-Mobile'] = DSX_CLIENT_HINTS.secChUaMobile;
+      headers['Sec-CH-UA-Platform'] = DSX_CLIENT_HINTS.secChUaPlatform;
+      headers['Sec-CH-UA-Full-Version-List'] = DSX_CLIENT_HINTS.secChUaFullVersionList;
+      headers['Sec-CH-UA-Full-Version'] = DSX_CLIENT_HINTS.secChUaFullVersion;
+      callback({ requestHeaders: headers });
+    });
+  } catch (err) {
+    console.warn('[DSX] client-hints:', err.message);
   }
 
   try {

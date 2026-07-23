@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, session, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, session, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const http = require('http');
 const { spawn, execFile } = require('child_process');
@@ -7,6 +7,119 @@ const fs = require('fs').promises;
 let mediaSdkProcess = null;
 let apiDsxProcess = null;
 let isAppQuitting = false;
+
+/**
+ * UA de Chrome “puro” (sem Electron) — WhatsApp/Discord leem a versão do Chrome
+ * e rejeitam strings com Electron/ ou Chrome antigo.
+ */
+function buildChromeUserAgent() {
+  const chrome = process.versions.chrome || '146.0.7680.65';
+  let osToken = 'Windows NT 10.0; Win64; x64';
+  if (process.platform === 'darwin') {
+    osToken = 'Macintosh; Intel Mac OS X 10_15_7';
+  } else if (process.platform === 'linux') {
+    osToken = 'X11; Linux x86_64';
+  }
+  return (
+    `Mozilla/5.0 (${osToken}) AppleWebKit/537.36 (KHTML, like Gecko) ` +
+    `Chrome/${chrome} Safari/537.36`
+  );
+}
+
+const DSX_BROWSER_UA = buildChromeUserAgent();
+
+function hardenSession(ses) {
+  if (!ses || ses.__dsxHardened) return;
+  ses.__dsxHardened = true;
+
+  try {
+    ses.setUserAgent(DSX_BROWSER_UA);
+  } catch (_) {
+    /* ignore */
+  }
+
+  try {
+    ses.setPermissionRequestHandler((_wc, permission, callback) => {
+      const allow = new Set([
+        'media',
+        'mediaKeySystem',
+        'display-capture',
+        'fullscreen',
+        'notifications',
+        'pointerLock',
+        'clipboard-sanitized-write',
+        'clipboard-read',
+        'geolocation',
+        'midiSysex',
+        'idle-detection',
+        'openExternal',
+        'window-management',
+      ]);
+      callback(allow.has(String(permission || '')));
+    });
+  } catch (_) {
+    /* ignore */
+  }
+
+  try {
+    ses.setPermissionCheckHandler((_wc, permission) => {
+      const allow = new Set([
+        'media',
+        'display-capture',
+        'fullscreen',
+        'notifications',
+        'clipboard-sanitized-write',
+      ]);
+      return allow.has(String(permission || ''));
+    });
+  } catch (_) {
+    /* ignore */
+  }
+
+  // Discord / Meet: getDisplayMedia precisa de handler explícito no Electron.
+  if (typeof ses.setDisplayMediaRequestHandler === 'function') {
+    const handler = async (request, callback) => {
+      try {
+        if (request?.frame) {
+          callback({ video: request.frame, audio: 'loopback' });
+          return;
+        }
+        const sources = await desktopCapturer.getSources({
+          types: ['screen', 'window'],
+          thumbnailSize: { width: 0, height: 0 },
+        });
+        const preferred =
+          sources.find((s) => String(s.id || '').startsWith('screen:')) || sources[0];
+        if (!preferred) {
+          callback({});
+          return;
+        }
+        callback({ video: preferred, audio: 'loopback' });
+      } catch (err) {
+        console.warn('[DSX] display-media:', err.message);
+        callback({});
+      }
+    };
+    try {
+      ses.setDisplayMediaRequestHandler(handler, { useSystemPicker: true });
+    } catch (_) {
+      try {
+        ses.setDisplayMediaRequestHandler(handler);
+      } catch (err) {
+        console.warn('[DSX] display-media handler:', err.message);
+      }
+    }
+  }
+}
+
+function configureBrowserIdentity() {
+  try {
+    app.userAgentFallback = DSX_BROWSER_UA;
+  } catch (_) {
+    /* ignore */
+  }
+  hardenSession(session.defaultSession);
+}
 
 /**
  * Sobe o Dragon Media SDK como processo filho.
@@ -997,7 +1110,10 @@ ipcMain.handle('user:deleteUserData', async (_event, userId) => {
 });
 
 ipcMain.handle('wallpaper:readState', async (_event, payload) => {
-  const userId = (payload && payload.userId) || activeUserId;
+  // Só lê o wallpaper do userId explícito — nunca cai no activeUserId
+  // para evitar vazar estado entre perfis.
+  const userId = payload && payload.userId;
+  if (!userId) return null;
   try {
     const raw = await fs.readFile(WALLPAPER_STATE_FILE(userId), 'utf8');
     return JSON.parse(raw);
@@ -1008,6 +1124,7 @@ ipcMain.handle('wallpaper:readState', async (_event, payload) => {
 
 ipcMain.handle('wallpaper:saveState', async (_event, payload) => {
   const userId = (payload && payload.userId) || activeUserId;
+  if (!userId) throw new Error('userId obrigatório para salvar wallpaper');
   const state = payload && payload.state !== undefined ? payload.state : payload;
   await ensureWallpaperDir(userId);
   await fs.writeFile(WALLPAPER_STATE_FILE(userId), JSON.stringify(state), 'utf8');
@@ -1017,6 +1134,7 @@ ipcMain.handle('wallpaper:saveState', async (_event, payload) => {
 ipcMain.handle('wallpaper:importFile', async (_event, { sourcePath, type, userId }) => {
   if (!sourcePath) throw new Error('sourcePath obrigatorio');
   const uid = userId || activeUserId;
+  if (!uid) throw new Error('userId obrigatório');
   await ensureWallpaperDir(uid);
   const ext = path.extname(sourcePath) || (type === 'video' ? '.mp4' : '.jpg');
   const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${ext}`);
@@ -1027,6 +1145,7 @@ ipcMain.handle('wallpaper:importFile', async (_event, { sourcePath, type, userId
 ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl, userId }) => {
   if (!dataUrl || !dataUrl.startsWith('data:')) throw new Error('dataUrl invalido');
   const uid = userId || activeUserId;
+  if (!uid) throw new Error('userId obrigatório');
   await ensureWallpaperDir(uid);
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error('dataUrl invalido');
@@ -1042,11 +1161,55 @@ ipcMain.handle('wallpaper:importDataUrl', async (_event, { dataUrl, userId }) =>
 
 ipcMain.handle('wallpaper:importBlob', async (_event, { buffer, ext, userId }) => {
   const uid = userId || activeUserId;
+  if (!uid) throw new Error('userId obrigatório');
   await ensureWallpaperDir(uid);
   const safeExt = ext && ext.startsWith('.') ? ext : '.mp4';
   const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${safeExt}`);
   await fs.writeFile(destPath, Buffer.from(buffer));
   return destPath;
+});
+
+const DEFAULT_WALLPAPER_FILES = ['WWP.jpg', 'WWP1.png', 'WWP3.jpg'];
+
+function defaultWallpaperSourcePath(fileName) {
+  return path.join(__dirname, 'UserINTer', 'Tabline', 'idget', 'Wallpaper', fileName);
+}
+
+ipcMain.handle('wallpaper:seedDefault', async (_event, { userId } = {}) => {
+  const uid = userId || activeUserId;
+  if (!uid) return { seeded: false, reason: 'no-user' };
+  await ensureWallpaperDir(uid);
+  try {
+    await fs.access(WALLPAPER_STATE_FILE(uid));
+    return { seeded: false, reason: 'already-has-state' };
+  } catch {
+    /* sem state — segue */
+  }
+
+  const available = [];
+  for (const file of DEFAULT_WALLPAPER_FILES) {
+    const src = defaultWallpaperSourcePath(file);
+    try {
+      await fs.access(src);
+      available.push({ file, src });
+    } catch {
+      /* skip missing */
+    }
+  }
+  if (!available.length) return { seeded: false, reason: 'no-assets' };
+
+  const pick = available[Math.floor(Math.random() * available.length)];
+  const ext = path.extname(pick.file) || '.jpg';
+  const destPath = path.join(WALLPAPER_DIR(uid), `wallpaper${ext}`);
+  await fs.copyFile(pick.src, destPath);
+  const state = {
+    type: 'image',
+    dataUrl: destPath,
+    transform: { x: 0, y: 0, rotate: 0, flipX: 1, flipY: 1 },
+    source: pick.file,
+  };
+  await fs.writeFile(WALLPAPER_STATE_FILE(uid), JSON.stringify(state), 'utf8');
+  return { seeded: true, path: destPath, source: pick.file };
 });
 
 function postDownloadToApi(body, method = 'POST', id = null) {
@@ -1116,9 +1279,22 @@ function attachDownloadTracking(webContents) {
 
 app.on('web-contents-created', (_event, contents) => {
   attachDownloadTracking(contents);
+  try {
+    hardenSession(contents.session);
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    if (typeof contents.setUserAgent === 'function') {
+      contents.setUserAgent(DSX_BROWSER_UA);
+    }
+  } catch (_) {
+    /* ignore */
+  }
 });
 
 app.whenReady().then(async () => {
+  configureBrowserIdentity();
   setupApplicationMenu();
   startMediaSdk();
   await startApiDsx();

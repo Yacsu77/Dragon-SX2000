@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('DragonWallpaper', {
     ipcRenderer.invoke('wallpaper:importDataUrl', { dataUrl, userId }),
   importBlob: (buffer, ext, userId) =>
     ipcRenderer.invoke('wallpaper:importBlob', { buffer, ext, userId }),
+  seedDefault: (userId) => ipcRenderer.invoke('wallpaper:seedDefault', { userId }),
 });
 
 contextBridge.exposeInMainWorld('DragonBrowser', {

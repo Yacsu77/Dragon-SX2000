@@ -37,8 +37,21 @@
     };
   }
 
+  function migrateLegacyIfNeeded() {
+    try {
+      if (!window.UserStorage?.getItem || !window.UserStorage?.setItem) return;
+      if (window.UserStorage.getItem(STORE_KEY) != null) return;
+      const legacy = localStorage.getItem(STORE_KEY);
+      if (legacy == null) return;
+      window.UserStorage.setItem(STORE_KEY, legacy);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function readRaw() {
     try {
+      migrateLegacyIfNeeded();
       const raw = window.UserStorage
         ? window.UserStorage.getItem(STORE_KEY)
         : localStorage.getItem(STORE_KEY);

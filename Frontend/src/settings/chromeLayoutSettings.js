@@ -33,8 +33,21 @@
     activeTabLedBorder: false,
   };
 
+  function migrateLegacyIfNeeded() {
+    try {
+      if (!window.UserStorage?.getItem || !window.UserStorage?.setItem) return;
+      if (window.UserStorage.getItem(STORAGE_KEY) != null) return;
+      const legacy = localStorage.getItem(STORAGE_KEY);
+      if (legacy == null) return;
+      window.UserStorage.setItem(STORAGE_KEY, legacy);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function readRaw() {
     try {
+      migrateLegacyIfNeeded();
       const raw = window.UserStorage
         ? window.UserStorage.getItem(STORAGE_KEY)
         : localStorage.getItem(STORAGE_KEY);

@@ -51,7 +51,23 @@ function buildChromeUserAgent() {
   );
 }
 
-/** Client Hints alinhados ao UA Chrome — Google rejeita Electron/Chromium genérico. */
+/**
+ * UA Firefox só para login Google.
+ * Spoof Chrome+Electron ainda é detectado; Firefox evita o check de “browser inseguro”.
+ * WhatsApp/Discord continuam com UA Chrome.
+ */
+function buildFirefoxUserAgent() {
+  const ff = '140.0';
+  if (process.platform === 'darwin') {
+    return `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:${ff}) Gecko/20100101 Firefox/${ff}`;
+  }
+  if (process.platform === 'linux') {
+    return `Mozilla/5.0 (X11; Linux x86_64; rv:${ff}) Gecko/20100101 Firefox/${ff}`;
+  }
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:${ff}) Gecko/20100101 Firefox/${ff}`;
+}
+
+/** Client Hints alinhados ao UA Chrome (sites normais). */
 function buildChromeClientHints(ua) {
   const chrome = process.versions.chrome || '146.0.7680.65';
   const major = String(chrome).split('.')[0] || '146';
@@ -68,8 +84,97 @@ function buildChromeClientHints(ua) {
   };
 }
 
+/** Login / OAuth Google — precisa UA Firefox (Chrome spoof não basta no Electron). */
+function isGoogleAuthUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const path = u.pathname || '';
+    if (host === 'accounts.google.com' || host.endsWith('.accounts.google.com')) return true;
+    if (host === 'accounts.youtube.com') return true;
+    if (
+      (host === 'google.com' || host.endsWith('.google.com')) &&
+      /\/(signin|ServiceLogin|AccountChooser|o\/oauth2|v3\/signin|AddSession)/i.test(path)
+    ) {
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return /accounts\.google\.|accounts\.youtube\./i.test(url);
+  }
+}
+
+const CH_HEADER_KEYS = [
+  'Sec-CH-UA',
+  'Sec-CH-UA-Mobile',
+  'Sec-CH-UA-Platform',
+  'Sec-CH-UA-Full-Version',
+  'Sec-CH-UA-Full-Version-List',
+  'Sec-CH-UA-Arch',
+  'Sec-CH-UA-Bitness',
+  'Sec-CH-UA-Model',
+  'Sec-CH-UA-Platform-Version',
+  'sec-ch-ua',
+  'sec-ch-ua-mobile',
+  'sec-ch-ua-platform',
+  'sec-ch-ua-full-version',
+  'sec-ch-ua-full-version-list',
+  'sec-ch-ua-arch',
+  'sec-ch-ua-bitness',
+  'sec-ch-ua-model',
+  'sec-ch-ua-platform-version',
+];
+
 const DSX_BROWSER_UA = buildChromeUserAgent();
+const DSX_FIREFOX_UA = buildFirefoxUserAgent();
 const DSX_CLIENT_HINTS = buildChromeClientHints(DSX_BROWSER_UA);
+
+function stripClientHintHeaders(headers) {
+  for (const key of CH_HEADER_KEYS) {
+    if (key in headers) delete headers[key];
+  }
+  for (const key of Object.keys(headers)) {
+    if (/^sec-ch-ua/i.test(key)) delete headers[key];
+  }
+}
+
+/** Injeta UA Firefox no JS da página (Google também lê navigator.userAgent). */
+function injectFirefoxNavigatorSpoof(contents) {
+  if (!contents || contents.isDestroyed()) return;
+  const uaJson = JSON.stringify(DSX_FIREFOX_UA);
+  const script = `(() => {
+    try {
+      const ua = ${uaJson};
+      const desc = (v) => ({ configurable: true, enumerable: true, get: () => v });
+      Object.defineProperty(Navigator.prototype, 'userAgent', desc(ua));
+      Object.defineProperty(Navigator.prototype, 'appVersion', desc('5.0'));
+      Object.defineProperty(Navigator.prototype, 'vendor', desc(''));
+      Object.defineProperty(Navigator.prototype, 'userAgentData', {
+        configurable: true,
+        enumerable: true,
+        get: () => undefined,
+      });
+    } catch (_) {}
+  })();`;
+  contents.executeJavaScript(script, true).catch(() => {});
+}
+
+function attachGoogleAuthNavigatorSpoof(contents) {
+  if (!contents || contents.__dsxGoogleUaSpoof) return;
+  contents.__dsxGoogleUaSpoof = true;
+  const maybeSpoof = () => {
+    try {
+      if (contents.isDestroyed()) return;
+      if (isGoogleAuthUrl(contents.getURL())) injectFirefoxNavigatorSpoof(contents);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+  contents.on('did-navigate', maybeSpoof);
+  contents.on('did-navigate-in-page', maybeSpoof);
+  contents.on('dom-ready', maybeSpoof);
+}
 
 function hardenSession(ses) {
   if (!ses || ses.__dsxHardened) return;
@@ -81,16 +186,21 @@ function hardenSession(ses) {
     /* ignore */
   }
 
-  // Alinha Sec-CH-UA* com o UA Chrome (login Google / accounts.google.com).
+  // Chrome + Client Hints no geral; Firefox (sem CH) só em login Google.
   try {
     ses.webRequest.onBeforeSendHeaders((details, callback) => {
       const headers = { ...(details.requestHeaders || {}) };
-      headers['User-Agent'] = DSX_CLIENT_HINTS.ua;
-      headers['Sec-CH-UA'] = DSX_CLIENT_HINTS.secChUa;
-      headers['Sec-CH-UA-Mobile'] = DSX_CLIENT_HINTS.secChUaMobile;
-      headers['Sec-CH-UA-Platform'] = DSX_CLIENT_HINTS.secChUaPlatform;
-      headers['Sec-CH-UA-Full-Version-List'] = DSX_CLIENT_HINTS.secChUaFullVersionList;
-      headers['Sec-CH-UA-Full-Version'] = DSX_CLIENT_HINTS.secChUaFullVersion;
+      if (isGoogleAuthUrl(details.url)) {
+        headers['User-Agent'] = DSX_FIREFOX_UA;
+        stripClientHintHeaders(headers);
+      } else {
+        headers['User-Agent'] = DSX_CLIENT_HINTS.ua;
+        headers['Sec-CH-UA'] = DSX_CLIENT_HINTS.secChUa;
+        headers['Sec-CH-UA-Mobile'] = DSX_CLIENT_HINTS.secChUaMobile;
+        headers['Sec-CH-UA-Platform'] = DSX_CLIENT_HINTS.secChUaPlatform;
+        headers['Sec-CH-UA-Full-Version-List'] = DSX_CLIENT_HINTS.secChUaFullVersionList;
+        headers['Sec-CH-UA-Full-Version'] = DSX_CLIENT_HINTS.secChUaFullVersion;
+      }
       callback({ requestHeaders: headers });
     });
   } catch (err) {
@@ -1353,6 +1463,11 @@ app.on('web-contents-created', (_event, contents) => {
   attachDownloadTracking(contents);
   try {
     hardenSession(contents.session);
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    attachGoogleAuthNavigatorSpoof(contents);
   } catch (_) {
     /* ignore */
   }

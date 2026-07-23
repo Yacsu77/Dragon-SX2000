@@ -1,7 +1,8 @@
 /**
  * AppShell — estado global da aplicação (home vs navegador).
  *
- * Troca new-tab ↔ conteúdo com crossfade + blur leve na superfície que sai.
+ * Troca new-tab ↔ conteúdo: anima só se Janelas.tabTransition ≠ 'none'.
+ * Com animação desligada, troca instantânea (sem absolute/crossfade = sem “pulo”).
  */
 (function () {
   const SURFACE_MS = 320;
@@ -12,6 +13,11 @@
       home: document.getElementById('homePage'),
       browser: document.getElementById('browser'),
     };
+  }
+
+  function tabTransitionEnabled() {
+    const transition = window.JanelasNS?.Store?.getSettings?.()?.tabTransition || 'none';
+    return transition && transition !== 'none';
   }
 
   function clearSwapState() {
@@ -52,12 +58,11 @@
     if (browser?.classList.contains('active') && home.classList.contains('hidden')) {
       return false;
     }
-    // Home sem .hidden = New Tab visível
     return true;
   }
 
   /**
-   * Crossfade: blur só em quem sai (evita hitch ao aplicar blur(0) no destino).
+   * Crossfade: só opacity (sem translate — a superfície fica no lugar).
    */
   function crossfade(fromEl, toEl, after) {
     if (!fromEl || !toEl) {
@@ -104,7 +109,7 @@
       document.dispatchEvent(new CustomEvent('app:home-shown', { detail: {} }));
     };
 
-    if (fromBrowser && home && !isFloatingLayout()) {
+    if (fromBrowser && home && !isFloatingLayout() && tabTransitionEnabled()) {
       home.classList.remove('hidden');
       applyHomeChrome();
       crossfade(browser, home, () => {
@@ -130,8 +135,7 @@
       document.dispatchEvent(new CustomEvent('app:browser-shown', { detail: {} }));
     };
 
-    if (fromHome && browser && !isFloatingLayout()) {
-      // Garante home visível para o crossfade (fundo sólido no CSS de leave)
+    if (fromHome && browser && !isFloatingLayout() && tabTransitionEnabled()) {
       home.classList.remove('hidden');
       browser.classList.add('active');
       applyBrowserChrome();

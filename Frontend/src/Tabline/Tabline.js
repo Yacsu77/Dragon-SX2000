@@ -290,6 +290,8 @@
       if (iconPlay && iconPause) {
         iconPlay.hidden = playing;
         iconPause.hidden = !playing;
+        iconPlay.style.display = playing ? 'none' : '';
+        iconPause.style.display = playing ? '' : 'none';
       }
     }
 
@@ -322,8 +324,18 @@
         const action = btn.getAttribute('data-media-action');
         if (!action || !window.DragonMedia?.command) return;
 
+        // Atualiza play/pause na hora para o ícone trocar imediatamente.
         if (action === 'play_pause' && window.DragonMedia.snapshot) {
-          updateMediaHint();
+          const snap = window.DragonMedia.snapshot;
+          const nextPlaying = Boolean(snap.paused);
+          mediaWrap.classList.toggle('is-playing', nextPlaying);
+          mediaWrap.classList.toggle('is-paused', !nextPlaying);
+          if (iconPlay && iconPause) {
+            iconPlay.hidden = nextPlaying;
+            iconPause.hidden = !nextPlaying;
+            iconPlay.style.display = nextPlaying ? 'none' : '';
+            iconPause.style.display = nextPlaying ? '' : 'none';
+          }
         }
 
         try {

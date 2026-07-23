@@ -25,7 +25,7 @@ jobs:
           - platform: macos
             os: macos-latest
             build_script: npm run dist:mac
-            artifact_name: DSX-macOS-x64
+            artifact_name: DSX-macOS
             artifact_path: release/DSX-*.dmg
 
           - platform: linux
@@ -42,60 +42,24 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # Electron 41 → Node 24 (ABI alinhado para sqlite3 / rebuild)
+          node-version: "24"
           cache: npm
 
-      - run: npm ci
+      - name: Install root dependencies
+        run: npm ci
 
-      - name: Verify package version and critical app files
+      - name: Install Linux build tools (native modules)
+        if: matrix.platform == 'linux'
         run: |
-          node -e "
-            const fs = require('fs');
-            const path = require('path');
-            const pkg = require('./package.json');
-            if (pkg.version !== '1.4.0') {
-              console.error('Expected package.json version 1.4.0, got', pkg.version);
-              process.exit(1);
-            }
-            if (pkg.build.productName !== 'DSX') {
-              console.error('Expected productName DSX, got', pkg.build.productName);
-              process.exit(1);
-            }
-            const required = [
-              'main.js',
-              'preload.js',
-              'Frontend/src/index.html',
-              'Frontend/src/settings/perfSettings.js',
-              'Frontend/src/js/connectionPrefetch.js',
-              'Frontend/src/shortcuts/actions/navigation-controls/index.js',
-              'Frontend/Telas/Atalhos/Atalhos.js',
-              'Frontend/Telas/Atalhos/Atalhos.html',
-              'Frontend/Telas/Atalhos/Atalhos.css',
-              'Frontend/Telas/Editar/Editar.js',
-              'Frontend/Telas/Editar/Editar.html',
-              'Frontend/MiniTelas/MiniAtalhos/MiniAtalhos.js',
-              'Frontend/src/Browser/Browser.css',
-              'Frontend/src/Tabs/Tabs.core.js',
-              'Frontend/src/Tabs/TabWarmth.js',
-              'Frontend/src/Tabs/TabGroups.runtime.js',
-              'Frontend/src/core/AppShell.js',
-              'Frontend/src/Janelas/index.js',
-              'Frontend/src/Janelas/animations/AnimationHook.js',
-              'Frontend/src/Janelas/split/SplitHost.js',
-              'Frontend/src/Janelas/effects/RgbClock.js',
-              'Frontend/src/search/SmartSearch.js',
-              'Backend/API-DSX/boot.js',
-              'Backend/API-DSX/app.js',
-              'Version/Lançamento/Log v1.4.MD',
-            ];
-            const missing = required.filter((f) => !fs.existsSync(path.join(process.cwd(), f)));
-            if (missing.length) {
-              console.error('Missing build-critical files:', missing.join(', '));
-              process.exit(1);
-            }
-            console.log('DSX v' + pkg.version + ' — productName=' + pkg.build.productName);
-            console.log('Critical files OK (' + required.length + ')');
-          "
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 libdbus-1-dev
+
+      - name: Prepare Backend (API-DSX + SDK + wallpapers check)
+        run: npm run prepare:backend
+
+      - name: Verify package version, Backend deps and critical files
+        run: node scripts/verify-build.js
 
       - name: Prepare platform icons from Image/Icons
         run: npm run icons:prepare

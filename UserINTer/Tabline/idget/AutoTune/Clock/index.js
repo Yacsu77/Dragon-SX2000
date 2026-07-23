@@ -11,7 +11,7 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 
   function readClockConfig() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
       if (!raw) return Config.DEFAULT_CLOCK;
       const store = JSON.parse(raw);
       const record = store[Config.FACTORY_KEY];

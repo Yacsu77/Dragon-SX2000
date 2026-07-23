@@ -67,7 +67,7 @@
 
   function loadBindings() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       if (!raw) return {};
       const parsed = JSON.parse(raw);
       return parsed && typeof parsed === "object" ? parsed : {};
@@ -78,8 +78,11 @@
 
   function saveBindings(bindings) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(bindings || {}));
-    } catch (_) { /* ignore */ }
+      if (window.UserStorage) {
+        window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(bindings || {}));
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(bindings || {}));
+      }    } catch (_) { /* ignore */ }
   }
 
   function emitChange() {

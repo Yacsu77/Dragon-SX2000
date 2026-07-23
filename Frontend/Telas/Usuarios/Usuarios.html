@@ -1,0 +1,45 @@
+<div class="user-gate" data-role="user-gate">
+  <div class="user-gate__brand" data-role="brand">DSX</div>
+  <h1 class="user-gate__title" data-role="title">Quem está navegando?</h1>
+  <p class="user-gate__status" data-role="status" hidden></p>
+
+  <div class="user-gate__profiles" data-role="profiles"></div>
+
+  <div class="user-gate__stage" data-role="stage" hidden>
+    <button type="button" class="user-gate__back" data-role="back" aria-label="Voltar">←</button>
+    <div class="user-gate__stage-card" data-role="stage-card">
+      <div class="user-gate__tile-face" data-role="stage-face"></div>
+      <p class="user-gate__tile-nick" data-role="stage-nick"></p>
+    </div>
+
+    <form class="user-gate__password" data-role="unlock-form" hidden>
+      <input
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        placeholder="Senha"
+        required
+        data-role="unlock-input"
+      />
+      <button type="submit" class="user-gate__enter">Entrar</button>
+      <p class="user-gate__error" data-role="unlock-error" hidden></p>
+    </form>
+
+    <form class="user-gate__create" data-role="create-form" hidden>
+      <label>
+        Nickname
+        <input type="text" name="nickname" maxlength="32" required autocomplete="username" placeholder="Seu apelido" />
+      </label>
+      <label>
+        Senha (opcional)
+        <input type="password" name="password" autocomplete="new-password" placeholder="Vazio = acesso livre" />
+      </label>
+      <label>
+        Foto (opcional)
+        <input type="file" name="photo" accept="image/*" />
+      </label>
+      <button type="submit" class="user-gate__enter">Criar perfil</button>
+      <p class="user-gate__error" data-role="form-error" hidden></p>
+    </form>
+  </div>
+</div>

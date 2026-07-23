@@ -124,6 +124,46 @@ Pesquisa no histórico por URL ou título.
 
 ---
 
+### GET `/history/suggestions?q=`
+
+Sugestões da **Busca Inteligente**: combina histórico (frecência), logins salvos
+no Vault, sessões ativas e sugestões do Google numa única resposta.
+
+**Query params:**
+
+| Param | Obrigatório | Descrição |
+|---|---|---|
+| `q` | Sim | Termo digitado |
+| `user_id` | Não | Perfil ativo (usado para ranking/logins) |
+
+**Resposta de sucesso (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "sites": [
+      { "type": "history", "url": "https://youtube.com", "title": "YouTube", "visit_count": 42, "has_saved_login": false }
+    ],
+    "google": ["youtube", "youtube music", "youtube studio"]
+  }
+}
+```
+
+| Campo | Descrição |
+|---|---|
+| `sites` | Até 2 sites, os mais acessados (frecência; login salvo desempata) |
+| `google` | 5 sugestões se houver `sites`, senão 7 — via `client=gws-wiz` (fallback `client=chrome`) |
+
+**Ranking (frecência + Redis):** o serviço mantém um `ZSET` Redis por usuário
+(`smart-search:rank:{userId}`) para acelerar as URLs mais usadas. Sem Redis, o
+ranking cai para SQLite/memória. URLs de páginas de resultado de busca são
+filtradas das sugestões de sites.
+
+**Arquivo:** `Services/historyService.js` (`smartSuggestions`, `googleSuggestions`).
+
+---
+
 ### GET `/history/:id`
 
 Busca um registro específico pelo ID.
@@ -226,6 +266,13 @@ Quando a URL é nova:
 ### Ordenação
 
 Todas as listagens retornam registros ordenados por `last_visit_time` em ordem **decrescente** (mais recentes primeiro).
+
+### Frecência (Busca Inteligente)
+
+O `frecencyScore` pondera **frequência** (`visit_count`, `typed_count`) e
+**recência** (`last_visit_time`) para ordenar as sugestões de sites. A rota
+`/history/suggestions` usa esse score; o cliente frontend consome via
+`HistoryApi.smartSuggestions`. Detalhes em [`BuscaInteligente.md`](../../../Version/Docs/BuscaInteligente.md).
 
 ---
 

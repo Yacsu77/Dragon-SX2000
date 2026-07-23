@@ -15,7 +15,7 @@ Container `#browser` onde webviews são inseridos por `Tabs.core.js`. Centraliza
 ```
 Browser/
 ├── Browser.html        ← <div class="browser-container" id="browser"> (fallback fetch)
-├── Browser.css         ← Layout flex; fundo opaco; modo perf-render-all
+├── Browser.css         ← Layout flex; fundo opaco; crossfade; modo perf-render-all
 └── Browser.js          ← init(), setupWebviewNavigation()
 ```
 
@@ -44,25 +44,35 @@ Escutado por: `Top/ButtonGo`, `Top/Search`, `js/historyTracker.js`.
 
 ---
 
-## Browser.css — layout e desempenho
+## Browser.css — layout e troca de tela (v1.4)
 
 ```css
 .browser-container {
   flex: 1; min-height: 0;
-  background: var(--content-bg); /* evita wallpaper “vazando” ao carregar */
+  background: var(--content-bg);
 }
 .browser-container.active { display: flex; flex-direction: column; }
-webview { display: none; background: var(--content-bg); }
-webview.active { display: flex; flex: 1; min-height: 0; }
 ```
+
+### Crossfade padrão (conteúdo ↔ conteúdo)
+
+- Webviews empilhados com `position: absolute` quando o browser está `.active`
+- Inativos: `opacity: 0`
+- Ativo: `opacity: 1; z-index: 1`
+- Ao trocar: anterior `.active.is-leaving` (z-index 2) some em ~320ms; a nova já está opaca por baixo
+- **Sem** `filter: blur()` no `<webview>` (custo GPU alto / hitch na barra)
+- **Sem** baixar opacity do container `#browser` no flip (causava “piscar”)
+
+### Split / multi-floating
+
+Regras com `!important` forçam `opacity: 1` e `filter: none` em `.janelas-pane-visible` — evita painel preso em blur residual.
 
 ### Modo opcional `perf-render-all`
 
 Quando `body` tem a classe `perf-render-all` (`PerfSettings`):
 
-- Webviews inativos ficam `position: absolute; opacity: 0` (ainda renderizados)
-- Ativo: `opacity: 1; z-index: 1`
-- Troca de aba sem `display: none` → sem repaint; mais CPU/RAM
+- Mesmo empilhamento por opacity (todas pintadas)
+- Mais CPU/RAM
 
 Controlado pela Tela Editar — ver [`Editar.MD`](./Editar.MD).
 
@@ -97,6 +107,10 @@ trackWebviewHistory(webview);
 
 ## AppShell
 
-`showBrowser()` adiciona `.active` em `#browser` → container visível e expande.
+`showBrowser()` / `showHome()` — ver [`core.MD`](./core.MD): crossfade New Tab ↔ conteúdo via `body.surface-crossfade`.
 
-`showHome()` remove `.active` → container oculto (`display: none`).
+---
+
+## Ver também
+
+- [`Tabs.MD`](./Tabs.MD) · [`Janelas.MD`](./Janelas.MD) · [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD)

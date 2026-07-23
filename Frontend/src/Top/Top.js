@@ -10,6 +10,8 @@
     if (window.TopArquivos) window.TopArquivos.init();
     if (window.TopNewTab) window.TopNewTab.init();
     if (window.ConfigOverview) window.ConfigOverview.init();
+    if (window.ChromeLayout) window.ChromeLayout.init();
+    if (window.PictureInPictureControl) window.PictureInPictureControl.init();
 
     const editarBtn = document.getElementById('editarBtn');
     if (editarBtn) {

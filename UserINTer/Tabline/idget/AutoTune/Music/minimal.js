@@ -4,20 +4,13 @@
 (function () {
   const STORAGE_KEY = "settingsAUTO";
   const DEFAULT_OFFSET_RIGHT = 10;
-  const INNER_WIDTH = 168;
-  const VOLUME_ZONE_WIDTH = 14;
+  const INNER_WIDTH = 128;
+  const VOLUME_ZONE_WIDTH = 28;
   const TOTAL_WIDTH = INNER_WIDTH + VOLUME_ZONE_WIDTH;
-
-  function fmtTime(sec) {
-    sec = Math.max(0, Math.floor(Number(sec) || 0));
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }
 
   function readMusicSettings() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       if (!raw) return {};
       const data = JSON.parse(raw);
       return (data && data.music && typeof data.music === "object") ? data.music : {};
@@ -28,20 +21,20 @@
 
   function patchMusicSettings(patch) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
       const data = raw ? JSON.parse(raw) : {};
       if (!data.music || typeof data.music !== "object") {
         data.music = { id: "music-minimal", active: false };
       }
       data.music = { ...data.music, ...patch };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(data)) : localStorage.setItem(STORAGE_KEY, JSON.stringify(data)));
     } catch {
       /* ignore */
     }
   }
 
   function loadMusicMinimal() {
-    return readMusicSettings().minimal === true;
+    return readMusicSettings().active === true;
   }
 
   function loadOffsetX() {
@@ -55,7 +48,7 @@
   }
 
   function saveMusicMinimal(enabled) {
-    patchMusicSettings({ minimal: !!enabled });
+    patchMusicSettings({ active: !!enabled, minimal: true });
   }
 
   function saveOffsetX(offsetX) {
@@ -95,12 +88,87 @@
     let lastVolumePointerY = null;
     let volumeApplying = false;
 
-    function positionBar(bar) {
-      if (!bar) return;
+    function getMusicPosition() {
+      const fromBody = document.body?.dataset?.musicPosition;
+      if (fromBody === "left" || fromBody === "right" || fromBody === "bottom") return fromBody;
+      const fromSettings = window.ChromeLayoutSettings?.read?.()?.musicPosition;
+      if (fromSettings === "between") return "right";
+      if (fromSettings === "left" || fromSettings === "right" || fromSettings === "bottom") return fromSettings;
+      return "right";
+    }
+
+    function clearInlineSlots(exceptId) {
+      ["navMusicSlotLeft", "navMusicSlotRight"].forEach((id) => {
+        if (id === exceptId) return;
+        const slot = document.getElementById(id);
+        if (!slot) return;
+        slot.setAttribute("aria-hidden", "true");
+        if (barEl && barEl.parentElement === slot) {
+          /* moved elsewhere */
+        }
+      });
+    }
+
+    function mountInline(bar, slotId, position) {
+      const slot = document.getElementById(slotId);
+      if (!slot) return false;
+
+      clearInlineSlots(slotId);
+      bar.classList.add("music-minimal-bar--inline");
+      bar.dataset.musicPosition = position;
+      bar.style.top = "";
+      bar.style.right = "";
+      bar.style.bottom = "";
+      bar.style.left = "";
+      bar.style.width = "";
+      bar.style.position = "";
+      if (bar.parentElement !== slot) slot.appendChild(bar);
+
+      const move = bar.querySelector(".music-minimal-move");
+      if (move) {
+        move.hidden = true;
+        move.style.display = "none";
+      }
+
+      slot.setAttribute("aria-hidden", bar.classList.contains("music-minimal-bar--visible") ? "false" : "true");
+      return true;
+    }
+
+    function mountBottom(bar) {
+      clearInlineSlots(null);
       offsetX = clampOffset(offsetX);
+      bar.classList.remove("music-minimal-bar--inline");
+      bar.dataset.musicPosition = "bottom";
       bar.style.top = `${getTabsBottom()}px`;
       bar.style.right = `${DEFAULT_OFFSET_RIGHT + offsetX}px`;
+      bar.style.bottom = "";
+      bar.style.left = "";
       bar.style.width = `${TOTAL_WIDTH}px`;
+      bar.style.position = "fixed";
+
+      const move = bar.querySelector(".music-minimal-move");
+      if (move) {
+        move.hidden = false;
+        move.style.display = "";
+      }
+
+      if (bar.parentElement !== document.body) {
+        document.body.appendChild(bar);
+      }
+    }
+
+    function positionBar(bar) {
+      if (!bar) return;
+      const position = getMusicPosition();
+
+      if (position === "left") {
+        if (mountInline(bar, "navMusicSlotLeft", "left")) return;
+      }
+      if (position === "right") {
+        if (mountInline(bar, "navMusicSlotRight", "right")) return;
+      }
+
+      mountBottom(bar);
     }
 
     async function sendCommand(action) {
@@ -116,9 +184,12 @@
     }
 
     function updateVolumeUI() {
-      if (!refs || !refs.volumeFill || !refs.volumeThumb) return;
-      refs.volumeFill.style.height = `${volumeLevel}%`;
-      refs.volumeThumb.style.bottom = `calc(${volumeLevel}% - 4px)`;
+      if (!barEl) return;
+      const dot = barEl.querySelector(".music-minimal-volume-dot");
+      if (dot) {
+        const intensity = 0.35 + (volumeLevel / 100) * 0.65;
+        dot.style.opacity = String(intensity);
+      }
     }
 
     function levelFromPointer(clientY) {
@@ -174,6 +245,25 @@
       }
     }
 
+    function updateCover(snapshot) {
+      if (!refs || !refs.cover) return;
+      const cover = snapshot && typeof snapshot.cover === "string" ? snapshot.cover.trim() : "";
+      const hasCover = Boolean(cover);
+      if (hasCover && refs.cover.getAttribute("src") !== cover) {
+        refs.cover.setAttribute("src", cover);
+      }
+      if (!hasCover) {
+        refs.cover.removeAttribute("src");
+      }
+      refs.cover.classList.toggle("is-visible", hasCover);
+      if (refs.coverFallback) {
+        refs.coverFallback.classList.toggle("is-hidden", hasCover);
+      }
+      if (refs.media) {
+        refs.media.classList.toggle("is-playing", Boolean(snapshot && !snapshot.paused));
+      }
+    }
+
     function render(snapshot) {
       if (!refs || !barEl) return;
 
@@ -181,17 +271,20 @@
       const shouldShow = loadMusicMinimal() && hasMedia;
       barEl.classList.toggle("music-minimal-bar--visible", shouldShow);
       barEl.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+      ["navMusicSlotLeft", "navMusicSlotRight"].forEach((id) => {
+        const slot = document.getElementById(id);
+        if (!slot) return;
+        const active = barEl.parentElement === slot && shouldShow;
+        slot.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+      positionBar(barEl);
+      updateCover(hasMedia ? snapshot : null);
 
       if (!hasMedia) {
-        refs.title.textContent = "Sem mídia";
-        refs.time.textContent = "0:00";
         refs.iconPlay.style.display = "";
         refs.iconPause.style.display = "none";
         return;
       }
-
-      refs.title.textContent = snapshot.title;
-      refs.time.textContent = fmtTime(snapshot.position);
 
       if (snapshot.paused) {
         refs.iconPlay.style.display = "";
@@ -213,7 +306,7 @@
     }
 
     function bindVolumeZone(zoneEl) {
-      if (!zoneEl || !refs.volumeSlider) return;
+      if (!zoneEl) return;
 
       zoneEl.addEventListener("mouseenter", () => {
         if (volumeCloseTimer) {
@@ -229,33 +322,24 @@
         }, 260);
       });
 
-      refs.volumeSlider.addEventListener("pointerdown", (event) => {
-        if (event.button !== 0 && event.pointerType === "mouse") return;
-        volumeDragActive = true;
-        lastVolumePointerY = event.clientY;
-        zoneEl.classList.add("music-minimal-volume-zone--open");
-        refs.volumeSlider.setPointerCapture(event.pointerId);
-        applyVolumeAtPointer(event.clientY);
+      zoneEl.addEventListener("click", async (event) => {
+        const btn = event.target.closest("[data-volume-action]");
+        if (!btn) return;
         event.preventDefault();
-      });
-
-      refs.volumeSlider.addEventListener("pointermove", (event) => {
-        if (!volumeDragActive) return;
-        applyVolumeDrag(event.clientY);
-      });
-
-      const endVolumeDrag = (event) => {
-        if (!volumeDragActive) return;
-        volumeDragActive = false;
-        lastVolumePointerY = null;
-        if (refs.volumeSlider.hasPointerCapture(event.pointerId)) {
-          refs.volumeSlider.releasePointerCapture(event.pointerId);
-        }
+        event.stopPropagation();
+        const action = btn.getAttribute("data-volume-action");
+        if (action !== "volume_up" && action !== "volume_down") return;
+        flashButton(btn);
+        volumeLevel = Math.max(
+          0,
+          Math.min(100, volumeLevel + (action === "volume_up" ? 8 : -8))
+        );
+        updateVolumeUI();
         saveVolumeLevel(volumeLevel);
-      };
-
-      refs.volumeSlider.addEventListener("pointerup", endVolumeDrag);
-      refs.volumeSlider.addEventListener("pointercancel", endVolumeDrag);
+        try {
+          await sendCommand(action);
+        } catch (_) { /* ignore */ }
+      });
     }
 
     function bindMoveZone(moveEl) {
@@ -263,6 +347,7 @@
 
       moveEl.addEventListener("mousedown", (event) => {
         if (event.button !== 0) return;
+        if (getMusicPosition() !== "bottom") return;
         moveDragActive = true;
         moveDragStartX = event.clientX;
         moveDragStartOffset = offsetX;
@@ -324,6 +409,7 @@
         offsetX = clampOffset(offsetX);
         positionBar(barEl);
       });
+      document.addEventListener("chrome-layout:changed", () => positionBar(barEl));
     }
 
     function mount(root) {
@@ -341,43 +427,48 @@
         </div>
         <div class="music-minimal-shell">
           <div class="music-minimal-inner">
-            <div class="music-minimal-row">
-              <span class="music-minimal-title" data-role="title">Sem mídia</span>
-              <span class="music-minimal-time" data-role="time">0:00</span>
+            <div class="music-minimal-media" aria-hidden="true">
+              <div class="music-minimal-cover-wrap">
+                <img class="music-minimal-cover" data-role="cover" alt="" />
+                <span class="music-minimal-cover-fallback" data-role="cover-fallback">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                    <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+                  </svg>
+                </span>
+              </div>
+              <span class="music-minimal-note music-minimal-note--1">♪</span>
+              <span class="music-minimal-note music-minimal-note--2">♫</span>
+              <span class="music-minimal-note music-minimal-note--3">♩</span>
             </div>
-            <div class="music-minimal-controls">
+            <div class="music-minimal-controls" aria-label="Controles">
               <button type="button" class="music-minimal-btn" data-action="prev" title="Anterior" aria-label="Faixa anterior">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
               </button>
               <button type="button" class="music-minimal-btn music-minimal-btn--play" data-action="play_pause" title="Play/Pause" aria-label="Play/Pause">
-                <svg data-icon="play" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                <svg data-icon="pause" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+                <svg data-icon="play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg data-icon="pause" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
               </button>
               <button type="button" class="music-minimal-btn" data-action="next" title="Próxima" aria-label="Próxima faixa">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
               </button>
             </div>
           </div>
         </div>
         <div class="music-minimal-volume-zone" aria-label="Volume">
           <span class="music-minimal-volume-dot" aria-hidden="true"></span>
-          <div class="music-minimal-volume-rail">
-            <div class="music-minimal-volume-slider" data-role="volumeSlider">
-              <div class="music-minimal-volume-fill" data-role="volumeFill"></div>
-              <div class="music-minimal-volume-thumb" data-role="volumeThumb"></div>
-            </div>
+          <div class="music-minimal-volume-buttons" role="group" aria-label="Ajustar volume">
+            <button type="button" class="music-minimal-vol-btn" data-volume-action="volume_up" title="Aumentar" aria-label="Aumentar volume">+</button>
+            <button type="button" class="music-minimal-vol-btn" data-volume-action="volume_down" title="Diminuir" aria-label="Diminuir volume">−</button>
           </div>
         </div>
       `;
 
       refs = {
-        title: barEl.querySelector('[data-role="title"]'),
-        time: barEl.querySelector('[data-role="time"]'),
         iconPlay: barEl.querySelector('[data-icon="play"]'),
         iconPause: barEl.querySelector('[data-icon="pause"]'),
-        volumeSlider: barEl.querySelector('[data-role="volumeSlider"]'),
-        volumeFill: barEl.querySelector('[data-role="volumeFill"]'),
-        volumeThumb: barEl.querySelector('[data-role="volumeThumb"]'),
+        cover: barEl.querySelector('[data-role="cover"]'),
+        coverFallback: barEl.querySelector('[data-role="cover-fallback"]'),
+        media: barEl.querySelector('.music-minimal-media'),
       };
 
       offsetX = loadOffsetX();
@@ -419,6 +510,7 @@
       mount,
       sync,
       destroy,
+      reposition: () => positionBar(barEl),
       isEnabled: loadMusicMinimal,
       setEnabled: (enabled) => {
         saveMusicMinimal(!!enabled);

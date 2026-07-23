@@ -24,9 +24,9 @@
   }
 
   function migrateLegacySettings() {
-    if (localStorage.getItem(SETTINGS_KEY)) return;
+    if ((window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY))) return;
     try {
-      const raw = localStorage.getItem(LEGACY_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(LEGACY_KEY) : localStorage.getItem(LEGACY_KEY));
       if (!raw) return;
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr) || arr.length === 0) return;
@@ -43,8 +43,8 @@
           active: true
         };
       });
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-      localStorage.removeItem(LEGACY_KEY);
+      (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
+      (window.UserStorage ? window.UserStorage.removeItem(LEGACY_KEY) : localStorage.removeItem(LEGACY_KEY));
     } catch {
       /* ignore */
     }
@@ -53,7 +53,7 @@
   function loadSettings() {
     migrateLegacySettings();
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY));
       if (!raw) return emptyState();
       const data = JSON.parse(raw);
       if (!data || typeof data !== "object") return emptyState();
@@ -68,7 +68,7 @@
           h: data.h,
           active: data.active !== false
         };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+        (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
         return next;
       }
 
@@ -101,7 +101,7 @@
   }
 
   function saveSettings(state) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
+    (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(state)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(state)));
   }
 
   function getContentBounds() {
@@ -668,7 +668,16 @@
     const settings = loadSettings();
     TYPES.forEach((t) => {
       const s = settings[t];
-      if (!s || s.active === false || !window.AutoTuneWidgets || !window.AutoTuneWidgets[t]) return;
+      if (!s || s.active === false) return;
+      // Music só existe como minimal — nunca restaura o card flutuante.
+      if (t === "music") {
+        if (!settings.music.minimal) {
+          settings.music = { ...settings.music, minimal: true };
+          saveSettings(settings);
+        }
+        return;
+      }
+      if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[t]) return;
       spawnWidget(t, root, {
         id: s.id,
         x: s.x,
@@ -681,7 +690,28 @@
 
   function setPanelTypeActive(type, active, root) {
     const settings = loadSettings();
-    if (!TYPES.includes(type) || !window.AutoTuneWidgets || !window.AutoTuneWidgets[type]) return;
+    if (!TYPES.includes(type)) return;
+
+    // Music existe apenas no modo minimal — nunca spawna o card flutuante.
+    if (type === "music") {
+      if (!settings.music || typeof settings.music !== "object") {
+        settings.music = { id: "music-minimal", active: false };
+      }
+      settings.music = {
+        ...settings.music,
+        active: !!active,
+        minimal: true,
+      };
+      saveSettings(settings);
+      syncPanelToggles();
+      syncMusicWidgetPresentation(root);
+      if (window.AutoTuneMusicMinimal) {
+        window.AutoTuneMusicMinimal.setEnabled(!!active);
+      }
+      return;
+    }
+
+    if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[type]) return;
 
     if (!active && (type === "timer" || type === "tasklist")) {
       const fusion = root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
@@ -700,8 +730,6 @@
     } else {
       const el = root.querySelector(`.floating-widget[data-widget-type="${type}"]`);
       if (el) {
-        const prevMinimal = type === "music" ? settings[type]?.minimal : undefined;
-        const prevOffset = type === "music" ? settings[type]?.minimalOffsetX : undefined;
         settings[type] = {
           id: el.dataset.widgetId,
           x: parseFloat(el.style.left) || 0,
@@ -710,12 +738,6 @@
           h: el.offsetHeight,
           active: false
         };
-        if (type === "music" && prevMinimal === true) {
-          settings[type].minimal = true;
-        }
-        if (type === "music" && typeof prevOffset === "number") {
-          settings[type].minimalOffsetX = prevOffset;
-        }
         el.remove();
         saveSettings(settings);
       } else if (settings[type]) {
@@ -785,59 +807,33 @@
 
   function isMusicMinimalEnabled() {
     const settings = loadSettings();
-    return !!(settings.music && settings.music.minimal === true);
+    return !!(settings.music && settings.music.active === true);
   }
 
   function setMusicMinimalEnabled(enabled, root) {
-    const settings = loadSettings();
-    if (!settings.music) {
-      settings.music = { id: "music-minimal", active: false, minimal: !!enabled };
-    } else {
-      settings.music = { ...settings.music, minimal: !!enabled };
-    }
-    saveSettings(settings);
-    syncMusicMinimalPanel();
-    syncMusicWidgetPresentation(root);
-    if (window.AutoTuneMusicMinimal) {
-      window.AutoTuneMusicMinimal.setEnabled(!!enabled);
-    }
+    setPanelTypeActive("music", !!enabled, root);
   }
 
   /**
    * Alterna visibilidade entre o widget Music flutuante e o modo minimalista.
-   * Quando minimal está ativo, o card flutuante fica oculto.
+   * O card flutuante fica sempre oculto — só o minimal permanece.
    */
   window.syncMusicWidgetPresentation = function syncMusicWidgetPresentation(rootEl) {
     const root = rootEl || document.getElementById("floating-cosmetics-root");
     if (!root) return;
     const musicEl = root.querySelector('.floating-widget[data-widget-type="music"]');
-    if (!musicEl) return;
-    const minimalOn = isMusicMinimalEnabled();
-    const active = hasActiveMedia();
-    if (minimalOn) {
-      musicEl.style.display = "none";
-    } else {
-      musicEl.style.display = active ? "" : "none";
-    }
+    if (musicEl) musicEl.style.display = "none";
   };
 
   function syncMusicMinimalPanel() {
-    const on = isMusicMinimalEnabled();
-    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
-      input.checked = on;
-    });
-    document.querySelectorAll('[data-autotune-panel-label="music-minimal"]').forEach((label) => {
-      label.textContent = on ? "On" : "Off";
-    });
+    /* toggle music-minimal removido do catálogo — no-op */
   }
 
   function initMusicMinimalToggle(root) {
-    document.querySelectorAll('[data-autotune-panel-toggle="music-minimal"]').forEach((input) => {
-      input.addEventListener("change", () => {
-        setMusicMinimalEnabled(input.checked, root);
-      });
-    });
-    syncMusicMinimalPanel();
+    syncMusicWidgetPresentation(root);
+    if (window.AutoTuneMusicMinimal) {
+      window.AutoTuneMusicMinimal.setEnabled(isMusicMinimalEnabled());
+    }
   }
 
   function hasActiveMedia() {
@@ -913,10 +909,42 @@
     snapshotAll(root);
   });
 
+  function clearWidgets(root) {
+    if (!root) return;
+    root.querySelectorAll(".floating-widget").forEach((el) => el.remove());
+    root.querySelectorAll(".autotune-music-minimal").forEach((el) => el.remove());
+  }
+
+  function reloadFromStorage() {
+    const root = document.getElementById("floating-cosmetics-root");
+    if (!root) return;
+    clearWidgets(root);
+    removeFusion(root);
+    restore(root);
+    syncPanelToggles();
+    syncMusicMinimalPanel();
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
+      window.AutoTuneMusicMinimal.mount(root);
+    }
+    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
+      window.AutoTuneMusicMinimal.sync();
+    }
+    syncVisibilityFromHome();
+    syncMediaGatedVisibility();
+    if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === "function") {
+      window.AutoTuneFactory.reloadFromStorage();
+    }
+  }
+
+  document.addEventListener("user:changed", () => {
+    reloadFromStorage();
+  });
+
   window.AutoTuneEngine = {
     spawnWidget,
     getContentBounds,
     getSettings: loadSettings,
+    reloadFromStorage,
     splitFusion: () => {
       const root = document.getElementById("floating-cosmetics-root");
       if (!root) return;
@@ -926,5 +954,10 @@
         snapshotAll(root);
       }
     }
+  };
+
+  window.AutoTune = {
+    reloadFromStorage,
+    getSettings: loadSettings,
   };
 })();

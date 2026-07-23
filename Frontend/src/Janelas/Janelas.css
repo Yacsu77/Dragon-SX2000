@@ -1,0 +1,669 @@
+/**
+ * Janelas — estilos base (preview, detach ghost, split divider, layouts, anims).
+ */
+
+/* ── Mini visualizador de aba (fase 1) ───────────────────────────────────── */
+
+.janelas-tab-preview {
+  position: fixed;
+  z-index: 10050;
+  width: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(22, 22, 28, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.janelas-tab-preview:not([hidden]) {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.janelas-tab-preview__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 32px;
+}
+
+.janelas-tab-preview__icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+}
+
+.janelas-tab-preview__icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.janelas-tab-preview__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.janelas-tab-preview__body {
+  position: relative;
+  width: 100%;
+  height: 142px;
+  background: #0e0e12;
+  overflow: hidden;
+}
+
+.janelas-tab-preview__body--home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(80, 120, 200, 0.35), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(40, 80, 140, 0.25), transparent 50%),
+    #12161f;
+}
+
+.janelas-tab-preview__home-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: 0.02em;
+}
+
+.janelas-tab-preview__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.janelas-tab-preview__shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* Captura de webview inativo (display:none → paint temporário) */
+webview.janelas-capturing {
+  display: flex !important;
+  position: absolute !important;
+  inset: 0 !important;
+  opacity: 0.01 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+#browser webview.active {
+  z-index: 1;
+}
+
+.janelas-detach-ghost {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  width: 168px !important;
+  height: 128px !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  white-space: normal !important;
+  transform: scale(1.04) !important;
+  gap: 0 !important;
+}
+
+.janelas-detach-ghost .tab-icon,
+.janelas-detach-ghost .tab-title {
+  display: none !important;
+}
+
+.janelas-detach-ghost__shot {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #0e0e12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.janelas-detach-ghost__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.janelas-detach-ghost__hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px;
+  text-align: center;
+}
+
+/* Transferência entre janelas — highlight no ghost */
+.janelas-transfer-ghost {
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(120, 180, 255, 0.85) !important;
+  transform: scale(1.08) !important;
+}
+
+/* Shield: captura o mouse durante drag (webview não rouba eventos) */
+.janelas-drag-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  cursor: grabbing;
+  background: transparent;
+}
+
+/* Feedback: aba recém-transferida */
+@keyframes janelas-tab-received-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(120, 180, 255, 0.9); }
+  40% { box-shadow: 0 0 0 4px rgba(120, 180, 255, 0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(120, 180, 255, 0); }
+}
+
+.tab.janelas-tab-received {
+  animation: janelas-tab-received-pulse 1.4s ease-out;
+  outline: 2px solid rgba(120, 180, 255, 0.85);
+  outline-offset: 1px;
+}
+
+.janelas-transfer-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 10060;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(20, 22, 28, 0.94);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(120, 180, 255, 0.45);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.janelas-transfer-toast--show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Split in-window */
+html[data-janelas-mode='split'] #browser.browser-container.active {
+  display: flex !important;
+  flex-direction: row;
+  gap: 0;
+  position: relative;
+}
+
+html[data-janelas-mode='split'] #browser webview {
+  display: none !important;
+  flex: 1 1 50%;
+  width: 50%;
+  min-width: 0;
+  position: relative !important;
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+html[data-janelas-mode='split'] #browser webview.janelas-pane-visible {
+  display: flex !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+html[data-janelas-mode='split'] #browser webview.janelas-pane-focus {
+  outline: 2px solid rgba(120, 180, 255, 0.55);
+  outline-offset: -2px;
+}
+
+/* Marca nas abas: qual painel está em edição no split */
+.tab.janelas-tab-in-split {
+  position: relative;
+}
+
+.tab.janelas-tab-pane-left::after,
+.tab.janelas-tab-pane-right::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tab.janelas-tab-pane-focus {
+  box-shadow: inset 0 0 0 1px rgba(120, 180, 255, 0.65);
+}
+
+.tab.janelas-tab-pane-focus::after {
+  background: rgba(120, 180, 255, 0.95);
+  height: 2px;
+  bottom: 3px;
+}
+
+.tab.janelas-tab-pane-focus .tab-title {
+  color: #fff;
+}
+
+html[data-janelas-mode='split'] body.janelas-multi-floating #browser {
+  gap: 10px;
+  padding: 0;
+}
+
+.janelas-split-divider {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.35);
+  display: none;
+}
+
+html[data-janelas-mode='split'] .janelas-split-divider {
+  display: block;
+}
+
+.janelas-split-divider__x {
+  display: none;
+  font-size: 12px;
+  line-height: 1;
+  color: #111;
+}
+
+.janelas-split-divider:hover {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.janelas-split-divider:hover .janelas-split-divider__dot {
+  display: none;
+}
+
+.janelas-split-divider:hover .janelas-split-divider__x {
+  display: block;
+}
+
+/* Layouts — espaçamento/arredondamento só na área de conteúdo (não nas abas) */
+body.janelas-window-floating {
+  background: transparent !important;
+}
+
+/* Canto invertido da sidebar não faz sentido com card flutuante */
+body.janelas-window-floating .side-dock__join,
+body.janelas-multi-floating .side-dock__join {
+  display: none !important;
+}
+
+/* New Tab: transparente (wallpaper nítido). Blur só no anel FORA das bordas. */
+body.janelas-window-floating #homePage:not(.hidden) {
+  margin-top: 10px;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  margin-left: calc(var(--sidebar-dock-width, 52px) + 10px);
+  border-radius: 16px;
+  /* visible para o anel ::before não ser cortado */
+  overflow: visible;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  position: relative;
+  z-index: 0;
+}
+
+body.janelas-window-floating #homePage:not(.hidden)::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 30px;
+  padding: 14px;
+  pointer-events: none;
+  z-index: -1;
+  background: transparent;
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/*
+ * Browser flutuante:
+ * O <webview> do Electron NÃO herda border-radius do pai — por isso aparecia
+ * uma “divisória” (var(--content-bg)) entre a tela quadrada e a borda redonda.
+ * Solução: raio no próprio webview + container transparente (sem clip no pai,
+ * para o anel de blur externo continuar visível).
+ */
+body.janelas-window-floating #browser.browser-container.active {
+  margin-top: 10px;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  margin-left: calc(var(--sidebar-dock-width, 52px) + 10px);
+  border-radius: 16px;
+  overflow: visible;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  position: relative;
+  isolation: isolate;
+  outline: none;
+}
+
+body.janelas-window-floating #browser.browser-container.active::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 28px;
+  padding: 12px;
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  z-index: -1;
+  pointer-events: none;
+  background: transparent;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* Webview = superfície nativa: precisa do mesmo raio da moldura */
+body.janelas-window-floating #browser.browser-container.active > webview,
+body.janelas-window-floating #browser.browser-container.active webview.active,
+body.janelas-window-floating #browser.browser-container.active webview {
+  border-radius: 15px !important;
+  overflow: hidden !important;
+  background: var(--content-bg) !important;
+  transform: translateZ(0);
+}
+
+body.janelas-multi-standard #browser.browser-container.active {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+}
+
+body.janelas-multi-floating {
+  background: transparent !important;
+}
+
+body.janelas-multi-floating #browser.browser-container.active {
+  display: flex !important;
+  flex-direction: row;
+  gap: 10px;
+  margin-top: 10px;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  margin-left: calc(var(--sidebar-dock-width, 52px) + 10px);
+  padding: 0;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible !important;
+  border: none !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+}
+
+body.janelas-multi-floating #browser.browser-container.active::before,
+body.janelas-multi-floating #browser.browser-container.active::after {
+  display: none !important;
+  content: none !important;
+}
+
+body.janelas-multi-floating #browser webview.janelas-pane-visible {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--content-bg) !important;
+  transform: translateZ(0);
+  clip-path: inset(0 round 14px);
+  -webkit-clip-path: inset(0 round 14px);
+}
+
+body.janelas-multi-floating .janelas-split-divider {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+html[data-janelas-mode='split'] body.janelas-multi-floating #browser.browser-container.active {
+  gap: 10px;
+  padding: 0;
+}
+
+/* Bordas — janela única (não split) */
+html[data-janelas-borders='1']:not([data-janelas-mode='split']) #browser.browser-container.active,
+html[data-janelas-borders='1'] body.janelas-window-floating #homePage:not(.hidden) {
+  outline: 1px solid rgba(255, 255, 255, 0.22);
+  outline-offset: 0;
+}
+
+/* Bordas — split / multi: uma borda por painel */
+html[data-janelas-mode='split'][data-janelas-borders='1'] #browser webview.janelas-pane-visible,
+html[data-janelas-borders='1'] body.janelas-multi-floating #browser webview.janelas-pane-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.22);
+  outline-offset: -1px;
+}
+
+html[data-janelas-borders-animated='1']:not([data-janelas-mode='split']) #browser.browser-container.active,
+html[data-janelas-borders-animated='1'] body.janelas-window-floating #homePage:not(.hidden),
+html[data-janelas-mode='split'][data-janelas-borders-animated='1'] #browser webview.janelas-pane-visible {
+  transition: outline-color 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+/* RGB — janela única */
+@keyframes janelas-rgb-spin {
+  to { --janelas-rgb-angle: 360deg; }
+}
+
+@property --janelas-rgb-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes janelas-rgb-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #ff5080, 0 0 14px rgba(255, 80, 120, 0.3), 0 8px 28px rgba(0, 0, 0, 0.22); }
+  33% { box-shadow: 0 0 0 2px #50ffb0, 0 0 14px rgba(80, 255, 176, 0.3), 0 8px 28px rgba(0, 0, 0, 0.22); }
+  66% { box-shadow: 0 0 0 2px #5080ff, 0 0 14px rgba(80, 128, 255, 0.3), 0 8px 28px rgba(0, 0, 0, 0.22); }
+}
+
+html[data-janelas-borders-rgb='1']:not([data-janelas-mode='split']) #browser.browser-container.active,
+html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.hidden) {
+  position: relative;
+  outline: none !important;
+}
+
+html[data-janelas-borders-rgb='1']:not([data-janelas-mode='split']) #browser.browser-container.active.janelas-anim-restart::after,
+html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.hidden).janelas-anim-restart::after {
+  animation: none !important;
+}
+
+html[data-janelas-borders-rgb='1']:not([data-janelas-mode='split']) #browser.browser-container.active::after,
+html[data-janelas-borders-rgb='1'] body.janelas-window-floating #homePage:not(.hidden)::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--janelas-rgb-angle, 0deg),
+    #ff5080,
+    #ffd050,
+    #50ffb0,
+    #5080ff,
+    #c050ff,
+    #ff5080
+  );
+  /* Ângulo vem do RgbClock (JS) — CSS animation pausa em janela sem foco */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* RGB / anel: sem pause por foco — RgbClock para quando document.hidden */
+body.perf-window-hidden.janelas-window-floating #homePage:not(.hidden)::before,
+body.perf-window-hidden.janelas-window-floating #browser.browser-container.active::before {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* RGB — por painel no split/multi (webview não aceita ::after bem → pulse) */
+html[data-janelas-mode='split'][data-janelas-borders-rgb='1'] #browser webview.janelas-pane-visible,
+html[data-janelas-borders-rgb='1'] body.janelas-multi-floating #browser webview.janelas-pane-visible {
+  outline: none !important;
+  animation: janelas-rgb-pulse 2.2s ease-in-out infinite;
+}
+
+html[data-janelas-mode='split'][data-janelas-borders-rgb='1'] #browser.browser-container.active::after,
+html[data-janelas-borders-rgb='1'] body.janelas-multi-floating #browser.browser-container.active::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Animações leves: só translate — sem baixar opacity (evita piscar a tela) */
+@keyframes janelas-flip-right {
+  from { transform: translate3d(10px, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes janelas-flip-left {
+  from { transform: translate3d(-10px, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes janelas-file-drop {
+  from { transform: translate3d(0, -8px, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes janelas-float-in {
+  from { transform: translate3d(0, 5px, 0) scale(0.99); }
+  to { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes janelas-float-drop {
+  from { transform: translate3d(0, -6px, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+.janelas-anim-flip-right,
+.janelas-anim-flip-left,
+.janelas-anim-file-drop,
+.janelas-anim-float-in,
+.janelas-anim-float-drop {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.janelas-anim-flip-right {
+  animation: janelas-flip-right 0.32s ease-in-out;
+}
+
+.janelas-anim-flip-left {
+  animation: janelas-flip-left 0.32s ease-in-out;
+}
+
+.janelas-anim-file-drop {
+  animation: janelas-file-drop 0.32s ease-in-out;
+}
+
+.janelas-anim-float-in {
+  animation: janelas-float-in 0.32s ease-in-out;
+}
+
+.janelas-anim-float-drop {
+  animation: janelas-float-drop 0.32s ease-in-out;
+}
+
+/* Indicador de drop remoto na barra de abas */
+.janelas-drop-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: rgba(120, 180, 255, 0.95);
+  box-shadow: 0 0 10px rgba(120, 180, 255, 0.75);
+  pointer-events: none;
+  z-index: 40;
+}
+
+.tabs-bar.janelas-drop-target,
+#tabs.janelas-drop-target {
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(120, 180, 255, 0.45);
+  background: rgba(120, 180, 255, 0.06);
+}
+
+.tab-placeholder--hidden {
+  opacity: 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}

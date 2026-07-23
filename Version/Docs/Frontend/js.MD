@@ -12,16 +12,18 @@ Bootstrap da aplicação, ponte com Dragon Media SDK, integração com API de hi
 
 ## Arquivos
 
-| Arquivo | Função |
-|---------|--------|
-| `app.js` | Bootstrap: Shell → Browser → CursorControll → Tabline → TopBar → Prefetch → PerfSettings → Home → showHome |
+| `app.js` | Bootstrap: Shell → Browser → CursorControll → Tabline → TopBar → TabGroups → Prefetch → PerfSettings → Home |
+| `userApi.js` | Cliente HTTP API-DSX: Users, Favorites, Downloads, Vault, **TabGroups** |
 | `connectionPrefetch.js` | `dns-prefetch` + `preconnect` ao digitar na barra (padrão) |
-| `historyApi.js` | Cliente HTTP para API-DSX (`localhost:3333`) |
+| `historyApi.js` | Cliente HTTP para API-DSX (`localhost:3333`) — histórico |
 | `historyNavigation.js` | Abrir tela de histórico, navegar para URL do histórico |
 | `historyTracker.js` | Grava visitas dos webviews na API (debounce) |
 | `dragon-media-bridge.js` | Ponte WebSocket com Dragon Media SDK (música/SMTC) |
 
-Settings relacionados (fora de `js/`): `Frontend/src/settings/perfSettings.js` — ver [`Editar.MD`](./Editar.MD).
+Settings relacionados (fora de `js/`):
+
+- `Frontend/src/settings/perfSettings.js` — ver [`Editar.MD`](./Editar.MD)
+- `Frontend/src/settings/chromeLayoutSettings.js` — Layout Topo Global (v1.4)
 
 ---
 
@@ -32,7 +34,10 @@ Shell.mountAll()
 Browser.init()
 CursorControll.init()
 Tabline.init()
-TopBar.init()
+TopBar.init()                 // inclui ChromeLayout
+TabGroupsRuntime.init()
+TabGroupsRender.init()
+TabGroupsRuntime.restoreActiveGroup()
 ConnectionPrefetch.init()
 PerfSettings.init()
 Home.init()
@@ -41,9 +46,25 @@ AppShell.showHome()
 updateTabsBarVisibility()
 ```
 
-**Mudar ordem de inicialização:** editar `initApp()` — respeitar dependências (Shell antes de Tabline; TopBar depois do Shell montar `#menuBtn`).
+**Mudar ordem de inicialização:** editar `initApp()` — respeitar dependências (Shell antes de Tabline; TopBar depois do Shell montar `#menuBtn`; TabGroups após Tabs + Top).
 
 **Adicionar passo global no boot:** inserir chamada em `initApp()` após módulo necessário.
+
+---
+
+## TabGroupsApi (`userApi.js`)
+
+```js
+window.TabGroupsApi = {
+  list(userId),
+  create(body),
+  update(id, userId, body),
+  remove(id, userId),
+  replaceTabs(id, body),   // PUT /tab-groups/:id/tabs
+}
+```
+
+UI e runtime: [`Tabs.MD`](./Tabs.MD). Schema: [`DB.md`](../../../Backend/API-DSX/Docs/DB.md).
 
 ---
 
@@ -67,7 +88,14 @@ window.ConnectionPrefetch = { init(), hint(raw) }
 
 Endpoints da API-DSX para histórico de navegação.
 
+```js
+HistoryApi.smartSuggestions(query)   // { sites, google } — Busca Inteligente
+```
+
 **Mudar URL da API:** constantes de base URL no arquivo.
+
+Ver [`BuscaInteligente.md`](../BuscaInteligente.md) para o fluxo completo de
+sugestões e autocomplete.
 
 ---
 
@@ -107,6 +135,7 @@ Conecta ao SDK de mídia (porta 8974). Usado pelo widget Music do AutoTune.
 | Objetivo | Arquivo |
 |----------|---------|
 | Boot da aplicação | `app.js` |
+| Grupos de abas (API) | `userApi.js` → `TabGroupsApi` |
 | Prefetch ao digitar | `connectionPrefetch.js` |
 | Desligar tracking de histórico | não chamar `trackWebviewHistory` em `Tabs.core.js` |
 | Nova integração API | novo arquivo em `js/` + script em `index.html` |

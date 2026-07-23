@@ -3,6 +3,7 @@
  */
 (function () {
   let fullUrl = '';
+  let smartController = null;
 
   function getDomainFromUrl(url) {
     try {
@@ -26,6 +27,10 @@
   function handleAddressBar() {
     const addressInput = document.getElementById('addressInput');
     if (!addressInput) return;
+    if (smartController) {
+      smartController.submit();
+      return;
+    }
 
     const input = addressInput.value.trim();
     if (!input) return;
@@ -108,9 +113,27 @@
     }
   }
 
+  function reloadActivePage() {
+    const reloadBtn = document.getElementById('addressReloadBtn');
+    const activeWebview = document.querySelector('webview.active');
+    if (!activeWebview || typeof activeWebview.reload !== 'function') return;
+    try {
+      activeWebview.reload();
+      if (reloadBtn) {
+        reloadBtn.classList.remove('is-spinning');
+        void reloadBtn.offsetWidth;
+        reloadBtn.classList.add('is-spinning');
+        setTimeout(() => reloadBtn.classList.remove('is-spinning'), 700);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   function init() {
     const addressBar = document.getElementById('addressBar');
     const addressInput = document.getElementById('addressInput');
+    const reloadBtn = document.getElementById('addressReloadBtn');
 
     if (addressBar) {
       addressBar.addEventListener('submit', (e) => {
@@ -119,17 +142,23 @@
       });
     }
 
-    if (addressInput) {
-      addressInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleAddressBar();
-        }
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        reloadActivePage();
       });
     }
 
     if (window.SearchAnim) {
       window.SearchAnim.bindFocusBlur(addressInput, getFullUrl, getDomainFromUrl);
+    }
+    if (addressInput && window.SmartSearch) {
+      smartController = window.SmartSearch.attach(addressInput, {
+        mount: document.querySelector('.nav-search-wrap') || addressBar,
+        // O painel abre abaixo da barra de abas, nunca por cima dela.
+        avoid: '#tabsRoot',
+      });
     }
 
     document.addEventListener('app:webview-navigated', onWebviewNavigated);

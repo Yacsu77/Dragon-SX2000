@@ -6,17 +6,39 @@
     return document.querySelector('webview.active');
   }
 
+  function safeCanGoBack(webview) {
+    try {
+      return !!(webview && typeof webview.canGoBack === 'function' && webview.canGoBack());
+    } catch {
+      return false;
+    }
+  }
+
+  function safeCanGoForward(webview) {
+    try {
+      return !!(webview && typeof webview.canGoForward === 'function' && webview.canGoForward());
+    } catch {
+      return false;
+    }
+  }
+
   function goBack() {
     const webview = getActiveWebview();
-    if (webview && webview.canGoBack()) {
-      webview.goBack();
+    if (!webview) return;
+    try {
+      if (webview.canGoBack()) webview.goBack();
+    } catch {
+      /* webview ainda sem dom-ready */
     }
   }
 
   function goForward() {
     const webview = getActiveWebview();
-    if (webview && webview.canGoForward()) {
-      webview.goForward();
+    if (!webview) return;
+    try {
+      if (webview.canGoForward()) webview.goForward();
+    } catch {
+      /* webview ainda sem dom-ready */
     }
   }
 
@@ -29,8 +51,8 @@
     if (!setState) return;
 
     if (webview) {
-      setState(backBtn, webview.canGoBack());
-      setState(forwardBtn, webview.canGoForward());
+      setState(backBtn, safeCanGoBack(webview));
+      setState(forwardBtn, safeCanGoForward(webview));
     } else {
       setState(backBtn, false);
       setState(forwardBtn, false);

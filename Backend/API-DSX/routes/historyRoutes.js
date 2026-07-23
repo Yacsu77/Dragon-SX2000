@@ -4,6 +4,7 @@ const historyController = require('../Controller/historyController');
 const router = express.Router();
 
 router.post('/', historyController.create);
+router.get('/suggestions', historyController.suggestions);
 router.get('/search', historyController.search);
 router.get('/', historyController.findAll);
 router.get('/:id', historyController.findById);

@@ -1,0 +1,64 @@
+<div class="pip-menu__header">
+  <span class="pip-menu__badge" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+      <rect x="12" y="11" width="7" height="5" rx="1"></rect>
+    </svg>
+  </span>
+  <div>
+    <strong>Picture in Picture</strong>
+    <span data-role="pip-source">Vídeo da aba atual</span>
+  </div>
+</div>
+
+<div class="pip-menu__now-playing">
+  <div class="pip-menu__cover">
+    <img data-role="pip-cover" alt="" hidden />
+    <span data-role="pip-cover-fallback" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+        <path d="m9 10 6 3-6 3z" fill="currentColor" stroke="none"></path>
+      </svg>
+    </span>
+  </div>
+
+  <div class="pip-menu__media-info">
+    <strong data-role="pip-title">Vídeo da aba atual</strong>
+    <span data-role="pip-artist">Navegador</span>
+    <div class="pip-menu__timeline">
+      <span data-role="pip-position">0:00</span>
+      <div class="pip-menu__progress">
+        <i data-role="pip-progress-fill"></i>
+      </div>
+      <span data-role="pip-duration">0:00</span>
+    </div>
+  </div>
+</div>
+
+<div class="pip-menu__transport" aria-label="Controles da mídia">
+  <button type="button" data-pip-media-action="prev" title="Anterior" aria-label="Mídia anterior">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 5h2v14H6zM20 5v14L9 12z"></path>
+    </svg>
+  </button>
+  <button type="button" class="pip-menu__play" data-pip-media-action="play_pause" title="Reproduzir ou pausar" aria-label="Reproduzir ou pausar">
+    <svg data-icon="pip-play" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5v14l11-7z"></path>
+    </svg>
+    <svg data-icon="pip-pause" viewBox="0 0 24 24" fill="currentColor" hidden>
+      <path d="M6 5h4v14H6zm8 0h4v14h-4z"></path>
+    </svg>
+  </button>
+  <button type="button" data-pip-media-action="next" title="Próxima" aria-label="Próxima mídia">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 5h2v14h-2zM4 5v14l11-7z"></path>
+    </svg>
+  </button>
+</div>
+
+<button type="button" class="pip-menu__action" data-role="pip-action">
+  <span data-role="pip-action-icon" aria-hidden="true"></span>
+  <span data-role="pip-action-label">Abrir Picture in Picture</span>
+</button>
+
+<p class="pip-menu__message" data-role="pip-message" hidden></p>

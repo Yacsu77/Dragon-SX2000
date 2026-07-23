@@ -22,12 +22,15 @@
   let started = false;
 
   function isEnabled() {
+    if (window.TabGroupsRuntime && window.TabGroupsRuntime.isEnabled()) {
+      return false;
+    }
     return !!(window.PerfSettings && window.PerfSettings.isRestoreSessionTabs());
   }
 
   function readSnapshot() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = ((window.UserStorage && window.UserStorage.getItem(STORAGE_KEY)) || null);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.tabs)) return null;
@@ -39,13 +42,13 @@
 
   function writeSnapshot(payload) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, JSON.stringify(payload)) : localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)));
     } catch (_) { /* ignore */ }
   }
 
   function clear() {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      (window.UserStorage ? window.UserStorage.removeItem(STORAGE_KEY) : localStorage.removeItem(STORAGE_KEY));
     } catch (_) { /* ignore */ }
   }
 
@@ -109,7 +112,13 @@
     }, SAVE_DEBOUNCE_MS);
   }
 
-  function restore() {
+  function yieldFrame() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+  }
+
+  async function restore() {
     if (!isEnabled()) return false;
     if (typeof window.createTab !== 'function' || typeof window.createHomeTab !== 'function') {
       return false;
@@ -121,36 +130,41 @@
     restoring = true;
     let activeId = null;
     let lastId = null;
+    const deferOpts = { deferLoad: true };
 
     try {
-      snapshot.tabs.forEach((entry) => {
-        if (!entry) return;
+      for (const entry of snapshot.tabs) {
+        if (!entry) continue;
 
         if (entry.isHomeTab) {
           const id = window.createHomeTab(false);
           lastId = id;
           if (entry.active) activeId = id;
-          return;
+          await yieldFrame();
+          continue;
         }
 
-        if (!entry.url) return;
+        if (!entry.url) continue;
         const id = window.createTabAfter
-          ? window.createTabAfter(lastId, entry.url, entry.title || null, null, false)
-          : window.createTab(entry.url, entry.title || null, null, false);
+          ? window.createTabAfter(lastId, entry.url, entry.title || null, null, false, deferOpts)
+          : window.createTab(entry.url, entry.title || null, null, false, deferOpts);
         lastId = id;
         if (entry.active) activeId = id;
-      });
+        await yieldFrame();
+      }
 
       if (!lastId) {
         restoring = false;
         return false;
       }
 
-      if (activeId && typeof window.activateTab === 'function') {
-        window.activateTab(activeId);
-      } else if (lastId && typeof window.activateTab === 'function') {
-        window.activateTab(lastId);
+      const targetId = activeId || lastId;
+      if (targetId && typeof window.activateTab === 'function') {
+        window.activateTab(targetId);
       }
+
+      // Hidrata o restante em fila (não bloqueia o boot)
+      window.TabWarmth?.warmDeferredQueue?.(targetId);
 
       if (typeof updateTabsBarVisibility === 'function') {
         updateTabsBarVisibility();
@@ -161,7 +175,6 @@
       return false;
     } finally {
       restoring = false;
-      // Regrava com os IDs novos da sessão atual.
       scheduleSave();
     }
   }

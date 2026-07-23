@@ -9,8 +9,13 @@
 @import url('../Top/Menu/Menu.css');
 @import url('../Top/ButtonGo/ButtonGo.css');
 @import url('../Top/Search/Search.css');
+@import url('../Top/PictureInPicture/PictureInPicture.css');
+@import url('../search/SmartSearch.css');
+@import url('../Passwords/ui/PasswordIndicator.css');
 @import url('../Tabline/Tabline.css');
+@import url('../Tabline/panel/SidePanelHost.css');
 @import url('../Tabs/Tabs.css');
+@import url('../Janelas/Janelas.css');
 @import url('../Home/Home.css');
 @import url('../Home/HomeSearch/HomeSearch.css');
 @import url('../Browser/Browser.css');
@@ -22,6 +27,8 @@
 @import url('../../MiniTelas/MiniAtalhos/MiniAtalhos.css');
 @import url('../../Telas/Historico-Navegação/Historico-Navegação.css');
 @import url('../../Telas/Downloads/Downloads.css');
+@import url('../../Telas/Cofre/Cofre.css');
+@import url('../../Telas/Usuarios/Usuarios.css');
 @import url('../../Telas/Arquivos/Arquivos.css');
 @import url('../../Telas/Atalhos/Atalhos.css');
 @import url('../../Telas/Editar/Editar.css');

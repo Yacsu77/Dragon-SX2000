@@ -4,6 +4,10 @@
 (function () {
   const API_BASE = 'http://localhost:3333';
 
+  function activeUserId() {
+    return window.UserSession?.getActiveUserId?.() || null;
+  }
+
   async function request(path, options = {}) {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
@@ -30,18 +34,28 @@
     const query = new URLSearchParams();
     if (params.page) query.set('page', String(params.page));
     if (params.limit) query.set('limit', String(params.limit));
-    if (params.profile_id) query.set('profile_id', params.profile_id);
+    const userId = params.user_id || params.profile_id || activeUserId();
+    if (userId) query.set('user_id', userId);
 
     const suffix = query.toString() ? `?${query.toString()}` : '';
     const result = await request(`/history${suffix}`);
     return result.data || [];
   }
 
-  async function searchHistory(query, profileId = null) {
+  async function searchHistory(query, userId = null) {
     const params = new URLSearchParams({ q: query });
-    if (profileId) params.set('profile_id', profileId);
+    const uid = userId || activeUserId();
+    if (uid) params.set('user_id', uid);
     const result = await request(`/history/search?${params.toString()}`);
     return result.data || [];
+  }
+
+  async function smartSuggestions(query, userId = null) {
+    const params = new URLSearchParams({ q: query });
+    const uid = userId || activeUserId();
+    if (uid) params.set('user_id', uid);
+    const result = await request(`/history/suggestions?${params.toString()}`);
+    return result.data || { sites: [], google: [] };
   }
 
   async function fetchHistoryById(id) {
@@ -54,16 +68,21 @@
     return result.data;
   }
 
-  async function clearAllHistory(profileId = null) {
-    const suffix = profileId ? `?profile_id=${encodeURIComponent(profileId)}` : '';
+  async function clearAllHistory(userId = null) {
+    const uid = userId || activeUserId();
+    const suffix = uid ? `?user_id=${encodeURIComponent(uid)}` : '';
     const result = await request(`/history${suffix}`, { method: 'DELETE' });
     return result.data;
   }
 
   async function createHistoryEntry(data) {
+    const payload = {
+      ...data,
+      user_id: data.user_id || data.profile_id || activeUserId(),
+    };
     const result = await request('/history', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return result.data;
   }
@@ -72,6 +91,7 @@
     API_BASE,
     fetchHistory,
     searchHistory,
+    smartSuggestions,
     fetchHistoryById,
     deleteHistoryItem,
     clearAllHistory,

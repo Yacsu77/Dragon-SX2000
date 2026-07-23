@@ -1,8 +1,14 @@
-/* NAVIGATION BAR */
+/* NAVIGATION BAR — busca sempre no centro; largura via --nav-search-width */
 .nav-bar {
+  --nav-music-gap: clamp(14px, calc((100cqi - var(--nav-search-width, 520px)) * 0.06), 40px);
   height: 48px;
-  display: flex;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, calc(var(--nav-search-width, 520px) + 28px))
+    minmax(0, 1fr);
   align-items: center;
+  column-gap: var(--nav-music-gap);
   padding: 0 8px;
   background: var(--nav-bg);
   backdrop-filter: blur(30px) saturate(200%) brightness(110%);
@@ -10,11 +16,37 @@
   border-bottom: none;
   border-top: none;
   box-shadow: none;
-  gap: 8px;
   border-radius: 0;
   position: relative;
   z-index: 1;
   border: none;
+  container-type: inline-size;
+}
+
+@supports not (width: 1cqi) {
+  .nav-bar {
+    --nav-music-gap: clamp(14px, calc((100vw - var(--nav-search-width, 520px)) * 0.035), 40px);
+  }
+}
+
+.nav-side {
+  display: flex;
+  align-items: center;
+  gap: var(--nav-music-gap);
+  min-width: 0;
+  width: 100%;
+}
+
+.nav-side--left {
+  grid-column: 1;
+  justify-self: stretch;
+  justify-content: flex-start;
+}
+
+.nav-side--right {
+  grid-column: 3;
+  justify-self: stretch;
+  justify-content: flex-start;
 }
 
 .nav-left {
@@ -23,8 +55,9 @@
   gap: 4px;
   padding: 4px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(var(--chrome-border-rgb), var(--chrome-border-opacity));
   transition: border-color 0.2s;
+  flex-shrink: 0;
 }
 
 .nav-left:hover,
@@ -38,8 +71,15 @@
   gap: 4px;
   padding: 4px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(var(--chrome-border-rgb), var(--chrome-border-opacity));
   transition: border-color 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.nav-right .nav-btn.chrome-item-hidden,
+.nav-right .nav-btn[hidden] {
+  display: none !important;
 }
 
 .nav-right:hover,
@@ -76,8 +116,61 @@
 }
 
 .nav-center {
-  flex: 1;
+  grid-column: 2;
+  justify-self: stretch;
   display: flex;
   justify-content: center;
-  padding: 0 12px;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+}
+
+.nav-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.nav-search-wrap .address-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: var(--nav-search-width, 520px);
+}
+
+.nav-music {
+  flex: 0 0 auto;
+  display: none;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Music encostado ao buscador (borda interna da coluna), com o mesmo gap dos dois lados */
+body[data-music-position="left"] .nav-music--left,
+body[data-music-position="right"] .nav-music--right {
+  display: flex;
+}
+
+/* Esquerda: music perto da busca (fim da coluna) */
+body[data-music-position="left"] .nav-music--left {
+  margin-left: auto;
+}
+
+/* Direita: music perto da busca (início da coluna), gap espelhado */
+body[data-music-position="right"] .nav-music--right {
+  margin-right: auto;
+}
+
+body[data-music-position="left"] .nav-music--left:has(.music-minimal-bar--visible),
+body[data-music-position="right"] .nav-music--right:has(.music-minimal-bar--visible) {
+  min-width: 124px;
+}
+
+.chrome-item-hidden {
+  display: none !important;
 }

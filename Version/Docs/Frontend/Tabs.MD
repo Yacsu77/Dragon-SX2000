@@ -6,9 +6,7 @@
 
 ## Responsabilidade
 
-Criar, fechar, ativar e reordenar abas; associar webviews; home tabs; ícones; visibilidade da barra; animações.
-
-Dividido em 5 arquivos JS + CSS/HTML.
+Criar, fechar, ativar e reordenar abas; associar webviews; home tabs; ícones; visibilidade da barra; **grupos de abas** (v1.4).
 
 ---
 
@@ -16,52 +14,77 @@ Dividido em 5 arquivos JS + CSS/HTML.
 
 ```
 Tabs/
-├── Tabs.html           ← Barra de abas (montada em #tabsRoot)
-├── Tabs.css            ← Estilo glass, drag, ghost, .many-tabs
-├── Tabs.state.js       ← Estado compartilhado (tabCount, currentActiveTab)
-├── Tabs.core.js        ← CRUD, webview, home tab, CustomEvents
-├── Tabs.anim.js        ← animateTabTransition, efeitos drag
-├── Tabs.reorder.js     ← setupTabDragAndDrop (drag-and-drop)
-└── Tabs.visibility.js  ← Barra hidden, ponto "+", .many-tabs
+├── Tabs.html              ← Barra + slot de grupos (#tabGroupsBtn / #tabGroupsPanel)
+├── Tabs.css               ← Glass, many-tabs, LED, painel de grupos
+├── Tabs.state.js          ← Estado compartilhado (tabCount, currentActiveTab)
+├── Tabs.core.js           ← CRUD, webview, snapshots, activate com crossfade
+├── Tabs.anim.js           ← Efeitos cosméticos / drag da barra
+├── Tabs.reorder.js        ← Drag-and-drop de abas (+ limiar Janelas)
+├── Tabs.visibility.js     ← Barra hidden, "+", algoritmo many-tabs (7+)
+├── TabWarmth.js           ← deferLoad, hydrate, discard frio (P4)
+├── TabGroups.state.js     ← Lista de grupos + activeGroupId
+├── TabGroups.service.js   ← Chamadas TabGroupsApi + upsert local
+├── TabGroups.runtime.js   ← Switch/create/delete; salva snapshot do grupo ativo
+└── TabGroups.render.js    ← Painel UI (nome, cor, hover 5 abas, reorder)
 ```
 
 ---
 
-## API pública (globais legados + namespaces)
+## API pública
 
 ```js
 window.TabsState = { tabCount, currentActiveTab, DEFAULT_TAB_ICON }
-window.TabsCore = { createTab, activateTab, closeTab, createNewTab, createHomeTab, activateHomeTab, updateTabIcon, convertHomeTabToNormalTab }
+window.TabsCore = { createTab, activateTab, closeTab, createNewTab, createHomeTab, … }
+window.TabsVisibility = { updateTabsBarVisibility, scheduleVisibilityUpdate, … }
+window.TabGroupsState = { getGroups, getActiveGroup, setGroups, upsertGroup, … }
+window.TabGroupsRuntime = { init, createGroup, switchToGroup, updateGroup, deleteGroup, … }
+window.TabGroupsRender = { init, render, setPanelOpen }
 
-// Globais (atalhos e integrações):
-window.createTab(url, title?, icon?)
-window.activateTab(tabId)
-window.closeTab(tabId)
-window.createNewTab()
-window.createHomeTab()
-window.activateHomeTab(tabId)
-window.convertHomeTabToNormalTab(tabId, url, title?)
-window.updateTabIcon(tabId, faviconUrl)
-window.updateTabsBarVisibility()
+// Globais legados:
+window.createTab / activateTab / closeTab / createNewTab / createHomeTab / updateTabsBarVisibility
 ```
 
 ---
 
-## CustomEvents emitidos (`Tabs.core.js`)
+## CustomEvents
 
 | Evento | detail |
 |--------|--------|
 | `app:tab-changed` | `{ tabId, isHomeTab }` |
 | `app:tab-created` | `{ tabId, isHomeTab }` |
 | `app:tab-closed` | `{ tabId }` |
+| `tab-groups:changed` | `{ groups, activeGroupId }` |
+| `tab-groups:active-changed` | `{ activeGroupId, group }` |
 
 ---
 
-## Tabs.state.js
+## Grupos de abas (v1.4)
 
-Estado mínimo compartilhado. **Não** colocar lógica aqui.
+| Comportamento | Detalhe |
+|---------------|---------|
+| Isolamento | Por `user_id` na API-DSX (`/tab-groups`) |
+| Ativo | Só o grupo ativo tem webviews no DOM |
+| Inativos | Snapshot (url, title, favicon, is_home, active, position) |
+| UI | Botão ▦ à esquerda; painel compacto; hover lista 5 abas |
+| Reorder | Arraste de cards → `updateGroup({ position })` |
+| SessionTabs | Desabilitado quando o runtime de grupos está ativo |
 
-**Mudar ícone padrão da home tab:** `DEFAULT_TAB_ICON`.
+Backend: tabelas `tab_groups` / `tab_group_tabs` — ver [`DB.md`](../../../Backend/API-DSX/Docs/DB.md).
+
+---
+
+## Tabs.visibility.js — many-tabs
+
+| Regra | Detalhe |
+|-------|---------|
+| Limiar | `tabs.length >= 7` |
+| Aba ativa | Largura via `--many-active-tab-width` ≈ `floor(containerWidth / 5)` |
+| Inativas | `--many-inactive-tab-width` (resto do espaço) |
+| Troca | Sem animar width (evita hitch com paint do webview); feedback só background/opacity |
+| LED | Elemento `.tab-led-ring` (não usa `::before` dos separadores) |
+| Switch conteúdo | `body.janelas-content-switching` → aba ativa sólida (sem backdrop-filter) |
+
+Opacidade da ativa e LED: `ChromeLayoutSettings` (`activeTabOpacity`, `activeTabLedBorder`).
 
 ---
 
@@ -69,65 +92,22 @@ Estado mínimo compartilhado. **Não** colocar lógica aqui.
 
 | Função | Comportamento |
 |--------|---------------|
-| `buildWebview(url, tabId)` | Helper DRY: cria `<webview>` com `allowpopups` + `partition="persist:dragon"` |
-| `createTab(url, title, icon)` | Nova aba + webview + ativa |
-| `createHomeTab()` | Aba "New Tab" sem webview; ativa home |
-| `activateTab(tabId)` | Troca o conteúdo **na hora**; animação da barra é cosmética |
-| `activateHomeTab(tabId)` | Idem: `showHome()` imediato; animação só na barra |
-| `closeTab(tabId)` | Remove aba e webview; se última, `showHome()` |
-| `convertHomeTabToNormalTab(tabId, url, title)` | Home tab vira aba normal com URL (busca) |
-
-### Troca de aba (v1.3)
-
-Antes, `activateTab` desativava todos os webviews e só ativava o destino no `onComplete` da animação (~250–400 ms de área vazia / wallpaper).
-
-Agora:
-1. `finishActivateBrowserTab` / `finishActivateHomeTab` rodam **imediatamente**
-2. `TabsAnim.animateTabTransition` anima só os botões; `onComplete` → `restoreActiveTabButton`
-
-### Partição persistente
-
-Todos os webviews usam `partition="persist:dragon"` (via `buildWebview`): cache HTTP, cookies e conexões compartilhados entre abas e sessões — acelera sites pesados.
-
-Webviews appendados em `#browser`. Listeners: favicon, título, `setupWebviewNavigation`, `trackWebviewHistory`.
-
-**Mudar título truncado:** buscar `substring(0, 25)` em `Tabs.core.js`.
-
-**Mudar ícones emoji por hostname:** função `hostnameIcon()`.
-
-**Mudar fluxo ao fechar última aba:** bloco `closeTab()` quando `remainingTabs.length === 0`.
+| `buildWebview(url, tabId, opts)` | `partition="persist:dragon"`; `deferLoad` → `about:blank` + `pendingSrc` |
+| `activateTab` / `activateHomeTab` | Chrome na hora; webview crossfade (~320ms); hydrate no frame seguinte |
+| Conteúdo↔conteúdo | Nova opaca por baixo; anterior `.is-leaving` some por cima |
+| Split | Sem leave/blur residual nos painéis |
+| Snapshots | Helpers usados pelo `TabGroups.runtime` e por Janelas (detach/transfer) |
 
 ---
 
-## Tabs.anim.js
+## TabWarmth.js (v1.4 · P4)
 
-`animateTabTransition({ currentIndex, targetIndex, tabs, onComplete })` — animação liquid glass na **barra** (não bloqueia o conteúdo).
-
-**Mudar duração/curva:** `totalDuration` / easing em `Tabs.anim.js`.
-
-**Desativar animação:** em `activateTab` / `activateHomeTab`, omitir a chamada a `TabsAnim.animateTabTransition`.
-
----
-
-## Tabs.reorder.js
-
-Drag-and-drop completo: placeholder, ghost, reordena DOM + webviews.
-
-**Mudar sensibilidade do drag:** thresholds dentro de `setupTabDragAndDrop`.
-
----
-
-## Tabs.visibility.js
-
-| Função | Comportamento |
-|--------|---------------|
-| `updateTabsBarVisibility()` | Esconde `.tabs-bar` se só 1 home tab; aplica `.many-tabs` |
-| `updateLastTabDot()` | Insere botão "+" (`.new-tab-dot`) em cada aba |
-| Listener `resize` | Recalcula `.many-tabs` |
-
-**Mudar quando esconder a barra:** condição em `updateTabsBarVisibility()` (linha com `home-tab`).
-
-**Mudar limiar de 15%:** cálculo `activeTabPercentage < 15` em `updateTabsBarVisibility`.
+| API | Papel |
+|-----|--------|
+| `hydrateWebview` / `hydrateTab` | Carrega `pendingSrc` / `discardedUrl` |
+| `warmDeferredQueue` | Fila sequencial pós-restauração |
+| `maybeDiscardCold` | `about:blank` em abas frias quando há > `MAX_WARM` (8) |
+| `markActive` | Timestamp para política de discard |
 
 ---
 
@@ -135,18 +115,31 @@ Drag-and-drop completo: placeholder, ghost, reordena DOM + webviews.
 
 ```html
 <div class="tabs-bar">
+  <div class="tab-groups-slot">…</div>
   <div class="tabs" id="tabs"></div>
 </div>
 ```
-
-Abas criadas dinamicamente dentro de `#tabs`.
 
 ---
 
 ## Atalhos relacionados
 
-`shortcuts/actions/tab-controls/` → Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab (todos `global`).
+`shortcuts/actions/tab-controls/` → Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab.
 
 ## Desempenho opcional
 
-Com `body.perf-render-all` (Tela Editar), webviews inativos permanecem pintados — ver [`Editar.MD`](./Editar.MD) e [`Browser.MD`](./Browser.MD).
+`body.perf-render-all` — ver [`Editar.MD`](./Editar.MD). Default **off**; com muitas abas o custo sobe rápido.
+
+**Perf P2:** blur de aba só na **barra** + **aba ativa** (inativas são sólido); `body.perf-window-idle` pausa LED; RGB pausa só com `perf-window-hidden`.
+
+**Perf P3:** `activateTab` usa refs da aba/webview ativa; `capturePage` no switch deferido (~320ms) e só se cache frio.
+
+**Perf P4 (TabWarmth):** `deferLoad` + fila; discard frio (>8). Crossfade de tela só com opacity (sem `filter:blur` no guest — isso travava a barra).
+
+## Ver também
+
+- [`Janelas.MD`](./Janelas.MD) — Multijanelas, detach, transfer, split, `tabTransition`
+- [`Browser.MD`](./Browser.MD) — CSS de crossfade de webviews
+- [`core.MD`](./core.MD) — AppShell New Tab ↔ browser
+- [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD)
+- [`Top.MD`](./Top.MD) — Layout Topo Global

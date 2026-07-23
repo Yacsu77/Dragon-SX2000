@@ -1,270 +1,372 @@
 /**
  * Reordenação de abas por drag-and-drop.
+ * Um único pointermove/up no document (não por aba) + processamento 1× por frame.
  */
 (function () {
-function setupTabDragAndDrop(tabElement) {
-  let isDragging = false;
-  let hasStartedDrag = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let mouseOffsetX = 0;
-  let mouseOffsetY = 0;
-  let currentIndex = 0;
-  let tabsContainer = null;
-  let placeholder = null;
-  let dragGhost = null; // Clone visual com informações da aba
-  let tabsOrder = []; // Array que mantém a ordem das abas
-  const DRAG_THRESHOLD = 5; // Pixels que o mouse precisa se mover para iniciar o drag
-  
-  const handleMouseDown = (e) => {
-    // Não iniciar drag se clicar no botão de fechar
-    if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
+  const DRAG_THRESHOLD = 5;
+
+  /** @type {null | object} */
+  let session = null;
+  let listenersBound = false;
+  let moveRaf = 0;
+  let pendingMoveEvent = null;
+
+  function ensureGlobalListeners() {
+    if (listenersBound) return;
+    listenersBound = true;
+    document.addEventListener('pointermove', onGlobalPointerMove, { passive: true });
+    document.addEventListener('pointerup', onGlobalPointerUp);
+    document.addEventListener('pointercancel', onGlobalPointerUp);
+  }
+
+  function onGlobalPointerMove(e) {
+    if (!session) return;
+    pendingMoveEvent = e;
+    if (moveRaf) return;
+    moveRaf = requestAnimationFrame(() => {
+      moveRaf = 0;
+      const ev = pendingMoveEvent;
+      pendingMoveEvent = null;
+      if (ev && session) processPointerMove(ev);
+    });
+  }
+
+  function onGlobalPointerUp(e) {
+    if (!session) return;
+    if (
+      session.activePointerId != null &&
+      e.pointerId != null &&
+      e.pointerId !== session.activePointerId &&
+      session.hasStartedDrag
+    ) {
       return;
     }
-    
-    // Não iniciar drag se clicar no ponto de nova aba
-    if (e.target.classList.contains('new-tab-dot') || e.target.closest('.new-tab-dot')) {
-      return;
+    finishPointerUp();
+  }
+
+  function clearInlineDragStyles(tabElement) {
+    tabElement.classList.remove('dragging');
+    tabElement.style.zIndex = '';
+    tabElement.style.position = '';
+    tabElement.style.left = '';
+    tabElement.style.top = '';
+    tabElement.style.width = '';
+    tabElement.style.height = '';
+    tabElement.style.pointerEvents = '';
+    tabElement.style.opacity = '';
+    tabElement.style.visibility = '';
+  }
+
+  function positionGhost(s, clientX, clientY) {
+    if (!s.dragGhost) return;
+    s.dragGhost.style.left = `${clientX - s.mouseOffsetX}px`;
+    s.dragGhost.style.top = `${clientY - s.mouseOffsetY}px`;
+  }
+
+  function ensureDragShield(s, pointerId) {
+    if (s.dragShield) return s.dragShield;
+    s.dragShield = document.createElement('div');
+    s.dragShield.className = 'janelas-drag-shield';
+    s.dragShield.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(s.dragShield);
+    if (pointerId != null && s.dragShield.setPointerCapture) {
+      try {
+        s.dragShield.setPointerCapture(pointerId);
+        s.activePointerId = pointerId;
+      } catch (_) {
+        /* ignore */
+      }
     }
-    
-    // Preparar para possível drag, mas não iniciar ainda
-    hasStartedDrag = false;
-    tabsContainer = tabElement.parentElement;
-    
-    // Criar array com a ordem inicial de todas as abas
-    tabsOrder = Array.from(tabsContainer.children)
-      .filter(child => child.classList.contains('tab'))
-      .map(tab => tab);
-    
-    currentIndex = tabsOrder.indexOf(tabElement);
-    
-    const rect = tabElement.getBoundingClientRect();
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    // Usar offset menor para aba ficar mais próxima do cursor (centro da aba)
-    mouseOffsetX = rect.width / 2;
-    mouseOffsetY = rect.height / 2;
-    
-    e.preventDefault();
-  };
-  
-  const handleMouseMove = (e) => {
-    // Se ainda não começou o drag, verificar se passou do threshold
-    if (!hasStartedDrag && tabsContainer) {
-      const deltaX = Math.abs(e.clientX - dragStartX);
-      const deltaY = Math.abs(e.clientY - dragStartY);
+    return s.dragShield;
+  }
+
+  function removeDragShield(s) {
+    if (!s?.dragShield) return;
+    if (s.activePointerId != null && s.dragShield.releasePointerCapture) {
+      try {
+        s.dragShield.releasePointerCapture(s.activePointerId);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    s.activePointerId = null;
+    s.dragShield.remove();
+    s.dragShield = null;
+  }
+
+  function startOsGhost(s, tabId, mode) {
+    const tabElement = s.tabElement;
+    const titleSpan = tabElement.querySelector('.tab-title');
+    const faviconImg = tabElement.querySelector('.tab-icon img');
+    const thumb = window.JanelasNS?.ThumbnailCache?.getCached?.(tabId) || null;
+    const nextMode = mode || 'tab';
+    s.usingOsGhost = !!window.JanelasNS?.OsDragGhost?.start?.({
+      title: titleSpan?.textContent?.trim() || 'Aba',
+      favicon: faviconImg?.src || null,
+      thumbnail: thumb,
+      mode: nextMode,
+      width: nextMode === 'detach' ? 168 : s.ghostWidth,
+      height: nextMode === 'detach' ? 128 : s.ghostHeight,
+      offsetX: s.mouseOffsetX,
+      offsetY: s.mouseOffsetY,
+    });
+  }
+
+  function syncOsGhostMode(s, clientX, clientY) {
+    const hovering = Boolean(
+      window.JanelasNS?.TransferController?.isHoveringTarget?.()
+    );
+    const armed = Boolean(window.JanelasNS?.DetachController?.isArmed?.());
+    const outside = Boolean(
+      window.JanelasNS?.DetachThreshold?.isOutsideViewport?.(clientX, clientY)
+    );
+    const inLocalTabs = Boolean(
+      window.JanelasNS?.DetachThreshold?.isInLocalTabsZone?.(clientX, clientY)
+    );
+
+    let mode = 'tab';
+    if (hovering) mode = 'transfer';
+    else if (armed) mode = 'detach';
+
+    const needOs = !inLocalTabs || outside || hovering;
+    const tabId = s.tabElement.dataset.id;
+    const titleSpan = s.tabElement.querySelector('.tab-title');
+    const faviconImg = s.tabElement.querySelector('.tab-icon img');
+    const payload = {
+      thumbnail: window.JanelasNS?.ThumbnailCache?.getCached?.(tabId) || null,
+      title: titleSpan?.textContent?.trim() || 'Aba',
+      favicon: faviconImg?.src || null,
+      width: mode === 'detach' ? 168 : s.ghostWidth,
+      height: mode === 'detach' ? 128 : s.ghostHeight,
+    };
+
+    if (needOs) {
+      if (!s.usingOsGhost) startOsGhost(s, tabId, mode);
+      else window.JanelasNS?.OsDragGhost?.setMode?.(mode, payload);
+      if (s.dragGhost) {
+        s.dragGhost.style.opacity = '0';
+        s.dragGhost.style.pointerEvents = 'none';
+      }
+    } else {
+      if (s.usingOsGhost) endOsGhost(s);
+      if (s.dragGhost) {
+        s.dragGhost.style.opacity = '1';
+      }
+    }
+  }
+
+  function endOsGhost(s) {
+    if (!s?.usingOsGhost) return;
+    window.JanelasNS?.OsDragGhost?.end?.();
+    s.usingOsGhost = false;
+  }
+
+  function beginDragVisual(s, e) {
+    const tabElement = s.tabElement;
+    window.JanelasNS?.TabPreview?.hide?.();
+    window.JanelasNS?.DetachController?.reset?.();
+    window.JanelasNS?.ThumbnailCache?.pause?.();
+    window.JanelasNS?.TransferController?.beginDrag?.();
+    ensureDragShield(s, e.pointerId != null ? e.pointerId : s.activePointerId);
+
+    tabElement.classList.add('dragging');
+
+    s.dragGhost = document.createElement('div');
+    s.dragGhost.classList.add('tab-drag-ghost');
+
+    const iconSpan = tabElement.querySelector('.tab-icon');
+    const titleSpan = tabElement.querySelector('.tab-title');
+
+    const ghostIcon = document.createElement('span');
+    ghostIcon.classList.add('tab-icon');
+    if (iconSpan) {
+      const img = iconSpan.querySelector('img');
+      if (img) ghostIcon.appendChild(img.cloneNode(true));
+      else ghostIcon.textContent = iconSpan.textContent;
+    }
+
+    const ghostTitle = document.createElement('span');
+    ghostTitle.classList.add('tab-title');
+    if (titleSpan) ghostTitle.textContent = titleSpan.textContent;
+
+    s.dragGhost.appendChild(ghostIcon);
+    s.dragGhost.appendChild(ghostTitle);
+    s.dragGhost.style.width = `${s.ghostWidth}px`;
+    s.dragGhost.style.height = `${s.ghostHeight}px`;
+    s.dragGhost.style.opacity = '1';
+    positionGhost(s, e.clientX, e.clientY);
+    document.body.appendChild(s.dragGhost);
+
+    syncOsGhostMode(s, e.clientX, e.clientY);
+
+    s.placeholder = document.createElement('div');
+    s.placeholder.classList.add('tab-placeholder');
+    s.placeholder.style.width = `${s.ghostWidth}px`;
+    s.placeholder.style.height = `${s.ghostHeight}px`;
+    s.tabsContainer.insertBefore(s.placeholder, tabElement);
+    s.tabsContainer.classList.add('dragging-tabs');
+  }
+
+  /** Uma passada de getBoundingClientRect por aba (por frame). */
+  function buildVisibleTabMetrics(s, containerRect) {
+    const tabElement = s.tabElement;
+    return s.tabsOrder
+      .filter((tab) => tab !== tabElement)
+      .map((tab) => {
+        const rect = tab.getBoundingClientRect();
+        return {
+          element: tab,
+          left: rect.left - containerRect.left,
+          right: rect.right - containerRect.left,
+          mid: (rect.left + rect.right) / 2 - containerRect.left,
+          orderIndex: s.tabsOrder.indexOf(tab),
+        };
+      })
+      .sort((a, b) => a.left - b.left);
+  }
+
+  function processPointerMove(e) {
+    const s = session;
+    if (!s) return;
+
+    if (!s.hasStartedDrag && s.tabsContainer) {
+      const deltaX = Math.abs(e.clientX - s.dragStartX);
+      const deltaY = Math.abs(e.clientY - s.dragStartY);
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
+
       if (distance > DRAG_THRESHOLD) {
-        // Iniciar o drag
-        hasStartedDrag = true;
-        isDragging = true;
-        
-        const rect = tabElement.getBoundingClientRect();
-        const containerRect = tabsContainer.getBoundingClientRect();
-        
-        // Adicionar classe de arraste
-        tabElement.classList.add('dragging');
-        tabElement.style.zIndex = '1000';
-        tabElement.style.position = 'fixed';
-        tabElement.style.left = `${e.clientX - mouseOffsetX}px`;
-        // Manter a aba no mesmo nível Y ou ligeiramente acima (nunca abaixo)
-        const originalTop = containerRect.top;
-        const maxTop = originalTop - 5; // Permitir apenas 5px acima
-        tabElement.style.top = `${Math.max(maxTop, e.clientY - mouseOffsetY)}px`;
-        tabElement.style.width = `${rect.width}px`;
-        tabElement.style.pointerEvents = 'none';
-        // Esconder o conteúdo da aba original
-        tabElement.style.opacity = '0.3';
-        
-        // Criar clone visual (ghost) com informações da aba
-        dragGhost = document.createElement('div');
-        dragGhost.classList.add('tab-drag-ghost');
-        
-        // Copiar informações da aba
-        const iconSpan = tabElement.querySelector('.tab-icon');
-        const titleSpan = tabElement.querySelector('.tab-title');
-        
-        // Criar estrutura do clone
-        const ghostIcon = document.createElement('span');
-        ghostIcon.classList.add('tab-icon');
-        if (iconSpan) {
-          if (iconSpan.querySelector('img')) {
-            const img = iconSpan.querySelector('img').cloneNode(true);
-            ghostIcon.appendChild(img);
-          } else {
-            ghostIcon.textContent = iconSpan.textContent;
-          }
-        }
-        
-        const ghostTitle = document.createElement('span');
-        ghostTitle.classList.add('tab-title');
-        if (titleSpan) {
-          ghostTitle.textContent = titleSpan.textContent;
-        }
-        
-        dragGhost.appendChild(ghostIcon);
-        dragGhost.appendChild(ghostTitle);
-        
-        // Posicionar o clone
-        dragGhost.style.left = `${e.clientX - mouseOffsetX}px`;
-        dragGhost.style.top = `${Math.max(maxTop, e.clientY - mouseOffsetY)}px`;
-        dragGhost.style.width = `${rect.width}px`;
-        dragGhost.style.height = `${rect.height}px`;
-        
-        document.body.appendChild(dragGhost);
-        
-        // Criar placeholder (bolha)
-        placeholder = document.createElement('div');
-        placeholder.classList.add('tab-placeholder');
-        placeholder.style.width = `${rect.width}px`;
-        placeholder.style.height = `${rect.height}px`;
-        tabsContainer.insertBefore(placeholder, tabElement);
-        
-        // Adicionar classe ao container para efeitos nas outras abas
-        tabsContainer.classList.add('dragging-tabs');
+        s.hasStartedDrag = true;
+        s.isDragging = true;
+        beginDragVisual(s, e);
       } else {
-        // Ainda não passou do threshold, não fazer nada
         return;
       }
     }
-    
-    if (!isDragging) return;
-    
-    // Calcular posição do mouse relativa ao container de abas
+
+    if (!s.isDragging) return;
+
+    const tabElement = s.tabElement;
+    const tabsContainer = s.tabsContainer;
     const containerRect = tabsContainer.getBoundingClientRect();
     const mouseX = e.clientX - containerRect.left;
-    
-    // Atualizar posição da aba arrastada seguindo o mouse (X) e limitando Y
-    tabElement.style.left = `${e.clientX - mouseOffsetX}px`;
-    // Manter a aba no mesmo nível Y ou ligeiramente acima (nunca abaixo)
-    const originalTop = containerRect.top;
-    const maxTop = originalTop - 5; // Permitir apenas 5px acima
-    const calculatedTop = e.clientY - mouseOffsetY;
-    const finalTop = Math.max(maxTop, calculatedTop);
-    tabElement.style.top = `${finalTop}px`;
-    
-    // Atualizar posição do clone visual (ghost)
-    if (dragGhost) {
-      dragGhost.style.left = `${e.clientX - mouseOffsetX}px`;
-      dragGhost.style.top = `${finalTop}px`;
+    const tabId = tabElement.dataset.id;
+
+    positionGhost(s, e.clientX, e.clientY);
+
+    const hoveringTransfer = Boolean(
+      window.JanelasNS?.TransferController?.isHoveringTarget?.()
+    );
+    const inLocalTabs = Boolean(
+      window.JanelasNS?.DetachThreshold?.isInLocalTabsZone?.(e.clientX, e.clientY)
+    );
+
+    if (window.JanelasNS?.DetachController) {
+      window.JanelasNS.DetachController.onDragMove({
+        clientX: e.clientX,
+        clientY: e.clientY,
+        tabId,
+        ghostEl: s.dragGhost,
+        hoveringTransfer,
+      });
     }
-    
-    // Obter todas as abas visíveis (exceto a arrastada) ordenadas por posição visual atual
-    const visibleTabs = tabsOrder
-      .filter(tab => tab !== tabElement)
-      .map(tab => ({
-        element: tab,
-        left: tab.getBoundingClientRect().left - containerRect.left,
-        right: tab.getBoundingClientRect().right - containerRect.left,
-        mid: (tab.getBoundingClientRect().left + tab.getBoundingClientRect().right) / 2 - containerRect.left,
-        orderIndex: tabsOrder.indexOf(tab)
-      }))
-      .sort((a, b) => a.left - b.left);
-    
-    // Calcular novo índice baseado na posição X do mouse
-    let newIndex = currentIndex;
-    
+
+    if (window.JanelasNS?.TransferController?.onDragMove) {
+      window.JanelasNS.TransferController.onDragMove({
+        tabId,
+        ghostEl: s.dragGhost,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      });
+    }
+
+    syncOsGhostMode(s, e.clientX, e.clientY);
+
+    if (!inLocalTabs || hoveringTransfer) {
+      if (s.placeholder) s.placeholder.classList.add('tab-placeholder--hidden');
+      return;
+    }
+
+    if (s.placeholder) s.placeholder.classList.remove('tab-placeholder--hidden');
+
+    const visibleTabs = buildVisibleTabMetrics(s, containerRect);
+    let newIndex = s.currentIndex;
+
     if (visibleTabs.length === 0) {
       newIndex = 0;
+    } else if (mouseX < visibleTabs[0].left) {
+      newIndex = 0;
+    } else if (mouseX > visibleTabs[visibleTabs.length - 1].right) {
+      newIndex = s.tabsOrder.length - 1;
     } else {
-      // Verificar se o mouse está antes da primeira aba
-      if (mouseX < visibleTabs[0].left) {
-        newIndex = 0;
-      }
-      // Verificar se o mouse está depois da última aba
-      else if (mouseX > visibleTabs[visibleTabs.length - 1].right) {
-        newIndex = tabsOrder.length - 1;
-      }
-      // Verificar sobre qual aba o mouse está
-      else {
-        for (let i = 0; i < visibleTabs.length; i++) {
-          const tab = visibleTabs[i];
-          
-          // Se o mouse está sobre esta aba
-          if (mouseX >= tab.left && mouseX <= tab.right) {
-            // Usar o índice original no array tabsOrder
-            if (mouseX < tab.mid) {
-              newIndex = tab.orderIndex;
-            } else {
-              newIndex = tab.orderIndex + 1;
-            }
-            break;
-          }
-          // Se o mouse está entre duas abas
-          else if (i < visibleTabs.length - 1 && mouseX > tab.right && mouseX < visibleTabs[i + 1].left) {
-            newIndex = tab.orderIndex + 1;
-            break;
-          }
+      for (let i = 0; i < visibleTabs.length; i++) {
+        const tab = visibleTabs[i];
+        if (mouseX >= tab.left && mouseX <= tab.right) {
+          newIndex = mouseX < tab.mid ? tab.orderIndex : tab.orderIndex + 1;
+          break;
+        }
+        if (
+          i < visibleTabs.length - 1 &&
+          mouseX > tab.right &&
+          mouseX < visibleTabs[i + 1].left
+        ) {
+          newIndex = tab.orderIndex + 1;
+          break;
         }
       }
     }
-    
-    // Limitar newIndex ao range válido
-    newIndex = Math.max(0, Math.min(newIndex, tabsOrder.length - 1));
-    
-    // Sistema de array: reorganizar o array e aplicar ao DOM em tempo real
-    if (newIndex !== currentIndex) {
-      // Remover a aba arrastada do array
-      tabsOrder.splice(currentIndex, 1);
-      
-      // Inserir na nova posição
-      tabsOrder.splice(newIndex, 0, tabElement);
-      
-      // Atualizar currentIndex
-      currentIndex = newIndex;
-      
-      // Aplicar a nova ordem ao DOM em tempo real
-      // Remover placeholder se existir
-      if (placeholder && placeholder.parentNode) {
-        placeholder.remove();
+
+    newIndex = Math.max(0, Math.min(newIndex, s.tabsOrder.length - 1));
+
+    if (newIndex !== s.currentIndex) {
+      s.tabsOrder.splice(s.currentIndex, 1);
+      s.tabsOrder.splice(newIndex, 0, tabElement);
+      s.currentIndex = newIndex;
+
+      if (s.placeholder && s.placeholder.parentNode) {
+        s.placeholder.remove();
       }
-      
-      // Criar placeholder na nova posição
-      if (!placeholder) {
-        placeholder = document.createElement('div');
-        placeholder.classList.add('tab-placeholder');
-        const rect = tabElement.getBoundingClientRect();
-        placeholder.style.width = `${rect.width}px`;
-        placeholder.style.height = `${rect.height}px`;
+
+      if (!s.placeholder) {
+        s.placeholder = document.createElement('div');
+        s.placeholder.classList.add('tab-placeholder');
+        s.placeholder.style.width = `${s.ghostWidth}px`;
+        s.placeholder.style.height = `${s.ghostHeight}px`;
       }
-      
-      // Inserir placeholder na posição correta
+
       if (newIndex === 0) {
-        tabsContainer.insertBefore(placeholder, tabsContainer.firstChild);
-      } else if (newIndex < tabsOrder.length - 1) {
-        const nextTab = tabsOrder[newIndex + 1];
+        tabsContainer.insertBefore(s.placeholder, tabsContainer.firstChild);
+      } else if (newIndex < s.tabsOrder.length - 1) {
+        const nextTab = s.tabsOrder[newIndex + 1];
         if (nextTab && nextTab.parentNode === tabsContainer) {
-          tabsContainer.insertBefore(placeholder, nextTab);
+          tabsContainer.insertBefore(s.placeholder, nextTab);
         } else {
-          tabsContainer.appendChild(placeholder);
+          tabsContainer.appendChild(s.placeholder);
         }
       } else {
-        tabsContainer.appendChild(placeholder);
+        tabsContainer.appendChild(s.placeholder);
       }
-      
-      // Reorganizar todas as abas no DOM de acordo com o array
-      tabsOrder.forEach((tab, index) => {
+
+      s.tabsOrder.forEach((tab, index) => {
         if (tab !== tabElement && tab.parentNode === tabsContainer) {
           const currentPos = Array.from(tabsContainer.children).indexOf(tab);
           if (currentPos !== index) {
-            // Aplicar transição suave
             if (!tab.style.transition || !tab.style.transition.includes('transform')) {
               tab.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             }
-            
-            // Encontrar onde inserir
+
             if (index === 0) {
-              if (tabsContainer.firstChild !== tab && tabsContainer.firstChild !== placeholder) {
+              if (
+                tabsContainer.firstChild !== tab &&
+                tabsContainer.firstChild !== s.placeholder
+              ) {
                 tabsContainer.insertBefore(tab, tabsContainer.firstChild);
               }
             } else {
-              // Encontrar o item anterior no array que já está no DOM
               let referenceNode = null;
               for (let i = index - 1; i >= 0; i--) {
-                const prevTab = tabsOrder[i];
-                if (prevTab === placeholder && placeholder.parentNode) {
-                  referenceNode = placeholder.nextSibling;
+                const prevTab = s.tabsOrder[i];
+                if (prevTab === s.placeholder && s.placeholder.parentNode) {
+                  referenceNode = s.placeholder.nextSibling;
                   break;
                 } else if (prevTab !== tabElement && prevTab.parentNode === tabsContainer) {
                   referenceNode = prevTab.nextSibling;
@@ -281,43 +383,112 @@ function setupTabDragAndDrop(tabElement) {
         }
       });
     }
-    
-    const tabRect = tabElement.getBoundingClientRect();
-    const tabCenterX = tabRect.left + tabRect.width / 2;
 
     if (window.TabsAnim) {
-      window.TabsAnim.applyDragEffects(tabsContainer, tabElement, tabCenterX);
+      window.TabsAnim.applyDragEffects(tabsContainer, tabElement, e.clientX);
     }
-  };
-  
-  const handleMouseUp = () => {
-    // Se não iniciou o drag, permitir o clique normal
-    if (!hasStartedDrag) {
-      tabsContainer = null;
+  }
+
+  function cleanupSessionUi(s, handled) {
+    if (!s) return;
+    const tabElement = s.tabElement;
+    const tabsContainer = s.tabsContainer;
+
+    if (s.placeholder) {
+      if (s.placeholder.parentNode && !handled && tabsContainer) {
+        tabsContainer.insertBefore(tabElement, s.placeholder);
+      }
+      s.placeholder.remove();
+      s.placeholder = null;
+    }
+
+    if (s.dragGhost) {
+      s.dragGhost.remove();
+      s.dragGhost = null;
+    }
+
+    removeDragShield(s);
+    endOsGhost(s);
+    window.JanelasNS?.WindowBridge?.clearDragHover?.();
+    window.JanelasNS?.DropIndicator?.hide?.();
+    window.JanelasNS?.DetachController?.reset?.();
+    window.JanelasNS?.TransferController?.endDrag?.();
+    window.JanelasNS?.ThumbnailCache?.resume?.();
+    clearInlineDragStyles(tabElement);
+
+    if (tabsContainer) {
+      tabsContainer.classList.remove('dragging-tabs');
+      if (window.TabsAnim) {
+        window.TabsAnim.clearDragEffects(tabsContainer);
+      }
+    }
+
+    if (window.TabsVisibility) {
+      window.TabsVisibility.scheduleVisibilityUpdate();
+    }
+  }
+
+  async function finishPointerUp() {
+    const s = session;
+    if (!s) return;
+
+    if (!s.hasStartedDrag) {
+      session = null;
+      pendingMoveEvent = null;
       return;
     }
-    
-    if (!isDragging) return;
-    
-    isDragging = false;
-    hasStartedDrag = false;
-    
-    // A aba já está na posição correta no array tabsOrder
-    // Apenas remover placeholder e inserir a aba arrastada no lugar
-    if (placeholder && placeholder.parentNode) {
-      tabsContainer.insertBefore(tabElement, placeholder);
-      placeholder.remove();
+
+    if (!s.isDragging) {
+      session = null;
+      return;
     }
-    
-    // Garantir que todas as abas estejam na ordem correta do array
-    tabsOrder.forEach((tab, index) => {
+
+    s.isDragging = false;
+    s.hasStartedDrag = false;
+    // Impede novos moves enquanto await transfer/detach
+    session = null;
+    pendingMoveEvent = null;
+
+    const tabElement = s.tabElement;
+    const tabsContainer = s.tabsContainer;
+    const tabId = tabElement.dataset.id;
+    let handled = false;
+
+    if (window.JanelasNS?.TransferController?.onDragEnd) {
+      try {
+        handled = await window.JanelasNS.TransferController.onDragEnd({ tabId });
+      } catch (_) {
+        handled = false;
+      }
+    }
+
+    if (!handled && window.JanelasNS?.DetachController) {
+      try {
+        handled = await window.JanelasNS.DetachController.onDragEnd({ tabId });
+      } catch (_) {
+        handled = false;
+      }
+    }
+
+    if (handled) {
+      cleanupSessionUi(s, true);
+      return;
+    }
+
+    if (s.placeholder && s.placeholder.parentNode && tabsContainer) {
+      tabsContainer.insertBefore(tabElement, s.placeholder);
+      s.placeholder.remove();
+      s.placeholder = null;
+    }
+
+    s.tabsOrder.forEach((tab, index) => {
       if (tab !== tabElement && tab.parentNode === tabsContainer) {
         const currentPos = Array.from(tabsContainer.children).indexOf(tab);
         if (currentPos !== index) {
           if (index === 0) {
             tabsContainer.insertBefore(tab, tabsContainer.firstChild);
           } else {
-            const prevTab = tabsOrder[index - 1];
+            const prevTab = s.tabsOrder[index - 1];
             if (prevTab && prevTab.parentNode === tabsContainer) {
               tabsContainer.insertBefore(tab, prevTab.nextSibling);
             }
@@ -325,24 +496,23 @@ function setupTabDragAndDrop(tabElement) {
         }
       }
     });
-    
-    // Reordenar webviews correspondentes usando o array tabsOrder
-    const finalIndex = tabsOrder.indexOf(tabElement);
+
+    const finalIndex = s.tabsOrder.indexOf(tabElement);
     if (finalIndex !== -1) {
-      const tabId = tabElement.dataset.id;
       const webview = document.querySelector(`webview[data-id="${tabId}"]`);
       const browserContainer = document.getElementById('browser');
-      
+
       if (webview && browserContainer) {
-        const webviews = Array.from(browserContainer.children).filter(child => 
-          child.tagName === 'WEBVIEW'
+        const webviews = Array.from(browserContainer.children).filter(
+          (child) => child.tagName === 'WEBVIEW'
         );
-        
-        const webviewOldIndex = webviews.findIndex(w => w.dataset.id === tabId);
+
+        const webviewOldIndex = webviews.findIndex((w) => w.dataset.id === tabId);
         if (webviewOldIndex !== -1 && webviewOldIndex !== finalIndex) {
-          const targetWebviewIndex = finalIndex < webviews.length ? finalIndex : webviews.length - 1;
+          const targetWebviewIndex =
+            finalIndex < webviews.length ? finalIndex : webviews.length - 1;
           const targetWebview = webviews[targetWebviewIndex];
-          
+
           if (targetWebview && webview !== targetWebview) {
             if (finalIndex > webviewOldIndex) {
               browserContainer.insertBefore(webview, targetWebview.nextSibling);
@@ -353,45 +523,62 @@ function setupTabDragAndDrop(tabElement) {
         }
       }
     }
-    
-    // Remover placeholder
-    if (placeholder) {
-      placeholder.remove();
-      placeholder = null;
-    }
-    
-    // Remover clone visual (ghost)
-    if (dragGhost) {
-      dragGhost.remove();
-      dragGhost = null;
-    }
-    
-    // Limpar estilos de arraste
-    tabElement.classList.remove('dragging');
-    tabElement.style.zIndex = '';
-    tabElement.style.position = '';
-    tabElement.style.left = '';
-    tabElement.style.top = '';
-    tabElement.style.width = '';
-    tabElement.style.pointerEvents = '';
-    tabElement.style.opacity = '';
-    
-    if (window.TabsAnim) {
-      window.TabsAnim.clearDragEffects(tabsContainer);
-    }
 
-    if (window.TabsVisibility) {
-      window.TabsVisibility.scheduleVisibilityUpdate();
-    }
+    cleanupSessionUi(s, false);
+  }
 
-    tabsContainer = null;
-  };
-  
-  // Adicionar event listeners
-  tabElement.addEventListener('mousedown', handleMouseDown);
-  document.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
-}
+  function setupTabDragAndDrop(tabElement) {
+    if (!tabElement || tabElement.dataset.tabDragBound === '1') return;
+    tabElement.dataset.tabDragBound = '1';
+    ensureGlobalListeners();
+
+    tabElement.addEventListener('pointerdown', (e) => {
+      if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
+        return;
+      }
+      if (e.target.classList.contains('new-tab-dot') || e.target.closest('.new-tab-dot')) {
+        return;
+      }
+      if (e.button != null && e.button !== 0) return;
+
+      // Novo pointerdown cancela sessão pendente sem drag
+      if (session && !session.hasStartedDrag) {
+        session = null;
+      }
+      if (session?.isDragging) return;
+
+      const tabsContainer = tabElement.parentElement;
+      if (!tabsContainer) return;
+
+      const tabsOrder = Array.from(tabsContainer.children)
+        .filter((child) => child.classList.contains('tab'))
+        .map((tab) => tab);
+
+      const rect = tabElement.getBoundingClientRect();
+
+      session = {
+        tabElement,
+        tabsContainer,
+        tabsOrder,
+        currentIndex: tabsOrder.indexOf(tabElement),
+        isDragging: false,
+        hasStartedDrag: false,
+        dragStartX: e.clientX,
+        dragStartY: e.clientY,
+        mouseOffsetX: rect.width / 2,
+        mouseOffsetY: rect.height / 2,
+        ghostWidth: rect.width,
+        ghostHeight: rect.height,
+        placeholder: null,
+        dragGhost: null,
+        dragShield: null,
+        activePointerId: e.pointerId != null ? e.pointerId : null,
+        usingOsGhost: false,
+      };
+
+      e.preventDefault();
+    });
+  }
 
   window.TabsReorder = { setupTabDragAndDrop };
   window.setupTabDragAndDrop = setupTabDragAndDrop;

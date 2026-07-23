@@ -1,0 +1,456 @@
+.user-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  color: #fff;
+  font-family: "Helvetica Neue", "Avenir Next", "Segoe UI", sans-serif;
+  padding: 48px 24px;
+  box-sizing: border-box;
+  background: #07090d;
+}
+
+.user-gate-overlay.is-open {
+  display: flex;
+}
+
+/* Parallax minimalista */
+.user-gate-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.user-gate-bg__layer {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.45;
+  will-change: transform;
+}
+
+.user-gate-bg__layer--a {
+  width: 55vw;
+  height: 55vw;
+  left: -12%;
+  top: -18%;
+  background: radial-gradient(circle, rgba(70, 120, 160, 0.55), transparent 70%);
+  animation: ugDriftA 18s ease-in-out infinite alternate;
+}
+
+.user-gate-bg__layer--b {
+  width: 48vw;
+  height: 48vw;
+  right: -14%;
+  bottom: -20%;
+  background: radial-gradient(circle, rgba(40, 70, 100, 0.5), transparent 70%);
+  animation: ugDriftB 22s ease-in-out infinite alternate;
+}
+
+.user-gate-bg__layer--c {
+  width: 30vw;
+  height: 30vw;
+  left: 40%;
+  top: 35%;
+  background: radial-gradient(circle, rgba(120, 140, 160, 0.22), transparent 70%);
+  animation: ugDriftC 14s ease-in-out infinite alternate;
+}
+
+.user-gate-bg__glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 55%),
+    linear-gradient(180deg, rgba(7, 9, 13, 0.2), rgba(7, 9, 13, 0.85));
+}
+
+@keyframes ugDriftA {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6%, 8%, 0) scale(1.08); }
+}
+
+@keyframes ugDriftB {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-7%, -5%, 0) scale(1.1); }
+}
+
+@keyframes ugDriftC {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(4%, -6%, 0); }
+}
+
+.user-gate {
+  width: min(1100px, 100%);
+  text-align: center;
+  position: relative;
+  min-height: 420px;
+  z-index: 1;
+}
+
+.user-gate__brand {
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  letter-spacing: 0.28em;
+  font-weight: 650;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  text-indent: 0.28em;
+}
+
+.user-gate__title {
+  margin: 0 0 2.25rem;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.user-gate__status {
+  margin: -1.25rem 0 1.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+}
+
+.user-gate__profiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2rem 2.25rem;
+}
+
+.user-gate__tile {
+  position: relative;
+  width: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, filter 220ms ease;
+}
+
+.user-gate__tile-main {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: 100%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-gate__tile:hover .user-gate__tile-face,
+.user-gate__tile-main:focus-visible .user-gate__tile-face {
+  border-color: #fff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.user-gate__tile-main:focus-visible {
+  outline: none;
+}
+
+.user-gate__tile-face {
+  width: 148px;
+  height: 148px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #2f3b4a, #172029);
+  border: 3px solid transparent;
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 280ms ease;
+  font-size: 3.2rem;
+  font-weight: 600;
+  color: #f5f5f5;
+}
+
+.user-gate__tile-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-gate__tile--add {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.user-gate__tile--add .user-gate__tile-face {
+  background: rgba(255, 255, 255, 0.04);
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 4rem;
+  font-weight: 300;
+}
+
+.user-gate__tile--add:hover .user-gate__tile-face {
+  border-color: #fff;
+  color: #fff;
+}
+
+.user-gate__tile-nick {
+  margin: 0;
+  max-width: 148px;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-gate__delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.user-gate__tile:hover .user-gate__delete {
+  opacity: 1;
+}
+
+.user-gate-overlay.is-unlocking .user-gate__tile.is-dimmed {
+  opacity: 0.28;
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+.user-gate__tile.is-unlocking {
+  transform: translateY(-18px);
+  z-index: 2;
+}
+
+.user-gate__tile.is-unlocking .user-gate__tile-face {
+  border-color: #fff;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  transform: scale(1.04);
+}
+
+.user-gate__inline-unlock {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  animation: ugUnlockIn 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes ugUnlockIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.user-gate__inline-unlock input,
+.user-gate__register input[type="text"],
+.user-gate__register input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.user-gate__enter {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  background: #3d7ea6;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-gate__enter:hover {
+  background: #4a91bc;
+}
+
+.user-gate__enter--compact {
+  padding: 0.65rem 0.8rem;
+  font-size: 0.88rem;
+}
+
+.user-gate__error {
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 0.82rem;
+}
+
+/* Cadastro dedicado */
+.user-gate__view[data-role="view-register"] {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  position: relative;
+}
+
+.user-gate__back {
+  position: absolute;
+  left: 0;
+  top: -8px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.user-gate__register {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  text-align: left;
+}
+
+.user-gate__register label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.user-gate__optional {
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+.user-gate__photo-pick {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 auto 0.5rem;
+  font-size: 0.9rem;
+}
+
+.user-gate__photo-preview {
+  width: 148px;
+  height: 148px;
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+  font-weight: 300;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 160ms ease;
+}
+
+.user-gate__photo-pick:hover .user-gate__photo-preview {
+  border-color: #fff;
+}
+
+.user-gate__photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Boot loader */
+.user-boot-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(7, 9, 13, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.user-boot-loader[hidden] {
+  display: none !important;
+}
+
+.user-boot-loader__orb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.85);
+  animation: ugSpin 0.85s linear infinite;
+}
+
+.user-boot-loader__brand {
+  font-size: 1.4rem;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  font-weight: 650;
+}
+
+.user-boot-loader__text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+}
+
+@keyframes ugSpin {
+  to { transform: rotate(360deg); }
+}
+
+.user-gate-overlay.is-booting .user-gate__view {
+  visibility: hidden;
+}
+
+@media (max-width: 640px) {
+  .user-gate__tile,
+  .user-gate__tile-face,
+  .user-gate__photo-preview {
+    width: 112px;
+  }
+
+  .user-gate__tile-face,
+  .user-gate__photo-preview {
+    height: 112px;
+  }
+
+  .user-gate__tile-face {
+    font-size: 2.4rem;
+  }
+
+  .user-gate__tile--add .user-gate__tile-face {
+    font-size: 3rem;
+  }
+
+  .user-gate__tile-nick {
+    max-width: 112px;
+    font-size: 0.92rem;
+  }
+}

@@ -30,10 +30,84 @@ let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let baseOffset = { x: 0, y: 0 };
 
+/** Wallpapers recomendados (empacotados no build via pasta UserINTer). */
+const RECOMMENDED_WALLPAPERS = Object.freeze([
+  { id: "WWP", file: "WWP.jpg", label: "WWP" },
+  { id: "WWP1", file: "WWP1.png", label: "WWP1" },
+  { id: "WWP3", file: "WWP3.jpg", label: "WWP3" },
+]);
+
+const RECOMMENDED_BASE = "../../UserINTer/Tabline/idget/Wallpaper/";
+
+function recommendedSrc(file) {
+  return `${RECOMMENDED_BASE}${encodeURIComponent(file)}`;
+}
+
+function pickRandomRecommended() {
+  return RECOMMENDED_WALLPAPERS[Math.floor(Math.random() * RECOMMENDED_WALLPAPERS.length)];
+}
+
 function setStatus(message) {
   if (statusLabel) {
     statusLabel.textContent = message;
   }
+}
+
+function getWallpaperUserId() {
+  try {
+    if (window.UserSession && typeof window.UserSession.getActiveUserId === "function") {
+      return window.UserSession.getActiveUserId() || null;
+    }
+  } catch (_) { /* ignore */ }
+  return null;
+}
+
+function getBackgroundLayers() {
+  return {
+    background: document.querySelector(".background"),
+    backgroundVideo: document.querySelector(".background-video"),
+    backgroundImage: document.querySelector(".background-image"),
+  };
+}
+
+function hideVideoLayer(backgroundVideo) {
+  if (!backgroundVideo) return;
+  backgroundVideo.pause();
+  backgroundVideo.hidden = true;
+  backgroundVideo.style.display = "none";
+}
+
+function hideImageLayer(backgroundImage) {
+  if (!backgroundImage) return;
+  backgroundImage.hidden = true;
+  backgroundImage.removeAttribute("src");
+  backgroundImage.style.display = "none";
+}
+
+function showImageLayer(backgroundImage, src) {
+  if (!backgroundImage || !src) return;
+  backgroundImage.src = src;
+  backgroundImage.hidden = false;
+  backgroundImage.style.display = "block";
+}
+
+function showVideoLayer(backgroundVideo, backgroundSource, src) {
+  if (!backgroundVideo || !backgroundSource || !src) return;
+  backgroundSource.src = src;
+  backgroundVideo.load();
+  backgroundVideo.hidden = false;
+  backgroundVideo.style.display = "block";
+  backgroundVideo.play().catch(() => {});
+}
+
+function restoreDefaultBackground() {
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
+  if (!background) return;
+  hideVideoLayer(backgroundVideo);
+  const pick = pickRandomRecommended();
+  const src = recommendedSrc(pick.file);
+  showImageLayer(backgroundImage, src);
+  background.style.backgroundImage = "none";
 }
 
 function updateTransform() {
@@ -117,25 +191,26 @@ function resetTransforms() {
 
 async function persistMediaFile() {
   if (!window.DragonWallpaper) return null;
+  const userId = getWallpaperUserId();
 
   if (currentType === "video") {
     if (currentFilePath) {
-      return window.DragonWallpaper.importFile(currentFilePath, "video");
+      return window.DragonWallpaper.importFile(currentFilePath, "video", userId);
     }
     if (currentDataUrl && currentDataUrl.startsWith("blob:")) {
       const response = await fetch(currentDataUrl);
       const buffer = await response.arrayBuffer();
-      return window.DragonWallpaper.importBlob(buffer, ".mp4");
+      return window.DragonWallpaper.importBlob(buffer, ".mp4", userId);
     }
     return null;
   }
 
   if (currentType === "image") {
     if (currentFilePath) {
-      return window.DragonWallpaper.importFile(currentFilePath, "image");
+      return window.DragonWallpaper.importFile(currentFilePath, "image", userId);
     }
     if (currentDataUrl && currentDataUrl.startsWith("data:")) {
-      return window.DragonWallpaper.importDataUrl(currentDataUrl);
+      return window.DragonWallpaper.importDataUrl(currentDataUrl, userId);
     }
   }
 
@@ -167,8 +242,9 @@ async function saveState() {
 
   if (window.DragonWallpaper) {
     try {
-      await window.DragonWallpaper.saveState(payload);
-      localStorage.removeItem("wallpaperState");
+      await window.DragonWallpaper.saveState(payload, getWallpaperUserId());
+      if (window.UserStorage) window.UserStorage.removeItem("wallpaperState");
+      else localStorage.removeItem("wallpaperState");
       if (persistedPath) {
         currentDataUrl = persistedPath;
         currentFilePath = currentType === "video" ? persistedPath : currentFilePath;
@@ -181,8 +257,13 @@ async function saveState() {
   }
 
   try {
-    localStorage.removeItem("wallpaperState");
-    localStorage.setItem("wallpaperState", JSON.stringify(payload));
+    if (window.UserStorage) {
+      window.UserStorage.removeItem("wallpaperState");
+      window.UserStorage.setItem("wallpaperState", JSON.stringify(payload));
+    } else {
+      localStorage.removeItem("wallpaperState");
+      localStorage.setItem("wallpaperState", JSON.stringify(payload));
+    }
     return true;
   } catch (error) {
     setStatus("Nao foi possivel salvar o wallpaper. Armazenamento cheio.");
@@ -190,8 +271,13 @@ async function saveState() {
   }
 }
 
+function isRestorablePayload(payload) {
+  // blob: não sobrevive a restart — payload gravado por fallback antigo é lixo.
+  return Boolean(payload && payload.dataUrl && !payload.dataUrl.startsWith("blob:"));
+}
+
 function applyPayloadToPreview(payload) {
-  if (!payload || !payload.dataUrl) return false;
+  if (!isRestorablePayload(payload)) return false;
 
   currentType = payload.type;
   currentDataUrl = payload.dataUrl;
@@ -230,32 +316,153 @@ function applyPayloadToPreview(payload) {
 
 async function loadState() {
   let payload = null;
+  const userId = getWallpaperUserId();
 
-  if (window.DragonWallpaper) {
+  if (userId && window.DragonWallpaper) {
     try {
-      payload = await window.DragonWallpaper.readState();
+      payload = await window.DragonWallpaper.readState(userId);
     } catch (error) {
       payload = null;
     }
   }
 
-  if (!payload) {
-    const saved = localStorage.getItem("wallpaperState");
-    if (!saved) return;
-    try {
-      payload = JSON.parse(saved);
-    } catch (error) {
-      return;
+  if (!payload && window.UserStorage) {
+    const saved = window.UserStorage.getItem("wallpaperState");
+    if (saved) {
+      try {
+        payload = JSON.parse(saved);
+      } catch (error) {
+        payload = null;
+      }
     }
   }
 
   try {
-    if (!applyPayloadToPreview(payload)) return;
+    if (!applyPayloadToPreview(payload)) {
+      restoreDefaultBackground();
+      return false;
+    }
     applyToBackground();
+    return true;
   } catch (error) {
-    // ignore invalid storage
+    restoreDefaultBackground();
+    return false;
   }
 }
+
+async function clearBackgroundPreview() {
+  if (previewLayer) previewLayer.innerHTML = "";
+  currentMedia = null;
+  currentDataUrl = null;
+  currentFilePath = null;
+  currentType = null;
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
+  if (background) background.style.backgroundImage = "none";
+  hideImageLayer(backgroundImage);
+  hideVideoLayer(backgroundVideo);
+  if (backgroundVideo) {
+    const source = backgroundVideo.querySelector("source");
+    if (source) source.src = "";
+  }
+}
+
+async function reloadForUser() {
+  // Sempre limpa o fundo do usuário anterior antes de carregar o próximo —
+  // evita vazar wallpaper entre perfis.
+  await clearBackgroundPreview();
+
+  let payload = null;
+  const userId = getWallpaperUserId();
+  if (!userId) {
+    restoreDefaultBackground();
+    return;
+  }
+
+  if (window.DragonWallpaper) {
+    try {
+      payload = await window.DragonWallpaper.readState(userId);
+    } catch (_) {
+      payload = null;
+    }
+  }
+  if (!payload) {
+    const saved = window.UserStorage
+      ? window.UserStorage.getItem("wallpaperState")
+      : null;
+    if (saved) {
+      try {
+        payload = JSON.parse(saved);
+      } catch (_) {
+        payload = null;
+      }
+    }
+  }
+
+  if (isRestorablePayload(payload)) {
+    try {
+      applyPayloadToPreview(payload);
+      applyToBackground();
+    } catch (_) {
+      restoreDefaultBackground();
+    }
+    return;
+  }
+
+  restoreDefaultBackground();
+}
+
+window.WallpaperUserReload = reloadForUser;
+
+async function seedDefaultIfNeeded(userId) {
+  const uid = userId || getWallpaperUserId();
+  if (!uid || !window.DragonWallpaper?.seedDefault) return null;
+  try {
+    const result = await window.DragonWallpaper.seedDefault(uid);
+    if (result?.seeded) await reloadForUser();
+    return result;
+  } catch (_) {
+    return null;
+  }
+}
+
+window.WallpaperSeedDefault = seedDefaultIfNeeded;
+
+function selectRecommended(item) {
+  if (!item) return;
+  currentType = "image";
+  currentFilePath = null;
+  currentDataUrl = recommendedSrc(item.file);
+  if (previewLayer) {
+    const img = document.createElement("img");
+    img.className = "preview-media";
+    img.alt = item.label || "Wallpaper";
+    img.src = currentDataUrl;
+    previewLayer.innerHTML = "";
+    previewLayer.appendChild(img);
+    currentMedia = img;
+  }
+  resetTransforms();
+  setStatus(`Recomendado: ${item.label || item.file}`);
+}
+
+function renderRecommended() {
+  const mount = document.getElementById("wallpaperRecommended");
+  if (!mount) return;
+  mount.innerHTML = "";
+  RECOMMENDED_WALLPAPERS.forEach((item) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "wallpaper-recommended-card";
+    btn.title = item.label;
+    btn.innerHTML = `<img src="${recommendedSrc(item.file)}" alt="${item.label}" /><span>${item.label}</span>`;
+    btn.addEventListener("click", () => selectRecommended(item));
+    mount.appendChild(btn);
+  });
+}
+
+document.addEventListener("user:changed", () => {
+  reloadForUser();
+});
 
 function setProgress(value) {
   if (!progress || !progressBar || !progressValue) return;
@@ -288,36 +495,31 @@ function startProgress(onDone) {
 }
 
 function applyToBackground() {
-  const background = document.querySelector(".background");
-  const backgroundVideo = document.querySelector(".background-video");
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
   const backgroundSource = backgroundVideo ? backgroundVideo.querySelector("source") : null;
   if (!background) return;
 
   if (currentType === "video") {
-    if (backgroundVideo && backgroundSource) {
-      const videoSrc = isFilesystemPath(currentDataUrl)
-        ? toFileUrl(currentDataUrl)
-        : (currentFilePath ? toFileUrl(currentFilePath) : currentDataUrl);
-      backgroundSource.src = videoSrc;
-      backgroundVideo.load();
-      backgroundVideo.style.display = "block";
-      backgroundVideo.play().catch(() => {});
-    }
+    hideImageLayer(backgroundImage);
+    const videoSrc = isFilesystemPath(currentDataUrl)
+      ? toFileUrl(currentDataUrl)
+      : (currentFilePath ? toFileUrl(currentFilePath) : currentDataUrl);
+    showVideoLayer(backgroundVideo, backgroundSource, videoSrc);
     background.style.backgroundImage = "none";
     background.style.backgroundSize = "";
     background.style.backgroundPosition = "";
-  } else {
-    if (backgroundVideo) {
-      backgroundVideo.pause();
-      backgroundVideo.style.display = "none";
-    }
-    const imageSrc = isFilesystemPath(currentDataUrl)
-      ? toFileUrl(currentDataUrl)
-      : currentDataUrl;
-    background.style.backgroundImage = `url(${imageSrc})`;
-    background.style.backgroundSize = "cover";
-    background.style.backgroundPosition = "center";
+    return;
   }
+
+  hideVideoLayer(backgroundVideo);
+  const imageSrc = isFilesystemPath(currentDataUrl)
+    ? toFileUrl(currentDataUrl)
+    : currentDataUrl;
+  // Usa <img> (mesmo padrão do video) — CSS url(file://...) falha no Electron.
+  showImageLayer(backgroundImage, imageSrc);
+  background.style.backgroundImage = "none";
+  background.style.backgroundSize = "";
+  background.style.backgroundPosition = "";
 }
 
 function closeOverlay() {
@@ -455,3 +657,4 @@ function createRipple(button) {
 }
 
 loadState().catch(() => {});
+renderRecommended();

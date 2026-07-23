@@ -1,0 +1,122 @@
+.cofre-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 116;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.cofre-screen-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cofre-screen {
+  width: min(420px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 18, 28, 0.94);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  color: #e5e7eb;
+}
+
+.cofre-screen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cofre-screen__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.cofre-screen__close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.cofre-screen__body {
+  padding: 20px;
+}
+
+.cofre-screen__locked {
+  text-align: left;
+}
+
+.cofre-screen__status {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.cofre-screen__hint {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: 0.72;
+}
+
+.cofre-screen__subtitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  text-align: left;
+}
+
+.cofre-screen__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+  text-align: left;
+}
+
+.cofre-screen__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cofre-screen__item--site strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cofre-screen__empty {
+  margin: 8px 0 0;
+  font-size: 13px;
+  opacity: 0.55;
+}

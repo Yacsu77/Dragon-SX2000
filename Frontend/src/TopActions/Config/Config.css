@@ -144,3 +144,38 @@
 .config-card:hover .config-card__close {
   opacity: 1;
 }
+
+.config-group-section {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.config-group-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #f9fafb;
+}
+
+.config-group-section__header small {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+}
+
+.config-group-section__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--group-color, #7a8cff);
+  box-shadow: 0 0 14px var(--group-color, #7a8cff);
+}
+
+.config-empty--group {
+  grid-column: 1 / -1;
+  padding: 22px 12px;
+}

@@ -1,116 +1,46 @@
-# Banco de Dados — API-DSX
+# Banco local API-DSX
 
-Documentação técnica sobre a camada de persistência e cache da API local do Dragon SX2000.
+SQLite em `DB/dsx-browser.db`. Foreign keys ligadas.
 
----
+## Tabelas
 
-## SQLite — Armazenamento Persistente
+### users
+- `id` TEXT UUID PK
+- `nickname` TEXT UNIQUE (case-insensitive)
+- `photo_path` TEXT NULL
+- `password_hash` / `password_salt` TEXT NULL
+- `vault_pin_hash` / `vault_pin_salt` TEXT NULL
+- `created_at` / `updated_at` / `last_active_at`
 
-### Por que usar SQLite?
+### browser_history
+- Campos de visita + `user_id` (e legado `profile_id`)
 
-O SQLite foi escolhido como banco de dados local porque:
+### downloads / favorites / password_vault
+- Todas com `user_id` FK lógica (cascade via service delete)
 
-- **Leve e embarcado**: não requer servidor externo, ideal para aplicações desktop Electron.
-- **Persistência local**: os dados do histórico de navegação permanecem no disco do usuário entre sessões.
-- **Zero configuração**: o arquivo `.db` é criado automaticamente na primeira execução.
-- **Confiável**: amplamente utilizado em aplicações locais e mobile.
+### tab_groups (v1.4)
+- `id` TEXT UUID PK
+- `user_id` TEXT NOT NULL → `users(id)` ON DELETE CASCADE
+- `name` TEXT NOT NULL
+- `color` TEXT NOT NULL
+- `icon` TEXT NULL
+- `position` INTEGER DEFAULT 0
+- `created_at` / `updated_at`
+- Índices: `idx_tab_groups_user_id`, `idx_tab_groups_user_position`
 
-### Localização do arquivo
+### tab_group_tabs (v1.4)
+- `id` TEXT UUID PK
+- `group_id` TEXT NOT NULL → `tab_groups(id)` ON DELETE CASCADE
+- `user_id` TEXT NOT NULL → `users(id)` ON DELETE CASCADE
+- `runtime_tab_id` TEXT NULL (id da aba no frontend)
+- `url` / `title` / `favicon_url` TEXT
+- `is_home` / `active` INTEGER (0|1)
+- `position` INTEGER DEFAULT 0
+- `created_at` / `updated_at`
+- Índices: `idx_tab_group_tabs_group_position`, `idx_tab_group_tabs_user_id`
 
-O banco SQLite é salvo em:
+**API:** `GET/POST /tab-groups`, `PATCH/DELETE /tab-groups/:id`, `PUT /tab-groups/:id/tabs`  
+**Cliente:** `window.TabGroupsApi` em `Frontend/src/js/userApi.js`  
+**Docs UI:** [`Tabs.MD`](../../../Version/Docs/Frontend/Tabs.MD) · [`Log v1.4.MD`](../../../Version/Lançamento/Log%20v1.4.MD)
 
-```
-Backend/API-DSX/DB/dsx-browser.db
-```
-
----
-
-## Redis — Cache de Sessão
-
-### Por que usar Redis?
-
-O Redis é utilizado exclusivamente como **cache temporário** da sessão ativa do usuário:
-
-- **Performance**: evita consultas repetidas ao SQLite durante a navegação.
-- **Dados voláteis**: informações de sessão que não precisam persistir após o fechamento do app.
-- **TTL configurável**: entradas de cache expiram automaticamente (padrão: 300 segundos).
-
-### Redis é opcional
-
-Se o Redis não estiver disponível ou offline, a API **continua funcionando normalmente** utilizando apenas o SQLite. O cache é uma otimização, não uma dependência crítica.
-
-### Uso do cache de sessão
-
-| Chave | Conteúdo | TTL |
-|---|---|---|
-| `session:history:default` | Lista completa do histórico (sem filtro de perfil) | 300s |
-| `session:history:{profile_id}` | Histórico filtrado por perfil | 300s |
-
-O cache é invalidado automaticamente quando:
-
-- Um novo registro é criado ou atualizado
-- Um registro é removido
-- O histórico é limpo
-
----
-
-## Diferença: Persistente vs Cache
-
-| Aspecto | SQLite | Redis |
-|---|---|---|
-| **Propósito** | Armazenamento permanente | Cache temporário de sessão |
-| **Duração** | Persiste entre reinicializações | Expira após TTL ou invalidação |
-| **Obrigatório** | Sim | Não |
-| **Dados** | Histórico completo de navegação | Listagens recentes em cache |
-
----
-
-## Tabela `browser_history`
-
-### Estrutura SQL
-
-```sql
-CREATE TABLE IF NOT EXISTS browser_history (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  url TEXT NOT NULL,
-  title TEXT,
-  visit_count INTEGER DEFAULT 1,
-  typed_count INTEGER DEFAULT 0,
-  last_visit_time DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  favicon_url TEXT,
-  transition_type TEXT,
-  referrer_url TEXT,
-  profile_id TEXT
-);
-```
-
-### Índices
-
-```sql
-CREATE INDEX IF NOT EXISTS idx_browser_history_url ON browser_history(url);
-CREATE INDEX IF NOT EXISTS idx_browser_history_profile_id ON browser_history(profile_id);
-CREATE INDEX IF NOT EXISTS idx_browser_history_last_visit_time ON browser_history(last_visit_time);
-```
-
-### Campos
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `id` | INTEGER | Identificador único auto-incrementado |
-| `url` | TEXT | URL visitada (obrigatório) |
-| `title` | TEXT | Título da página visitada |
-| `visit_count` | INTEGER | Quantidade de visitas à URL (padrão: 1) |
-| `typed_count` | INTEGER | Quantidade de vezes que a URL foi digitada na barra de endereço |
-| `last_visit_time` | DATETIME | Data/hora da última visita |
-| `created_at` | DATETIME | Data/hora de criação do registro |
-| `favicon_url` | TEXT | URL do favicon da página |
-| `transition_type` | TEXT | Tipo de transição (ex: `link`, `typed`, `reload`) |
-| `referrer_url` | TEXT | URL de origem da navegação |
-| `profile_id` | TEXT | Identificador do perfil do usuário |
-
----
-
-<p align="center">
-  <sub>Dragon SX2000 — API-DSX — Documentação de Banco de Dados</sub>
-</p>
+Ver também: [UserBundle.md](UserBundle.md), [SyncAdapter.md](SyncAdapter.md).

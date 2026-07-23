@@ -15,8 +15,9 @@
         <div class="editar-option__info">
           <div class="editar-option__label">Manter todas as abas renderizadas</div>
           <div class="editar-option__desc">
-            Deixa as abas em segundo plano sempre renderizadas, tornando a troca
-            entre elas instantânea (sem recarregar a imagem da página).
+            Deixa as abas em segundo plano sempre compostas (troca mais rápida),
+            com custo alto de CPU/GPU/RAM. Com muitas abas a lentidão piora —
+            mantenha desligado no uso normal.
           </div>
         </div>
         <label class="editar-switch">
@@ -30,8 +31,32 @@
         <span>
           <strong>Uso maior de recursos.</strong> Com esta opção ativa, todas as
           abas continuam consumindo <strong>CPU/GPU e memória RAM</strong> mesmo
-          em segundo plano. Prefira desativá-la se tiver muitas abas abertas ou
-          um computador mais modesto.
+          em segundo plano. Acima de ~8 abas o impacto fica bem perceptível.
+          Prefira desativá-la no uso diário.
+        </span>
+      </div>
+
+      <div class="editar-option">
+        <div class="editar-option__info">
+          <div class="editar-option__label">Manter painéis da barra lateral carregados</div>
+          <div class="editar-option__desc">
+            Mantém os sites abertos pela lateral (IA/Chats) em memória mesmo
+            depois de fechar o painel, para reabrir instantaneamente.
+          </div>
+        </div>
+        <label class="editar-switch">
+          <input type="checkbox" data-role="toggle-keep-sidebar" />
+          <span class="editar-switch__track"><span class="editar-switch__thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="editar-warning" data-role="keep-sidebar-warning" hidden>
+        <span class="editar-warning__icon" aria-hidden="true">⚠️</span>
+        <span>
+          <strong>Consome mais RAM do que o normal.</strong> Cada painel da
+          lateral permanece carregado em segundo plano. Quanto mais itens você
+          abrir, maior o uso de <strong>memória</strong>. Desative se notar
+          lentidão ou alto consumo.
         </span>
       </div>
     </section>

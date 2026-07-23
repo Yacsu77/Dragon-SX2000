@@ -104,4 +104,4 @@ window.SessionTabs = {
 
 - [`Browser.MD`](./Browser.MD) — CSS do modo render-all e fundo opaco
 - [`Tabs.MD`](./Tabs.MD) — troca instantânea de conteúdo
-- [`Log v1.3.MD`](../../Lançamento/Log%20v1.3.MD)
+- [`Log v1.4.MD`](../../Lançamento/Log%20v1.4.MD) · [`Log v1.3.MD`](../../Lançamento/Log%20v1.3.MD)

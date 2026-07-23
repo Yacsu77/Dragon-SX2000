@@ -1,3 +1,16 @@
 <div class="tabs-bar">
+  <div class="tab-groups-slot" data-role="tab-groups-slot">
+    <button class="tab-groups-button" id="tabGroupsBtn" type="button" title="Grupos de abas">
+      <span class="tab-groups-button__dot" aria-hidden="true"></span>
+      <span class="tab-groups-button__icon" aria-hidden="true">▦</span>
+    </button>
+    <div class="tab-groups-panel" id="tabGroupsPanel" hidden>
+      <div class="tab-groups-panel__header">
+        <strong>Grupos</strong>
+        <button type="button" data-role="create-group" title="Novo grupo">+</button>
+      </div>
+      <div class="tab-groups-panel__list" data-role="groups-list"></div>
+    </div>
+  </div>
   <div class="tabs" id="tabs"></div>
 </div>

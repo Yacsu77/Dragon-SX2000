@@ -1,16 +1,18 @@
 {
   "name": "dsx",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "DSX desktop application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "icons:prepare": "node scripts/prepare-icons.js",
-    "prebuild:win": "npm install --prefix Backend/SDK",
-    "prebuild:mac": "node scripts/fetch-nowplaying-cli.js --arch=arm64 && node scripts/fetch-nowplaying-cli.js --arch=x64 && npm install --prefix Backend/SDK",
-    "prebuild:linux": "npm install --prefix Backend/SDK",
-    "pack": "npm run icons:prepare && electron-builder",
-    "dist": "npm run icons:prepare && electron-builder --publish=never",
+    "prepare:backend": "node scripts/prepare-backend.js",
+    "verify:build": "node scripts/verify-build.js",
+    "prebuild:win": "node scripts/prepare-backend.js --arch=x64",
+    "prebuild:mac": "node scripts/fetch-nowplaying-cli.js --arch=arm64 && node scripts/fetch-nowplaying-cli.js --arch=x64 && node scripts/prepare-backend.js",
+    "prebuild:linux": "node scripts/prepare-backend.js --arch=x64",
+    "pack": "npm run icons:prepare && npm run prepare:backend && electron-builder",
+    "dist": "npm run icons:prepare && npm run prepare:backend && electron-builder --publish=never",
     "dist:win": "npm run icons:prepare && npm run prebuild:win && electron-builder --win --x64 --publish=never",
     "dist:mac": "npm run icons:prepare && npm run prebuild:mac && electron-builder --mac --arm64 --x64 --publish=never",
     "dist:linux": "npm run icons:prepare && npm run prebuild:linux && electron-builder --linux --x64 --publish=never",
@@ -31,7 +33,8 @@
     "lucide": "^0.575.0"
   },
   "devDependencies": {
-    "electron": "^41.9.2",
+    "@electron/rebuild": "^3.7.2",
+    "electron": "^41.10.2",
     "electron-builder": "^24.13.3",
     "png-to-ico": "^2.1.8",
     "png2icons": "^2.0.1",
@@ -45,16 +48,49 @@
     "directories": {
       "output": "release"
     },
+    "beforePack": "./scripts/before-pack.js",
+    "asar": true,
+    "asarUnpack": [
+      "UserINTer/Tabline/idget/Wallpaper/**"
+    ],
     "files": [
       "main.js",
       "preload.js",
       "package.json",
       "Frontend/**",
-      "Backend/**",
       "UserINTer/**",
       "resources/**",
       "Image/**",
-      "node_modules/lucide/**"
+      "node_modules/lucide/**",
+      "!Backend/**",
+      "!Backend/**/Docs/**",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md}",
+      "!**/*.{map,ts}"
+    ],
+    "extraResources": [
+      {
+        "from": "Backend/API-DSX",
+        "to": "Backend/API-DSX",
+        "filter": [
+          "**/*",
+          "!Docs/**",
+          "!**/*.md",
+          "!**/node_modules/.cache/**",
+          "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__}/**",
+          "!node_modules/nodemon/**"
+        ]
+      },
+      {
+        "from": "Backend/SDK",
+        "to": "Backend/SDK",
+        "filter": [
+          "**/*",
+          "!examples/**",
+          "!**/*.md",
+          "!**/node_modules/.cache/**",
+          "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__}/**"
+        ]
+      }
     ],
     "win": {
       "target": [
@@ -77,7 +113,13 @@
           ]
         }
       ],
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "DSX precisa do microfone para sites e apps web (ex.: Discord).",
+        "NSCameraUsageDescription": "DSX precisa da câmera para sites e apps web.",
+        "NSAudioCaptureUsageDescription": "DSX precisa capturar áudio do sistema para o player de mídia.",
+        "NSAppleEventsUsageDescription": "DSX precisa controlar apps de mídia no macOS."
+      }
     },
     "linux": {
       "maintainer": "Pedro Henrique <contatailandia134@gmail.com>",

@@ -1,7 +1,21 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, 'dsx-browser.db');
+function resolveDbPath() {
+  if (process.env.DSX_API_DB_PATH) {
+    const dbPath = path.resolve(process.env.DSX_API_DB_PATH);
+    try {
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    } catch (_) {
+      /* ignore */
+    }
+    return dbPath;
+  }
+  return path.join(__dirname, 'dsx-browser.db');
+}
+
+const DB_PATH = resolveDbPath();
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {
@@ -11,8 +25,21 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
   }
 });
 
-const CREATE_TABLE = `
-  CREATE TABLE IF NOT EXISTS browser_history (
+const CREATE_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    nickname TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    photo_path TEXT,
+    password_hash TEXT,
+    password_salt TEXT,
+    vault_pin_hash TEXT,
+    vault_pin_salt TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_active_at DATETIME
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS browser_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT NOT NULL,
     title TEXT,
@@ -23,34 +50,91 @@ const CREATE_TABLE = `
     favicon_url TEXT,
     transition_type TEXT,
     referrer_url TEXT,
-    profile_id TEXT
-  )
-`;
+    profile_id TEXT,
+    user_id TEXT
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS downloads (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    filename TEXT,
+    mime TEXT,
+    size INTEGER,
+    state TEXT,
+    save_path TEXT,
+    started_at DATETIME,
+    finished_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS favorites (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT,
+    url TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS password_vault (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    username TEXT,
+    ciphertext TEXT NOT NULL,
+    iv TEXT NOT NULL,
+    meta TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS tab_groups (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    icon TEXT,
+    position INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS tab_group_tabs (
+    id TEXT PRIMARY KEY,
+    group_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    runtime_tab_id TEXT,
+    url TEXT,
+    title TEXT,
+    favicon_url TEXT,
+    is_home INTEGER DEFAULT 0,
+    active INTEGER DEFAULT 0,
+    position INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES tab_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+];
 
 const CREATE_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_browser_history_url ON browser_history(url)',
   'CREATE INDEX IF NOT EXISTS idx_browser_history_profile_id ON browser_history(profile_id)',
+  'CREATE INDEX IF NOT EXISTS idx_browser_history_user_id ON browser_history(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_browser_history_last_visit_time ON browser_history(last_visit_time)',
+  'CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname)',
+  'CREATE INDEX IF NOT EXISTS idx_downloads_user_id ON downloads(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_favorites_user_url ON favorites(user_id, url)',
+  'CREATE INDEX IF NOT EXISTS idx_password_vault_user_id ON password_vault(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_groups_user_id ON tab_groups(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_groups_user_position ON tab_groups(user_id, position)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_group_tabs_group_position ON tab_group_tabs(group_id, position)',
+  'CREATE INDEX IF NOT EXISTS idx_tab_group_tabs_user_id ON tab_group_tabs(user_id)',
 ];
-
-function initializeDatabase() {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run(CREATE_TABLE, (err) => {
-        if (err) return reject(err);
-
-        let pending = CREATE_INDEXES.length;
-        CREATE_INDEXES.forEach((sql) => {
-          db.run(sql, (indexErr) => {
-            if (indexErr) return reject(indexErr);
-            pending -= 1;
-            if (pending === 0) resolve();
-          });
-        });
-      });
-    });
-  });
-}
 
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -79,8 +163,49 @@ function all(sql, params = []) {
   });
 }
 
+async function ensureColumn(table, column, definition) {
+  const cols = await all(`PRAGMA table_info(${table})`);
+  if (cols.some((c) => c.name === column)) return;
+  await run(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+}
+
+async function migrateLegacyHistory() {
+  await ensureColumn('browser_history', 'user_id', 'user_id TEXT');
+  await run(
+    `UPDATE browser_history
+     SET user_id = profile_id
+     WHERE user_id IS NULL AND profile_id IS NOT NULL`
+  );
+}
+
+async function migrateUsersExtras() {
+  await ensureColumn('users', 'vault_pin_hash', 'vault_pin_hash TEXT');
+  await ensureColumn('users', 'vault_pin_salt', 'vault_pin_salt TEXT');
+  await ensureColumn('users', 'photo_path', 'photo_path TEXT');
+  await ensureColumn('users', 'password_hash', 'password_hash TEXT');
+  await ensureColumn('users', 'password_salt', 'password_salt TEXT');
+  await ensureColumn('users', 'last_active_at', 'last_active_at DATETIME');
+  await ensureColumn('users', 'updated_at', 'updated_at DATETIME');
+}
+
+async function initializeDatabase() {
+  await run('PRAGMA foreign_keys = ON');
+
+  for (const sql of CREATE_STATEMENTS) {
+    await run(sql);
+  }
+
+  await migrateLegacyHistory();
+  await migrateUsersExtras();
+
+  for (const sql of CREATE_INDEXES) {
+    await run(sql);
+  }
+}
+
 module.exports = {
   db,
+  DB_PATH,
   initializeDatabase,
   run,
   get,

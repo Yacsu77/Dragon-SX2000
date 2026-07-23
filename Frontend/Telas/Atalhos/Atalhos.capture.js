@@ -117,6 +117,7 @@
 
     if (MODIFIER_KEYS.has(event.key)) {
       // Apenas modificadores ainda — mostra prévia parcial.
+      // Hold shortcuts (ex.: menu radial) podem usar só Alt/Ctrl/etc.
       const parts = [];
       if (event.ctrlKey) parts.push("Ctrl");
       if (event.shiftKey) parts.push("Shift");
@@ -131,6 +132,20 @@
       ? window.ShortcutManager.comboFromEvent(event)
       : "";
     if (combo) evaluate(combo);
+  }
+
+  function onKeyup(event) {
+    if (!MODIFIER_KEYS.has(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+
+    // Soltar um único modificador confirma o atalho hold (Alt, Ctrl, Meta…).
+    const map = { Control: "Ctrl", Alt: "Alt", Shift: "Shift", Meta: "Meta" };
+    const solo = map[event.key];
+    if (!solo) return;
+    if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+    evaluate(solo);
   }
 
   function onAuxClick(event) {
@@ -170,6 +185,7 @@
     // Listeners na fase de captura em `window`, que roda ANTES do listener do
     // ShortcutManager (registrado em `document`), garantindo prioridade.
     window.addEventListener("keydown", onKeydown, true);
+    window.addEventListener("keyup", onKeyup, true);
     window.addEventListener("auxclick", onAuxClick, true);
 
     void rootEl.offsetHeight;
@@ -182,6 +198,7 @@
     rootEl.classList.remove("is-open");
     rootEl.setAttribute("aria-hidden", "true");
     window.removeEventListener("keydown", onKeydown, true);
+    window.removeEventListener("keyup", onKeyup, true);
     window.removeEventListener("auxclick", onAuxClick, true);
     activeShortcut = null;
     callbacks = {};

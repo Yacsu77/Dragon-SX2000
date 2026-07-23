@@ -1,6 +1,10 @@
 const historyService = require('../Services/historyService');
 const { validateCreateHistory } = require('../DTO/historyDTO');
 
+function resolveUserId(req) {
+  return req.query.user_id || req.query.profile_id || null;
+}
+
 async function create(req, res, next) {
   try {
     const data = validateCreateHistory(req.body);
@@ -14,9 +18,7 @@ async function create(req, res, next) {
 
 async function findAll(req, res, next) {
   try {
-    const profileId = req.query.profile_id || null;
-    const history = await historyService.getAllHistory(profileId);
-
+    const history = await historyService.getAllHistory(resolveUserId(req));
     res.json({ success: true, data: history });
   } catch (err) {
     next(err);
@@ -26,7 +28,6 @@ async function findAll(req, res, next) {
 async function findById(req, res, next) {
   try {
     const entry = await historyService.getHistoryById(req.params.id);
-
     res.json({ success: true, data: entry });
   } catch (err) {
     next(err);
@@ -35,10 +36,16 @@ async function findById(req, res, next) {
 
 async function search(req, res, next) {
   try {
-    const query = req.query.q;
-    const profileId = req.query.profile_id || null;
-    const results = await historyService.searchHistory(query, profileId);
+    const results = await historyService.searchHistory(req.query.q, resolveUserId(req));
+    res.json({ success: true, data: results });
+  } catch (err) {
+    next(err);
+  }
+}
 
+async function suggestions(req, res, next) {
+  try {
+    const results = await historyService.smartSuggestions(req.query.q, resolveUserId(req));
     res.json({ success: true, data: results });
   } catch (err) {
     next(err);
@@ -48,7 +55,6 @@ async function search(req, res, next) {
 async function deleteById(req, res, next) {
   try {
     const result = await historyService.deleteHistoryById(req.params.id);
-
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -57,9 +63,7 @@ async function deleteById(req, res, next) {
 
 async function clear(req, res, next) {
   try {
-    const profileId = req.query.profile_id || null;
-    const result = await historyService.clearHistory(profileId);
-
+    const result = await historyService.clearHistory(resolveUserId(req));
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -71,6 +75,7 @@ module.exports = {
   findAll,
   findById,
   search,
+  suggestions,
   deleteById,
   clear,
 };

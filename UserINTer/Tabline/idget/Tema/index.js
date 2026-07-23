@@ -14,7 +14,7 @@ if (document.body && document.body.dataset) {
 }
 
 function getStoredMode() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = (window.UserStorage ? window.UserStorage.getItem(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY));
   if (raw && MODES.includes(raw)) return raw;
   return "dark";
 }
@@ -55,7 +55,7 @@ function updateTogglerUi(mode) {
 function cycleMode() {
   const current = getStoredMode();
   const next = MODES[(MODES.indexOf(current) + 1) % MODES.length];
-  localStorage.setItem(STORAGE_KEY, next);
+  (window.UserStorage ? window.UserStorage.setItem(STORAGE_KEY, next) : localStorage.setItem(STORAGE_KEY, next));
   applyThemeToDocument();
 }
 
@@ -75,7 +75,10 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 window.DragonTheme = {
   cycle: cycleMode,
   apply: applyThemeToDocument,
+  applyFromStorage: applyThemeToDocument,
   getMode: getStoredMode
 };
+
+document.addEventListener("user:changed", () => applyThemeToDocument());
 
 applyThemeToDocument();

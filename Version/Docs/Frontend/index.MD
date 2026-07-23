@@ -33,12 +33,14 @@ Não contém markup de nav, wallpaper, AutoTune ou tabline — tudo montado por 
 ## Ordem de scripts
 
 ```
-dragon-media-bridge → AppShell → Tabs.* → CursorControll* → Browser
+dragon-media-bridge → AppShell → Tabs.state/core/anim/reorder/visibility
+→ TabGroups.state/service/runtime/render → CursorControll* → Browser
 → HomeSearch → ButtonGo → Search → history*
 → MiniHistorico → Telas (Histórico, Downloads, Arquivos)
 → Atalhos.format/render/capture/Atalhos → MiniAtalhos → Editar
-→ Favoritos → Menu → TopActions → Home → Tabline → Top
-→ lucide → Factory → Shell → settings/perfSettings → connectionPrefetch → app.js
+→ Favoritos → Menu → TopActions → ChromeLayout → Home → Tabline → Top
+→ lucide → Factory → Shell → chromeLayoutSettings → perfSettings
+→ connectionPrefetch → app.js
 → shortcuts/core → overlays → actions (tab, history, navigation) → shortcuts/index
 ```
 
@@ -52,3 +54,5 @@ dragon-media-bridge → AppShell → Tabs.* → CursorControll* → Browser
 | Adicionar novo CSS | Incluir `@import` em `core/manifest.css` |
 | Novo fragmento HTML no shell | Adicionar mount point aqui + entrada em `core/Shell.js` → `FRAGMENTS` |
 | Alterar ordem de init | Editar `js/app.js` (não o HTML, salvo ordem de scripts) |
+| Layout Topo Global | `settings/chromeLayoutSettings.js` + `Top/ChromeLayout.js` |
+| Grupos de abas | Scripts `Tabs/TabGroups.*` (antes de `app.js`) |

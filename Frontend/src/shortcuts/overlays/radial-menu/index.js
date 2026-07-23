@@ -71,7 +71,7 @@
 
   function readSettings() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
       if (!raw) return { ...DEFAULT_SETTINGS };
       const store = JSON.parse(raw);
       const record = store && store[TARGET_KEY];
@@ -137,6 +137,15 @@
     ].join(" ");
   }
 
+  function radialBindingLabel() {
+    try {
+      const entry = window.ShortcutManager?.getAll?.()?.find((item) => item.id === "radial-menu");
+      return (entry && entry.keys) || "—";
+    } catch (_) {
+      return "—";
+    }
+  }
+
   function buildDom() {
     if (rootEl) return;
     rootEl = document.createElement("div");
@@ -147,7 +156,7 @@
       <div class="shortcut-radial-menu__stage" data-role="stage">
         <svg class="shortcut-radial-menu__svg" data-role="svg" viewBox="-140 -140 280 280" aria-hidden="true"></svg>
         <div class="shortcut-radial-menu__items" data-role="items"></div>
-        <div class="shortcut-radial-menu__hint" data-role="hint">Alt</div>
+        <div class="shortcut-radial-menu__hint" data-role="hint">${radialBindingLabel()}</div>
       </div>
     `;
     document.body.appendChild(rootEl);
@@ -216,7 +225,7 @@
     }
 
     if (hintEl) {
-      hintEl.textContent = total ? "Alt" : "—";
+      hintEl.textContent = total ? radialBindingLabel() : "—";
     }
 
     // Guarda raios para hit-test
@@ -235,7 +244,7 @@
     if (hintEl) {
       hintEl.textContent =
         activeIndex == null || !currentItems[activeIndex]
-          ? "Alt"
+          ? radialBindingLabel()
           : currentItems[activeIndex].label;
     }
   }
@@ -363,6 +372,9 @@
     if (isOpen) paintMenu();
   }
 
+  document.addEventListener("user:changed", reloadFromStore);
+  document.addEventListener("customise:reloaded", reloadFromStore);
+
   window.RadialMenu = {
     open: () => openAt(lastPointer.x, lastPointer.y),
     close: () => close(false),
@@ -386,10 +398,10 @@
       id: "radial-menu",
       label: "Menu radial de idgets",
       description:
-        "Segure Alt (Option no Mac) para abrir o menu circular com os idgets. " +
-        "Mova o cursor para pré-selecionar; solte Alt para abrir. " +
-        "Itens e cor configuráveis em Customise.",
-      defaultKeys: "Alt",
+        "Abra o menu circular de idgets com o atalho que você definir em Atalhos. " +
+        "Segure a tecla (hold) para abrir, mova o cursor para pré-selecionar e solte para confirmar. " +
+        "Itens e cor configuráveis em Customise. Sem atalho definido, o menu não abre.",
+      defaultKeys: "",
       category: "Navegação",
       allowInInputs: true,
       global: true,

@@ -1,62 +1,159 @@
 /**
  * AppShell — estado global da aplicação (home vs navegador).
  *
- * ─── CustomEvents (document) ───────────────────────────────────────────────
- *
- * | app:home-shown          | AppShell | {} | AutoTune, Home |
- * | app:browser-shown       | AppShell | {} | AutoTune, ButtonGo, Search |
- *
- * ─── API pública ───────────────────────────────────────────────────────────
- *
- *   AppShell.showHome()
- *   AppShell.showBrowser()
+ * Troca new-tab ↔ conteúdo: anima só se Janelas.tabTransition ≠ 'none'.
+ * Com animação desligada, troca instantânea (sem absolute/crossfade = sem “pulo”).
  */
 (function () {
+  const SURFACE_MS = 320;
+  let swapTimer = 0;
+
+  function getSurfaces() {
+    return {
+      home: document.getElementById('homePage'),
+      browser: document.getElementById('browser'),
+    };
+  }
+
+  function tabTransitionEnabled() {
+    const transition = window.JanelasNS?.Store?.getSettings?.()?.tabTransition || 'none';
+    return transition && transition !== 'none';
+  }
+
+  function clearSwapState() {
+    document.body.classList.remove('surface-crossfade');
+    const { home, browser } = getSurfaces();
+    [home, browser].forEach((el) => {
+      if (!el) return;
+      el.classList.remove(
+        'surface-leaving',
+        'surface-entering',
+        'surface-on-top',
+        'is-fading',
+        'is-shown'
+      );
+    });
+  }
+
+  function syncHomeActiveTab() {
+    const active = window.TabsState?.currentActiveTab;
+    if (active && String(active).startsWith('home-tab')) {
+      window.currentActiveTab = active;
+    } else {
+      window.currentActiveTab = null;
+    }
+  }
+
+  function isFloatingLayout() {
+    return (
+      document.body.classList.contains('janelas-window-floating') ||
+      document.body.classList.contains('janelas-multi-floating')
+    );
+  }
+
+  /** True se a New Tab (home) está na frente. */
+  function isHomeSurfaceVisible(home, browser) {
+    if (!home) return false;
+    if (home.classList.contains('hidden')) return false;
+    if (browser?.classList.contains('active') && home.classList.contains('hidden')) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Crossfade: só opacity (sem translate — a superfície fica no lugar).
+   */
+  function crossfade(fromEl, toEl, after) {
+    if (!fromEl || !toEl) {
+      after?.();
+      return;
+    }
+
+    if (swapTimer) {
+      window.clearTimeout(swapTimer);
+      swapTimer = 0;
+      clearSwapState();
+    }
+
+    document.body.classList.add('surface-crossfade');
+    toEl.classList.add('surface-entering');
+    fromEl.classList.add('surface-leaving', 'surface-on-top');
+    void fromEl.offsetWidth;
+
+    requestAnimationFrame(() => {
+      fromEl.classList.add('is-fading');
+      toEl.classList.add('is-shown');
+    });
+
+    swapTimer = window.setTimeout(() => {
+      swapTimer = 0;
+      after?.();
+      clearSwapState();
+    }, SURFACE_MS);
+  }
+
   function showHome() {
-    const homePage = document.getElementById('homePage');
-    const browser = document.getElementById('browser');
-
-    if (homePage) homePage.classList.remove('hidden');
-    if (browser) browser.classList.remove('active');
-
-    window.currentActiveTab = null;
-
-    if (typeof updateTabsBarVisibility === 'function') {
-      updateTabsBarVisibility();
-    }
-
-    if (window.NavSearch && typeof window.NavSearch.clearAddressBar === 'function') {
-      window.NavSearch.clearAddressBar();
-    }
-
-    if (typeof updateNavigationButtons === 'function') {
-      updateNavigationButtons();
-    }
+    const { home, browser } = getSurfaces();
+    const fromBrowser = Boolean(browser?.classList.contains('active'));
 
     if (typeof window.setAutoTuneHomeVisible === 'function') {
       window.setAutoTuneHomeVisible(true);
     }
 
-    document.dispatchEvent(new CustomEvent('app:home-shown', { detail: {} }));
+    const applyHomeChrome = () => {
+      syncHomeActiveTab();
+      if (typeof updateTabsBarVisibility === 'function') updateTabsBarVisibility();
+      if (window.NavSearch?.clearAddressBar) window.NavSearch.clearAddressBar();
+      if (typeof updateNavigationButtons === 'function') updateNavigationButtons();
+      document.dispatchEvent(new CustomEvent('app:home-shown', { detail: {} }));
+    };
+
+    if (fromBrowser && home && !isFloatingLayout() && tabTransitionEnabled()) {
+      home.classList.remove('hidden');
+      applyHomeChrome();
+      crossfade(browser, home, () => {
+        browser.classList.remove('active');
+      });
+      return;
+    }
+
+    if (home) home.classList.remove('hidden');
+    if (browser) browser.classList.remove('active');
+    applyHomeChrome();
   }
 
   function showBrowser() {
-    const homePage = document.getElementById('homePage');
-    const browser = document.getElementById('browser');
-
-    if (homePage) homePage.classList.add('hidden');
-    if (browser) browser.classList.add('active');
+    const { home, browser } = getSurfaces();
+    const fromHome = isHomeSurfaceVisible(home, browser);
 
     if (typeof window.setAutoTuneHomeVisible === 'function') {
       window.setAutoTuneHomeVisible(false);
     }
 
-    document.dispatchEvent(new CustomEvent('app:browser-shown', { detail: {} }));
+    const applyBrowserChrome = () => {
+      document.dispatchEvent(new CustomEvent('app:browser-shown', { detail: {} }));
+    };
+
+    if (fromHome && browser && !isFloatingLayout() && tabTransitionEnabled()) {
+      home.classList.remove('hidden');
+      browser.classList.add('active');
+      applyBrowserChrome();
+      crossfade(home, browser, () => {
+        home.classList.add('hidden');
+      });
+      return;
+    }
+
+    if (home) home.classList.add('hidden');
+    if (browser) browser.classList.add('active');
+    applyBrowserChrome();
   }
 
   window.AppShell = {
     showHome,
     showBrowser,
+    SURFACE_MS,
     init() {},
   };
 

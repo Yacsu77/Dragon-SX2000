@@ -9,6 +9,31 @@ let apiDsxProcess = null;
 let isAppQuitting = false;
 
 /**
+ * Backend (API + SDK) vai em extraResources no build:
+ *   <resources>/Backend/...
+ * Em desenvolvimento fica em <repo>/Backend/...
+ */
+function resolveBackendPath(...parts) {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'Backend', ...parts);
+  }
+  return path.join(__dirname, 'Backend', ...parts);
+}
+
+function backendChildEnv(extra = {}) {
+  const userData = app.getPath('userData');
+  return {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
+    DSX_PACKAGED: app.isPackaged ? '1' : '0',
+    DSX_PROJECT_ROOT: app.isPackaged ? process.resourcesPath : __dirname,
+    DSX_USER_DATA: userData,
+    DSX_API_DB_PATH: path.join(userData, 'API-DSX', 'dsx-browser.db'),
+    ...extra,
+  };
+}
+
+/**
  * UA de Chrome “puro” (sem Electron) — WhatsApp/Discord leem a versão do Chrome
  * e rejeitam strings com Electron/ ou Chrome antigo.
  */
@@ -133,12 +158,13 @@ function configureBrowserIdentity() {
 function startMediaSdk() {
   if (mediaSdkProcess) return;
 
-  const sdkEntry = path.join(__dirname, 'Backend', 'SDK', 'server.js');
+  const sdkRoot = resolveBackendPath('SDK');
+  const sdkEntry = path.join(sdkRoot, 'server.js');
 
   try {
     mediaSdkProcess = spawn(process.execPath, [sdkEntry], {
-      cwd: path.join(__dirname, 'Backend', 'SDK'),
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      cwd: sdkRoot,
+      env: backendChildEnv(),
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
@@ -207,8 +233,19 @@ function httpGetJson(urlPath, timeoutMs = 1500) {
   });
 }
 
+function expectedProjectRoot() {
+  if (app.isPackaged) return path.resolve(process.resourcesPath);
+  return path.resolve(__dirname);
+}
+
 function isSameApiProject(payload) {
-  return path.resolve(payload?.project_root || '') === path.resolve(__dirname);
+  const incoming = path.resolve(payload?.project_root || '');
+  const expected = expectedProjectRoot();
+  if (incoming === expected) return true;
+  // Compat: API antiga reportava o root do repo / asar
+  if (incoming === path.resolve(__dirname)) return true;
+  if (app.isPackaged && incoming.startsWith(path.resolve(process.resourcesPath))) return true;
+  return false;
 }
 
 function isApiFromCurrentProject(payload) {
@@ -350,12 +387,13 @@ async function startApiDsxInner() {
   await new Promise((r) => setTimeout(r, 500));
 
   // boot.js materializa arquivos (iCloud/Desktop) antes do require — evita ETIMEDOUT no cold start.
-  const apiEntry = path.join(__dirname, 'Backend', 'API-DSX', 'boot.js');
+  const apiRoot = resolveBackendPath('API-DSX');
+  const apiEntry = path.join(apiRoot, 'boot.js');
 
   try {
     apiDsxProcess = spawn(process.execPath, [apiEntry], {
-      cwd: path.join(__dirname, 'Backend', 'API-DSX'),
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      cwd: apiRoot,
+      env: backendChildEnv(),
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });

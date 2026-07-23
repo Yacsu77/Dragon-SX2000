@@ -30,6 +30,23 @@ let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let baseOffset = { x: 0, y: 0 };
 
+/** Wallpapers recomendados (empacotados no build via pasta UserINTer). */
+const RECOMMENDED_WALLPAPERS = Object.freeze([
+  { id: "WWP", file: "WWP.jpg", label: "WWP" },
+  { id: "WWP1", file: "WWP1.png", label: "WWP1" },
+  { id: "WWP3", file: "WWP3.jpg", label: "WWP3" },
+]);
+
+const RECOMMENDED_BASE = "../../UserINTer/Tabline/idget/Wallpaper/";
+
+function recommendedSrc(file) {
+  return `${RECOMMENDED_BASE}${encodeURIComponent(file)}`;
+}
+
+function pickRandomRecommended() {
+  return RECOMMENDED_WALLPAPERS[Math.floor(Math.random() * RECOMMENDED_WALLPAPERS.length)];
+}
+
 function setStatus(message) {
   if (statusLabel) {
     statusLabel.textContent = message;
@@ -45,29 +62,51 @@ function getWallpaperUserId() {
   return null;
 }
 
+function getBackgroundLayers() {
+  return {
+    background: document.querySelector(".background"),
+    backgroundVideo: document.querySelector(".background-video"),
+    backgroundImage: document.querySelector(".background-image"),
+  };
+}
+
+function hideVideoLayer(backgroundVideo) {
+  if (!backgroundVideo) return;
+  backgroundVideo.pause();
+  backgroundVideo.hidden = true;
+  backgroundVideo.style.display = "none";
+}
+
+function hideImageLayer(backgroundImage) {
+  if (!backgroundImage) return;
+  backgroundImage.hidden = true;
+  backgroundImage.removeAttribute("src");
+  backgroundImage.style.display = "none";
+}
+
+function showImageLayer(backgroundImage, src) {
+  if (!backgroundImage || !src) return;
+  backgroundImage.src = src;
+  backgroundImage.hidden = false;
+  backgroundImage.style.display = "block";
+}
+
+function showVideoLayer(backgroundVideo, backgroundSource, src) {
+  if (!backgroundVideo || !backgroundSource || !src) return;
+  backgroundSource.src = src;
+  backgroundVideo.load();
+  backgroundVideo.hidden = false;
+  backgroundVideo.style.display = "block";
+  backgroundVideo.play().catch(() => {});
+}
+
 function restoreDefaultBackground() {
-  const background = document.querySelector(".background");
-  const backgroundVideo = document.querySelector(".background-video");
-  const backgroundSource = backgroundVideo ? backgroundVideo.querySelector("source") : null;
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
   if (!background) return;
-  if (backgroundVideo && backgroundSource) {
-    const fallback =
-      backgroundSource.getAttribute("data-default-src") ||
-      "../../UserINTer/back%20groud/dark-queen-knight-moewalls-com.mp4";
-    if (!backgroundSource.getAttribute("data-default-src") && backgroundSource.src) {
-      try {
-        const current = backgroundSource.getAttribute("src") || "";
-        if (current && !current.startsWith("file:") && !current.startsWith("blob:")) {
-          backgroundSource.setAttribute("data-default-src", current);
-        }
-      } catch (_) { /* ignore */ }
-    }
-    backgroundSource.src =
-      backgroundSource.getAttribute("data-default-src") || fallback;
-    backgroundVideo.load();
-    backgroundVideo.style.display = "block";
-    backgroundVideo.play().catch(() => {});
-  }
+  hideVideoLayer(backgroundVideo);
+  const pick = pickRandomRecommended();
+  const src = recommendedSrc(pick.file);
+  showImageLayer(backgroundImage, src);
   background.style.backgroundImage = "none";
 }
 
@@ -279,40 +318,34 @@ async function loadState() {
   let payload = null;
   const userId = getWallpaperUserId();
 
-  if (window.DragonWallpaper) {
+  if (userId && window.DragonWallpaper) {
     try {
       payload = await window.DragonWallpaper.readState(userId);
-      // Legado: estado salvo antes do userId ativo (pasta global).
-      if (!payload && userId) {
-        payload = await window.DragonWallpaper.readState(null);
-        if (payload) {
-          try {
-            await window.DragonWallpaper.saveState(payload, userId);
-          } catch (_) { /* ignore migrate errors */ }
-        }
-      }
     } catch (error) {
       payload = null;
     }
   }
 
-  if (!payload) {
-    const saved = window.UserStorage
-      ? window.UserStorage.getItem("wallpaperState")
-      : localStorage.getItem("wallpaperState");
-    if (!saved) return false;
-    try {
-      payload = JSON.parse(saved);
-    } catch (error) {
-      return false;
+  if (!payload && window.UserStorage) {
+    const saved = window.UserStorage.getItem("wallpaperState");
+    if (saved) {
+      try {
+        payload = JSON.parse(saved);
+      } catch (error) {
+        payload = null;
+      }
     }
   }
 
   try {
-    if (!applyPayloadToPreview(payload)) return false;
+    if (!applyPayloadToPreview(payload)) {
+      restoreDefaultBackground();
+      return false;
+    }
     applyToBackground();
     return true;
   } catch (error) {
+    restoreDefaultBackground();
     return false;
   }
 }
@@ -322,29 +355,32 @@ async function clearBackgroundPreview() {
   currentMedia = null;
   currentDataUrl = null;
   currentFilePath = null;
-  const background = document.querySelector(".background");
-  const backgroundVideo = document.querySelector(".background-video");
-  if (background) {
-    background.style.backgroundImage = "none";
-  }
+  currentType = null;
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
+  if (background) background.style.backgroundImage = "none";
+  hideImageLayer(backgroundImage);
+  hideVideoLayer(backgroundVideo);
   if (backgroundVideo) {
-    backgroundVideo.pause();
-    backgroundVideo.style.display = "none";
     const source = backgroundVideo.querySelector("source");
     if (source) source.src = "";
   }
 }
 
 async function reloadForUser() {
-  // Carrega primeiro; só limpa se houver estado válido — evita tela preta no boot.
+  // Sempre limpa o fundo do usuário anterior antes de carregar o próximo —
+  // evita vazar wallpaper entre perfis.
+  await clearBackgroundPreview();
+
   let payload = null;
   const userId = getWallpaperUserId();
+  if (!userId) {
+    restoreDefaultBackground();
+    return;
+  }
+
   if (window.DragonWallpaper) {
     try {
       payload = await window.DragonWallpaper.readState(userId);
-      if (!payload && userId) {
-        payload = await window.DragonWallpaper.readState(null);
-      }
     } catch (_) {
       payload = null;
     }
@@ -352,7 +388,7 @@ async function reloadForUser() {
   if (!payload) {
     const saved = window.UserStorage
       ? window.UserStorage.getItem("wallpaperState")
-      : localStorage.getItem("wallpaperState");
+      : null;
     if (saved) {
       try {
         payload = JSON.parse(saved);
@@ -363,7 +399,6 @@ async function reloadForUser() {
   }
 
   if (isRestorablePayload(payload)) {
-    await clearBackgroundPreview();
     try {
       applyPayloadToPreview(payload);
       applyToBackground();
@@ -373,18 +408,61 @@ async function reloadForUser() {
     return;
   }
 
-  // Sem wallpaper do usuário: mantém / restaura o fundo padrão.
-  if (!currentDataUrl) {
-    restoreDefaultBackground();
-  }
+  restoreDefaultBackground();
 }
 
 window.WallpaperUserReload = reloadForUser;
 
+async function seedDefaultIfNeeded(userId) {
+  const uid = userId || getWallpaperUserId();
+  if (!uid || !window.DragonWallpaper?.seedDefault) return null;
+  try {
+    const result = await window.DragonWallpaper.seedDefault(uid);
+    if (result?.seeded) await reloadForUser();
+    return result;
+  } catch (_) {
+    return null;
+  }
+}
+
+window.WallpaperSeedDefault = seedDefaultIfNeeded;
+
+function selectRecommended(item) {
+  if (!item) return;
+  currentType = "image";
+  currentFilePath = null;
+  currentDataUrl = recommendedSrc(item.file);
+  if (previewLayer) {
+    const img = document.createElement("img");
+    img.className = "preview-media";
+    img.alt = item.label || "Wallpaper";
+    img.src = currentDataUrl;
+    previewLayer.innerHTML = "";
+    previewLayer.appendChild(img);
+    currentMedia = img;
+  }
+  resetTransforms();
+  setStatus(`Recomendado: ${item.label || item.file}`);
+}
+
+function renderRecommended() {
+  const mount = document.getElementById("wallpaperRecommended");
+  if (!mount) return;
+  mount.innerHTML = "";
+  RECOMMENDED_WALLPAPERS.forEach((item) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "wallpaper-recommended-card";
+    btn.title = item.label;
+    btn.innerHTML = `<img src="${recommendedSrc(item.file)}" alt="${item.label}" /><span>${item.label}</span>`;
+    btn.addEventListener("click", () => selectRecommended(item));
+    mount.appendChild(btn);
+  });
+}
+
 document.addEventListener("user:changed", () => {
   reloadForUser();
 });
-
 
 function setProgress(value) {
   if (!progress || !progressBar || !progressValue) return;
@@ -417,36 +495,31 @@ function startProgress(onDone) {
 }
 
 function applyToBackground() {
-  const background = document.querySelector(".background");
-  const backgroundVideo = document.querySelector(".background-video");
+  const { background, backgroundVideo, backgroundImage } = getBackgroundLayers();
   const backgroundSource = backgroundVideo ? backgroundVideo.querySelector("source") : null;
   if (!background) return;
 
   if (currentType === "video") {
-    if (backgroundVideo && backgroundSource) {
-      const videoSrc = isFilesystemPath(currentDataUrl)
-        ? toFileUrl(currentDataUrl)
-        : (currentFilePath ? toFileUrl(currentFilePath) : currentDataUrl);
-      backgroundSource.src = videoSrc;
-      backgroundVideo.load();
-      backgroundVideo.style.display = "block";
-      backgroundVideo.play().catch(() => {});
-    }
+    hideImageLayer(backgroundImage);
+    const videoSrc = isFilesystemPath(currentDataUrl)
+      ? toFileUrl(currentDataUrl)
+      : (currentFilePath ? toFileUrl(currentFilePath) : currentDataUrl);
+    showVideoLayer(backgroundVideo, backgroundSource, videoSrc);
     background.style.backgroundImage = "none";
     background.style.backgroundSize = "";
     background.style.backgroundPosition = "";
-  } else {
-    if (backgroundVideo) {
-      backgroundVideo.pause();
-      backgroundVideo.style.display = "none";
-    }
-    const imageSrc = isFilesystemPath(currentDataUrl)
-      ? toFileUrl(currentDataUrl)
-      : currentDataUrl;
-    background.style.backgroundImage = `url(${imageSrc})`;
-    background.style.backgroundSize = "cover";
-    background.style.backgroundPosition = "center";
+    return;
   }
+
+  hideVideoLayer(backgroundVideo);
+  const imageSrc = isFilesystemPath(currentDataUrl)
+    ? toFileUrl(currentDataUrl)
+    : currentDataUrl;
+  // Usa <img> (mesmo padrão do video) — CSS url(file://...) falha no Electron.
+  showImageLayer(backgroundImage, imageSrc);
+  background.style.backgroundImage = "none";
+  background.style.backgroundSize = "";
+  background.style.backgroundPosition = "";
 }
 
 function closeOverlay() {
@@ -584,3 +657,4 @@ function createRipple(button) {
 }
 
 loadState().catch(() => {});
+renderRecommended();

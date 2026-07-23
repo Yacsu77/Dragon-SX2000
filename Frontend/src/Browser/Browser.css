@@ -35,9 +35,14 @@ webview {
   pointer-events: none;
   z-index: 0;
   filter: none;
-  transition: opacity 320ms ease-in-out;
+  /* Transição só quando animação de aba está ativa (body.janelas-content-switching) */
+  transition: none;
   background: var(--content-bg);
   transform: translateZ(0);
+}
+
+body.janelas-content-switching .browser-container.active webview {
+  transition: opacity 320ms ease-in-out;
 }
 
 .browser-container.active webview.active {
@@ -54,6 +59,9 @@ webview {
   filter: none;
   pointer-events: none;
   z-index: 2;
+}
+
+body.janelas-content-switching .browser-container.active webview.active.is-leaving {
   transition: opacity 320ms ease-in-out;
 }
 

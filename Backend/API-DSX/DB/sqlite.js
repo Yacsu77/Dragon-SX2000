@@ -1,7 +1,21 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, 'dsx-browser.db');
+function resolveDbPath() {
+  if (process.env.DSX_API_DB_PATH) {
+    const dbPath = path.resolve(process.env.DSX_API_DB_PATH);
+    try {
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    } catch (_) {
+      /* ignore */
+    }
+    return dbPath;
+  }
+  return path.join(__dirname, 'dsx-browser.db');
+}
+
+const DB_PATH = resolveDbPath();
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {

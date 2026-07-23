@@ -159,6 +159,14 @@
     if (payload?.password) setProfileSecret(payload.password);
     await setActiveUser(user, { reason: 'create', keepProfileSecret: Boolean(payload?.password) });
     if (payload?.password) await unlockVaultWithSecret(user.id, payload.password);
+    try {
+      if (window.DragonWallpaper?.seedDefault) {
+        await window.DragonWallpaper.seedDefault(user.id);
+      }
+      if (typeof window.WallpaperUserReload === 'function') {
+        await window.WallpaperUserReload();
+      }
+    } catch (_) { /* ignore wallpaper seed errors */ }
     return user;
   }
 

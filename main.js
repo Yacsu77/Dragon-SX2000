@@ -53,12 +53,60 @@ function buildChromeUserAgent() {
 
 const DSX_BROWSER_UA = buildChromeUserAgent();
 
+/**
+ * UA honesto do Electron (com token Electron/DSX). É o padrão usado em todos os
+ * sites, INCLUSIVE Google — que bloqueia login quando detecta UA de Chrome
+ * "puro" vindo de um app embarcado. Capturado em tempo de execução.
+ */
+let DSX_DEFAULT_UA = '';
+
+/**
+ * UA por domínio: só WhatsApp/Discord recebem o Chrome "puro"; todo o resto
+ * (incl. accounts.google.com) usa o UA honesto do Electron.
+ */
+const DSX_SPOOF_HOST_RE =
+  /(?:^|\.)(?:whatsapp\.(?:com|net)|discord\.(?:com|gg|media)|discordapp\.(?:com|net))$/i;
+
+function dsxHostFromUrl(url) {
+  try {
+    return new URL(url).hostname || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function dsxShouldSpoofChrome(url) {
+  return DSX_SPOOF_HOST_RE.test(dsxHostFromUrl(url));
+}
+
+function dsxUserAgentForUrl(url) {
+  if (dsxShouldSpoofChrome(url)) return DSX_BROWSER_UA;
+  return DSX_DEFAULT_UA || DSX_BROWSER_UA;
+}
+
 function hardenSession(ses) {
   if (!ses || ses.__dsxHardened) return;
   ses.__dsxHardened = true;
 
+  // UA por domínio no nível do request (cobre navegação e sub-recursos).
+  // WhatsApp/Discord => Chrome puro; resto (incl. Google) => UA honesto.
   try {
-    ses.setUserAgent(DSX_BROWSER_UA);
+    ses.webRequest.onBeforeSendHeaders((details, callback) => {
+      try {
+        const ua = dsxUserAgentForUrl(details.url);
+        if (ua) details.requestHeaders['User-Agent'] = ua;
+      } catch (_) {
+        /* ignore */
+      }
+      callback({ requestHeaders: details.requestHeaders });
+    });
+  } catch (_) {
+    /* ignore */
+  }
+
+  // Base do navigator.userAgent = honesto; ajustado por navegação em web-contents-created.
+  try {
+    ses.setUserAgent(DSX_DEFAULT_UA || DSX_BROWSER_UA);
   } catch (_) {
     /* ignore */
   }
@@ -138,8 +186,14 @@ function hardenSession(ses) {
 }
 
 function configureBrowserIdentity() {
+  // Captura o UA honesto do Electron ANTES de qualquer override.
   try {
-    app.userAgentFallback = DSX_BROWSER_UA;
+    DSX_DEFAULT_UA = session.defaultSession.getUserAgent() || '';
+  } catch (_) {
+    DSX_DEFAULT_UA = '';
+  }
+  try {
+    app.userAgentFallback = DSX_DEFAULT_UA || DSX_BROWSER_UA;
   } catch (_) {
     /* ignore */
   }
@@ -1322,13 +1376,27 @@ app.on('web-contents-created', (_event, contents) => {
   } catch (_) {
     /* ignore */
   }
-  try {
-    if (typeof contents.setUserAgent === 'function') {
-      contents.setUserAgent(DSX_BROWSER_UA);
+
+  // navigator.userAgent por domínio: acompanha o override de header por navegação.
+  const applyUaForUrl = (url) => {
+    try {
+      if (typeof contents.setUserAgent === 'function' && url) {
+        contents.setUserAgent(dsxUserAgentForUrl(url));
+      }
+    } catch (_) {
+      /* ignore */
     }
+  };
+
+  try {
+    applyUaForUrl(contents.getURL());
   } catch (_) {
     /* ignore */
   }
+
+  contents.on('did-start-navigation', (_e, url, isInPlace, isMainFrame) => {
+    if (isMainFrame) applyUaForUrl(url);
+  });
 });
 
 app.whenReady().then(async () => {

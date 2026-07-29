@@ -197,6 +197,20 @@
   function buildWebview(url, tabId, opts) {
     const webview = document.createElement('webview');
     webview.setAttribute('allowpopups', '');
+    // Permissions Policy do guest: Spotify/Discord precisam de EME + autoplay.
+    webview.setAttribute(
+      'allow',
+      [
+        'autoplay *',
+        'encrypted-media *',
+        'fullscreen *',
+        'microphone *',
+        'camera *',
+        'display-capture *',
+        'clipboard-read *',
+        'clipboard-write *',
+      ].join('; ')
+    );
     const partition =
       (window.UserSession && typeof window.UserSession.getPartition === 'function'
         ? window.UserSession.getPartition()

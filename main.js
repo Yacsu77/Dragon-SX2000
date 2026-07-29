@@ -4,6 +4,10 @@ const http = require('http');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs').promises;
 
+const { MediaDrmManager } = require('./MediaDrm');
+// Switches Chromium (autoplay) precisam existir antes de app.whenReady().
+MediaDrmManager.installEarlySwitches();
+
 let mediaSdkProcess = null;
 let apiDsxProcess = null;
 let isAppQuitting = false;
@@ -61,11 +65,14 @@ const DSX_BROWSER_UA = buildChromeUserAgent();
 let DSX_DEFAULT_UA = '';
 
 /**
- * UA por domínio: só WhatsApp/Discord recebem o Chrome "puro"; todo o resto
+ * UA por domínio: WhatsApp/Discord/Spotify recebem Chrome "puro"; o resto
  * (incl. accounts.google.com) usa o UA honesto do Electron.
+ *
+ * Spotify: com UA Electron a UI carrega (álbuns) mas o player some —
+ * confirmado pela equipe do Electron (#40878).
  */
 const DSX_SPOOF_HOST_RE =
-  /(?:^|\.)(?:whatsapp\.(?:com|net)|discord\.(?:com|gg|media)|discordapp\.(?:com|net))$/i;
+  /(?:^|\.)(?:whatsapp\.(?:com|net)|discord\.(?:com|gg|media)|discordapp\.(?:com|net)|spotify\.(?:com|net)|spotifycdn\.com|scdn\.co)$/i;
 
 function dsxHostFromUrl(url) {
   try {
@@ -138,10 +145,13 @@ function hardenSession(ses) {
     ses.setPermissionCheckHandler((_wc, permission) => {
       const allow = new Set([
         'media',
+        'mediaKeySystem',
         'display-capture',
         'fullscreen',
         'notifications',
         'clipboard-sanitized-write',
+        'clipboard-read',
+        'autoplay',
       ]);
       return allow.has(String(permission || ''));
     });
@@ -577,7 +587,25 @@ function comboFromInput(input) {
 }
 
 function attachWebviewPopupHandler(win) {
+  win.webContents.on('will-attach-webview', (_event, webPreferences) => {
+    try {
+      webPreferences.plugins = true;
+      webPreferences.backgroundThrottling = false;
+      webPreferences.autoplayPolicy = 'no-user-gesture-required';
+    } catch (_) {
+      /* ignore */
+    }
+  });
+
   win.webContents.on('did-attach-webview', (_event, guestWebContents) => {
+    try {
+      if (typeof guestWebContents.setMaxListeners === 'function') {
+        guestWebContents.setMaxListeners(32);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
     guestWebContents.setWindowOpenHandler(({ url }) => {
       if (isAllowedNavigationUrl(url) && !win.isDestroyed()) {
         win.webContents.send('browser:open-url', url);
@@ -1377,6 +1405,23 @@ app.on('web-contents-created', (_event, contents) => {
     /* ignore */
   }
 
+  // SPAs pesadas (Spotify) disparam muitas navegações; o Electron adiciona
+  // did-stop-loading por loadURL/guest IPC e estoura o limite padrão (10).
+  // @TODO: verificar se isso é necessário.
+  // Caso não seja, remover o try/catch e o if.
+  // Se for necessário, verificar se o valor de 32 é adequado para o caso.
+  // https://github.com/electron/electron/blob/main/docs/api/web-contents.md#event-did-start-navigation
+  // Não estava funcionando com o valor padrão de 10.
+  // Estava disparando o evento did-start-navigation muitas vezes.
+  // Com o valor de 32, está funcionando corretamente.
+  try {
+    if (typeof contents.setMaxListeners === 'function') {
+      contents.setMaxListeners(32);
+    }
+  } catch (_) {
+    /* ignore */
+  }
+
   // navigator.userAgent por domínio: acompanha o override de header por navegação.
   const applyUaForUrl = (url) => {
     try {
@@ -1400,6 +1445,7 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.whenReady().then(async () => {
+  await MediaDrmManager.bootstrap();
   configureBrowserIdentity();
   setupApplicationMenu();
   startMediaSdk();
@@ -1410,6 +1456,7 @@ app.whenReady().then(async () => {
 app.on('activate', async () => {
   // macOS: reabrir janela sem matar a API (fica no dock).
   if (BrowserWindow.getAllWindows().length === 0) {
+    await MediaDrmManager.bootstrap();
     await startApiDsx();
     createWindow();
   }

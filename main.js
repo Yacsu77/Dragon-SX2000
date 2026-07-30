@@ -536,13 +536,118 @@ const globalCombosByHost = new Map();
 const globalHoldCombosByHost = new Map();
 
 function isAllowedNavigationUrl(url) {
-  
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
   }
+}
+
+/**
+ * Popups de OAuth/login (Google, Apple, Microsoft…).
+ * Se virarem aba (deny + browser:open-url), perdem window.opener e o
+ * callback fica em tela branca — "Não foi possível obter seu perfil do Google".
+ */
+function isAuthPopupUrl(url) {
+  if (!url || url === 'about:blank') return false;
+  try {
+    const parsed = new URL(url);
+    const host = String(parsed.hostname || '').toLowerCase();
+    const path = String(parsed.pathname || '').toLowerCase();
+    const href = String(parsed.href || '').toLowerCase();
+
+    if (
+      host === 'accounts.google.com' ||
+      host === 'accounts.youtube.com' ||
+      host === 'account.google.com'
+    ) {
+      return true;
+    }
+    if (host === 'www.google.com' || host === 'google.com') {
+      if (
+        path.includes('/o/oauth2') ||
+        path.includes('/signin') ||
+        path.includes('/gsi/') ||
+        href.includes('oauth') ||
+        href.includes('client_id=')
+      ) {
+        return true;
+      }
+    }
+    if (host.endsWith('.google.com') && (path.includes('/gsi/') || path.includes('/o/oauth2'))) {
+      return true;
+    }
+
+    if (host === 'appleid.apple.com') return true;
+    if (host === 'login.microsoftonline.com' || host === 'login.live.com') return true;
+    if (host === 'github.com' && path.includes('/login/oauth')) return true;
+    if (
+      (host === 'facebook.com' || host === 'www.facebook.com') &&
+      (path.includes('/login') || path.includes('/dialog') || path.includes('/v'))
+    ) {
+      return true;
+    }
+    if (
+      (host === 'twitter.com' || host === 'api.twitter.com' || host === 'x.com') &&
+      (path.includes('/oauth') || path.includes('/i/oauth'))
+    ) {
+      return true;
+    }
+    if (host.includes('auth0.com') || host.includes('okta.com')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeSizedPopup(features) {
+  const f = String(features || '');
+  return /\bwidth\s*=/i.test(f) && /\bheight\s*=/i.test(f);
+}
+
+/**
+ * @param {{ url?: string, disposition?: string, features?: string }} details
+ */
+function shouldAllowNativePopup(details) {
+  const url = details?.url || '';
+  const disposition = details?.disposition || '';
+  const features = details?.features || '';
+
+  if (isAuthPopupUrl(url)) return true;
+
+  // GIS/OAuth costuma abrir about:blank e só depois navega para accounts.google.com.
+  if (
+    (url === 'about:blank' || url === '') &&
+    (disposition === 'new-window' || looksLikeSizedPopup(features))
+  ) {
+    return true;
+  }
+
+  if (disposition === 'new-window' && looksLikeSizedPopup(features)) {
+    return true;
+  }
+
+  return false;
+}
+
+function authPopupWindowOptions(parentWin) {
+  return {
+    width: 520,
+    height: 740,
+    minWidth: 360,
+    minHeight: 480,
+    autoHideMenuBar: true,
+    parent: parentWin && !parentWin.isDestroyed() ? parentWin : undefined,
+    modal: false,
+    show: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      // Sem preload do DSX: popup é conteúdo de terceiros (OAuth).
+    },
+  };
 }
 
 /**
@@ -606,11 +711,49 @@ function attachWebviewPopupHandler(win) {
       /* ignore */
     }
 
-    guestWebContents.setWindowOpenHandler(({ url }) => {
+    guestWebContents.setWindowOpenHandler((details) => {
+      const { url } = details || {};
+
+      // OAuth / Sign-In: popup nativo (mantém window.opener → callback funciona).
+      if (shouldAllowNativePopup(details)) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: authPopupWindowOptions(win),
+        };
+      }
+
+      // Links normais (target=_blank): viram aba no DSX.
       if (isAllowedNavigationUrl(url) && !win.isDestroyed()) {
         win.webContents.send('browser:open-url', url);
       }
       return { action: 'deny' };
+    });
+
+    guestWebContents.on('did-create-window', (childWindow, details) => {
+      try {
+        if (!childWindow || childWindow.isDestroyed()) return;
+        const childWc = childWindow.webContents;
+        hardenSession(childWc.session);
+        if (typeof childWc.setMaxListeners === 'function') {
+          childWc.setMaxListeners(32);
+        }
+        // Se o popup nasceu em about:blank, aplica UA ao navegar.
+        const applyUa = (navUrl) => {
+          try {
+            if (navUrl && typeof childWc.setUserAgent === 'function') {
+              childWc.setUserAgent(dsxUserAgentForUrl(navUrl));
+            }
+          } catch (_) {
+            /* ignore */
+          }
+        };
+        applyUa(details?.url || childWc.getURL());
+        childWc.on('did-start-navigation', (_e, navUrl, _inPlace, isMainFrame) => {
+          if (isMainFrame) applyUa(navUrl);
+        });
+      } catch (err) {
+        console.warn('[DSX] oauth popup hook:', err?.message || err);
+      }
     });
 
     // Intercepta atalhos globais mesmo quando o foco está dentro do site.

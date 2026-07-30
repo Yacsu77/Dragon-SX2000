@@ -58,6 +58,7 @@
       "preload.js",
       "package.json",
       "MediaDrm/**",
+      "Main/**",
       "Frontend/**",
       "UserINTer/**",
       "resources/**",

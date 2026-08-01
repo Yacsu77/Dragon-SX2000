@@ -40,9 +40,9 @@
 
   async function useCredential(item, options = {}) {
     if (!item?.id || !window.PasswordVaultAdapter || !window.PasswordWebviewAdapter) return false;
-    const unlocked = await window.PasswordVaultAdapter.ensureUnlocked?.();
-    if (!unlocked) return false;
     try {
+      const unlocked = await window.PasswordVaultAdapter.ensureUnlocked?.();
+      if (!unlocked && !window.PasswordVaultAdapter.isUnlocked?.()) return false;
       const revealed = await window.PasswordVaultAdapter.reveal(item.id);
       const username = revealed?.username || item.username || '';
       const password = revealed?.password || '';

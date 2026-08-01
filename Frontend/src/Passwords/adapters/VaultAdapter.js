@@ -1,5 +1,6 @@
 /**
  * Adapter — VaultApi (/vault) como única persistência de senhas salvas.
+ * Unlock é silencioso no fluxo de senhas (não abre o Cofre).
  */
 (function () {
   if (window.PasswordVaultAdapter) return;
@@ -10,6 +11,10 @@
 
   function getToken() {
     return window.UserSession?.getVaultToken?.() || null;
+  }
+
+  function clearToken() {
+    window.UserSession?.clearVaultToken?.();
   }
 
   function normalizeOrigin(input) {
@@ -61,6 +66,18 @@
     return String(username || '').trim().toLowerCase();
   }
 
+  function isVaultLockedError(err) {
+    const msg = String(err?.message || err || '').toLowerCase();
+    return (
+      msg.includes('bloqueado') ||
+      msg.includes('locked') ||
+      msg.includes('401') ||
+      msg.includes('unlock') ||
+      msg.includes('token') ||
+      msg.includes('unavailable')
+    );
+  }
+
   async function listSafe() {
     const userId = getUserId();
     if (!userId || !window.VaultApi?.list) return [];
@@ -89,15 +106,15 @@
       }));
   }
 
-  /** true se já existe credencial para origin + username (case-insensitive). */
+  /**
+   * true se já existe credencial para origin + username.
+   * Sem username → false (não bloquear save quando o site só mostra o campo senha).
+   */
   async function hasCredential(origin, username) {
+    const target = normalizeUsername(username);
+    if (!target) return false;
     const items = await listByOrigin(origin);
     if (!items.length) return false;
-    const target = normalizeUsername(username);
-    if (!target) {
-      // Sem username: considera existente se já há qualquer senha para o site.
-      return items.length > 0;
-    }
     return items.some((item) => normalizeUsername(item.username) === target);
   }
 
@@ -117,68 +134,26 @@
     return Array.from(map.values()).sort((a, b) => a.site.localeCompare(b.site));
   }
 
-  async function create({ origin, username, password, meta }) {
-    const userId = getUserId();
-    const token = getToken();
-    if (!userId || !token || !window.VaultApi?.create) {
-      throw new Error('Vault locked or unavailable');
-    }
-    const normalizedOrigin = normalizeOrigin(origin) || origin;
-    const targetUser = normalizeUsername(username);
-
-    // Se já existe a mesma conta, remove e recria (permite atualizar senha).
-    try {
-      const existing = await listByOrigin(normalizedOrigin);
-      const match = existing.find((item) => normalizeUsername(item.username) === targetUser);
-      if (match?.id && window.VaultApi?.remove) {
-        await window.VaultApi.remove(match.id, userId);
-      }
-    } catch (_) {
-      /* segue para create */
-    }
-
-    return window.VaultApi.create({
-      user_id: userId,
-      token,
-      origin: normalizedOrigin,
-      username,
-      password,
-      meta: meta || null,
-    });
-  }
-
-  async function reveal(id) {
-    const userId = getUserId();
-    const token = getToken();
-    if (!userId || !token || !window.VaultApi?.reveal) {
-      throw new Error('Vault locked or unavailable');
-    }
-    return window.VaultApi.reveal(id, userId, token);
-  }
-
-  async function updateMeta(id, meta) {
-    const userId = getUserId();
-    const token = getToken();
-    if (!userId || !token || !window.VaultApi?.update) {
-      throw new Error('Vault locked or unavailable');
-    }
-    return window.VaultApi.update(id, {
-      user_id: userId,
-      token,
-      meta: meta || {},
-    });
-  }
-
   /**
    * Garante sessão do vault para o sistema de senhas (não abre o Cofre).
-   * Usa a senha do perfil se ainda estiver em cache curta, ou token existente.
+   * @param {string} [secret]
+   * @param {{ force?: boolean }} [options]
    */
-  async function ensureUnlocked(secret) {
-    if (isUnlocked()) return true;
+  async function ensureUnlocked(secret, options = {}) {
     const userId = getUserId();
     if (!userId || !window.VaultApi?.unlock) return false;
-    const key = secret || window.UserSession?.getProfileSecret?.();
-    if (!key) return false;
+
+    const force = Boolean(options.force);
+    if (!force && isUnlocked()) return true;
+
+    const profileSecret = window.UserSession?.getProfileSecret?.();
+    const key =
+      secret !== undefined && secret !== null
+        ? String(secret)
+        : profileSecret != null
+          ? String(profileSecret)
+          : '';
+
     try {
       const result = await window.VaultApi.unlock(userId, key);
       window.UserSession?.setVaultToken?.(result.token);
@@ -191,6 +166,72 @@
 
   function isUnlocked() {
     return Boolean(getToken());
+  }
+
+  async function withFreshSession(action) {
+    let ok = await ensureUnlocked();
+    if (!ok) throw new Error('Vault locked or unavailable');
+    try {
+      return await action(getToken());
+    } catch (err) {
+      if (!isVaultLockedError(err)) throw err;
+      clearToken();
+      ok = await ensureUnlocked(undefined, { force: true });
+      if (!ok) throw err;
+      return action(getToken());
+    }
+  }
+
+  async function create({ origin, username, password, meta }) {
+    const userId = getUserId();
+    if (!userId || !window.VaultApi?.create) {
+      throw new Error('Vault locked or unavailable');
+    }
+    const normalizedOrigin = normalizeOrigin(origin) || origin;
+    const targetUser = normalizeUsername(username);
+
+    return withFreshSession(async (token) => {
+      try {
+        const existing = await listByOrigin(normalizedOrigin);
+        const match = existing.find((item) => normalizeUsername(item.username) === targetUser);
+        if (match?.id && window.VaultApi?.remove) {
+          await window.VaultApi.remove(match.id, userId);
+        }
+      } catch (_) {
+        /* segue para create */
+      }
+
+      return window.VaultApi.create({
+        user_id: userId,
+        token,
+        origin: normalizedOrigin,
+        username,
+        password,
+        meta: meta || null,
+      });
+    });
+  }
+
+  async function reveal(id) {
+    const userId = getUserId();
+    if (!userId || !window.VaultApi?.reveal) {
+      throw new Error('Vault locked or unavailable');
+    }
+    return withFreshSession((token) => window.VaultApi.reveal(id, userId, token));
+  }
+
+  async function updateMeta(id, meta) {
+    const userId = getUserId();
+    if (!userId || !window.VaultApi?.update) {
+      throw new Error('Vault locked or unavailable');
+    }
+    return withFreshSession((token) =>
+      window.VaultApi.update(id, {
+        user_id: userId,
+        token,
+        meta: meta || {},
+      })
+    );
   }
 
   window.PasswordVaultAdapter = {

@@ -151,6 +151,8 @@
     await window.UsersApi.unlock(user.id, null);
     clearProfileSecret();
     await setActiveUser(user, { reason: 'select' });
+    // Perfil sem senha: unlock silencioso do vault (chave de dispositivo).
+    await unlockVaultWithSecret(user.id, '');
     return user;
   }
 
@@ -158,7 +160,8 @@
     const user = await window.UsersApi.create(payload);
     if (payload?.password) setProfileSecret(payload.password);
     await setActiveUser(user, { reason: 'create', keepProfileSecret: Boolean(payload?.password) });
-    if (payload?.password) await unlockVaultWithSecret(user.id, payload.password);
+    // Sempre sobe o vault em silêncio (senha do perfil ou chave de dispositivo).
+    await unlockVaultWithSecret(user.id, payload?.password || '');
     try {
       if (window.DragonWallpaper?.seedDefault) {
         await window.DragonWallpaper.seedDefault(user.id);

@@ -94,12 +94,11 @@
     observeWebviews();
     observeTabs();
 
+    // Fecha menu só ao trocar de aba — NÃO em app:webview-navigated.
+    // Durante load/redirects o webview emite navegação várias vezes e
+    // matava o menu aberto pelo botão direito na aba.
     document.addEventListener('app:tab-changed', () => {
       window.CursorMiddleMouseScroll?.stop();
-      window.CursorContextMenu?.close();
-    });
-
-    document.addEventListener('app:webview-navigated', () => {
       window.CursorContextMenu?.close();
     });
   }

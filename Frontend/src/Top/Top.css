@@ -115,6 +115,99 @@
   stroke-width: 2;
 }
 
+/* Downloads: spinner à esquerda do botão + ghost de voo */
+.download-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.download-btn__spinner {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  margin: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  animation: download-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+.download-btn-wrap:not(.is-downloading) .download-btn__spinner,
+.download-btn__spinner[hidden] {
+  display: none !important;
+}
+
+.download-btn-wrap.is-downloading .download-btn__spinner {
+  display: block !important;
+}
+
+.download-btn-wrap.is-downloading #downloadBtn {
+  width: 28px;
+}
+
+@keyframes download-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#downloadBtn.download-btn--pulse {
+  animation: download-btn-pulse 0.4s ease;
+}
+
+@keyframes download-btn-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.download-fly-ghost {
+  position: fixed;
+  z-index: 100000;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 28, 32, 0.92);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.55s ease,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.download-fly-ghost img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.download-fly-ghost.is-flying {
+  opacity: 0.35;
+  transform: scale(0.45);
+}
+
 .nav-center {
   grid-column: 2;
   justify-self: stretch;

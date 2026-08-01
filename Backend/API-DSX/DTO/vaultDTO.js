@@ -11,11 +11,9 @@ function validateVaultUnlock(data) {
   if (!data || typeof data !== 'object') {
     throw new ApiError('Dados inválidos', 400);
   }
+  // Secret opcional: perfis sem senha/PIN usam unlock de dispositivo.
   const secret = data.password || data.pin || data.secret;
-  if (!secret) {
-    throw new ApiError('Senha ou PIN do cofre é obrigatório', 400);
-  }
-  return { secret: String(secret) };
+  return { secret: secret == null ? '' : String(secret) };
 }
 
 function validateCreateVaultItem(data) {

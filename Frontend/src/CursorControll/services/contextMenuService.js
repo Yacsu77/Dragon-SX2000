@@ -6,6 +6,7 @@
     'selected-text': () => window.CursorSelectedTextContext,
     tab: () => window.CursorTabContext,
     'text-input': () => window.CursorTextInputContext,
+    image: () => window.CursorImageContext,
     page: () => window.CursorPageContext,
     link: () => window.CursorLinkContext,
   };

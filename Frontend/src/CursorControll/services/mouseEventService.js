@@ -28,6 +28,8 @@
     tabElement.dataset.cursorTabEvents = 'true';
 
     tabElement.addEventListener('contextmenu', (e) => {
+      // X da aba tem prioridade — não abrir menu em cima do fechar.
+      if (e.target?.closest?.('.tab-close')) return;
       e.preventDefault();
       e.stopPropagation();
       const context = window.CursorContextDetection.fromTabElement(
@@ -39,6 +41,7 @@
 
     tabElement.addEventListener('auxclick', (e) => {
       if (e.button !== 1) return;
+      if (e.target?.closest?.('.tab-close')) return;
       e.preventDefault();
       e.stopPropagation();
       const tabId = tabElement.dataset.id;
@@ -91,12 +94,11 @@
     observeWebviews();
     observeTabs();
 
+    // Fecha menu só ao trocar de aba — NÃO em app:webview-navigated.
+    // Durante load/redirects o webview emite navegação várias vezes e
+    // matava o menu aberto pelo botão direito na aba.
     document.addEventListener('app:tab-changed', () => {
       window.CursorMiddleMouseScroll?.stop();
-      window.CursorContextMenu?.close();
-    });
-
-    document.addEventListener('app:webview-navigated', () => {
       window.CursorContextMenu?.close();
     });
   }

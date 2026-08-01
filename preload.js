@@ -1,3 +1,13 @@
+/**
+
+ * preload.js — contexto de segurança para o Frontend.
+ * 
+ * Este arquivo é executado antes do processo principal (main.js)
+ * e tem acesso a APIs do Electron. Ele é usado para expor
+ * funcionalidades do Backend para o Frontend de forma segura.
+ */
+
+
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 function resolveFilePath(file) {
@@ -86,6 +96,16 @@ contextBridge.exposeInMainWorld('DragonJanelas', {
     const handler = (_event, payload) => callback(payload);
     ipcRenderer.on('janelas:drop-indicator', handler);
     return () => ipcRenderer.removeListener('janelas:drop-indicator', handler);
+  },
+});
+
+contextBridge.exposeInMainWorld('DragonDownloads', {
+  prepare: (payload) => ipcRenderer.invoke('downloads:prepare', payload || {}),
+  onEvent: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('downloads:event', handler);
+    return () => ipcRenderer.removeListener('downloads:event', handler);
   },
 });
 

@@ -57,6 +57,8 @@
       "main.js",
       "preload.js",
       "package.json",
+      "MediaDrm/**",
+      "Main/**",
       "Frontend/**",
       "UserINTer/**",
       "resources/**",
@@ -117,6 +119,8 @@
       "extendInfo": {
         "NSMicrophoneUsageDescription": "DSX precisa do microfone para sites e apps web (ex.: Discord).",
         "NSCameraUsageDescription": "DSX precisa da câmera para sites e apps web.",
+        "NSLocationWhenInUseUsageDescription": "DSX precisa da localização quando um site solicita (mapas, clima, etc.).",
+        "NSLocationUsageDescription": "DSX precisa da localização quando um site solicita (mapas, clima, etc.).",
         "NSAudioCaptureUsageDescription": "DSX precisa capturar áudio do sistema para o player de mídia.",
         "NSAppleEventsUsageDescription": "DSX precisa controlar apps de mídia no macOS."
       }

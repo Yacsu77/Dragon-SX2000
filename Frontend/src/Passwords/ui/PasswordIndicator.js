@@ -98,10 +98,9 @@
   }
 
   async function withVault(action) {
-    if (window.PasswordVaultAdapter?.isUnlocked?.()) return action();
+    // Unlock silencioso — nunca abre o Cofre no fluxo de salvar/usar senha.
     const ok = await window.PasswordVaultAdapter?.ensureUnlocked?.();
-    if (!ok) {
-      window.PasswordBus?.notify('vault:locked', { action: 'password-flow' });
+    if (!ok && !window.PasswordVaultAdapter?.isUnlocked?.()) {
       return false;
     }
     return action();
@@ -210,7 +209,7 @@
         } catch (err) {
           if (hint) {
             hint.hidden = false;
-            hint.textContent = 'Não foi possível salvar. Desbloqueie o cofre e tente de novo.';
+            hint.textContent = 'Não foi possível salvar a senha. Tente de novo.';
           }
           return false;
         }

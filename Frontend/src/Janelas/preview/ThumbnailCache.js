@@ -23,6 +23,29 @@
     return document.querySelector(`webview[data-id="${tabId}"]`);
   }
 
+  /** Sites GPU-pesados: capturePage dispara UnknownVizError no guest (Viz compositor). */
+  function shouldSkipCapture(webview) {
+    if (!webview) return true;
+    let url = '';
+    try {
+      url =
+        (typeof webview.getURL === 'function' && webview.getURL()) ||
+        webview.src ||
+        '';
+    } catch (_) {
+      url = webview.src || '';
+    }
+    return /(?:^|\.)(?:spotify\.(?:com|net)|spotifycdn\.com|scdn\.co)/i.test(
+      (() => {
+        try {
+          return new URL(url).hostname || '';
+        } catch (_) {
+          return '';
+        }
+      })()
+    );
+  }
+
   function getCached(tabId) {
     const entry = cache.get(tabId);
     return entry?.dataUrl || null;
@@ -64,6 +87,7 @@
     const job = (async () => {
       const webview = getWebview(tabId);
       if (!webview || typeof webview.capturePage !== 'function') return null;
+      if (shouldSkipCapture(webview)) return getCached(tabId);
 
       const needsTemp = !webview.classList.contains('active');
       if (needsTemp) {
@@ -145,18 +169,21 @@
         if (!fresh) {
           const wv = getWebview(prev);
           if (wv && wv.classList.contains('active') && typeof wv.capturePage === 'function') {
-            // Fora do caminho crítico: capturePage no mesmo tick da troca compete com a barra
-            window.setTimeout(() => {
-              if (!wv.isConnected) return;
-              wv.capturePage()
-                .then((image) => {
-                  if (!image || (typeof image.isEmpty === 'function' && image.isEmpty())) return;
-                  if (typeof image.toDataURL === 'function') {
-                    setCached(prev, image.toDataURL());
-                  }
-                })
-                .catch(() => {});
-            }, 320);
+            // Spotify: capturePage → UnknownVizError no guest (GPU/Viz).
+            if (!shouldSkipCapture(wv)) {
+              // Fora do caminho crítico: capturePage no mesmo tick da troca compete com a barra
+              window.setTimeout(() => {
+                if (!wv.isConnected) return;
+                wv.capturePage()
+                  .then((image) => {
+                    if (!image || (typeof image.isEmpty === 'function' && image.isEmpty())) return;
+                    if (typeof image.toDataURL === 'function') {
+                      setCached(prev, image.toDataURL());
+                    }
+                  })
+                  .catch(() => {});
+              }, 320);
+            }
           }
         }
       }

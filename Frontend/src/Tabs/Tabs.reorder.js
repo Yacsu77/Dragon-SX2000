@@ -533,10 +533,12 @@
     ensureGlobalListeners();
 
     tabElement.addEventListener('pointerdown', (e) => {
-      if (e.target.classList.contains('tab-close') || e.target.closest('.tab-close')) {
-        return;
-      }
-      if (e.target.classList.contains('new-tab-dot') || e.target.closest('.new-tab-dot')) {
+      const t = e.target;
+      if (
+        t &&
+        typeof t.closest === 'function' &&
+        (t.closest('.tab-close') || t.closest('.new-tab-dot'))
+      ) {
         return;
       }
       if (e.button != null && e.button !== 0) return;

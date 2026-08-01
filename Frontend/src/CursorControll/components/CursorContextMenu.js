@@ -150,6 +150,8 @@
 
       document.addEventListener('mousedown', onOutsideClick, true);
       document.addEventListener('keydown', onKeyDown, true);
+      // Fecha ao trocar/fechar aba — não escuta webview-navigated
+      // (load/redirects fechavam o menu enquanto a página carregava).
       document.addEventListener('app:tab-changed', close);
       document.addEventListener('app:tab-closed', close);
       window.addEventListener('blur', close);

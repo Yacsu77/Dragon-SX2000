@@ -328,8 +328,20 @@ body.janelas-content-switching .tab.active {
   font-size: 11px;
 }
 
+/* Com muitas abas: X no hover (substitui o ícone) — sempre clicável */
 .tabs.many-tabs .tab:not(.active) .tab-close {
-  display: none;
+  left: 50% !important;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  z-index: 100 !important;
+}
+
+.tabs.many-tabs .tab:not(.active):hover .tab-close {
+  opacity: 0.9;
+}
+
+.tabs.many-tabs .tab:not(.active):hover .tab-icon {
+  opacity: 0;
 }
 
 .tabs.many-tabs .tab:not(.active) .new-tab-dot {
@@ -560,7 +572,8 @@ body.active-tab-led .tab.active > *:not(.tab-led-ring):not(.tab-close) {
   top: 50% !important;
   bottom: auto !important;
   transform: translateY(-50%);
-  z-index: 30 !important;
+  /* Acima de ícone, LED, separadores e handlers de drag/cursor */
+  z-index: 100 !important;
   pointer-events: auto !important;
   margin: 0;
   -webkit-app-region: no-drag;

@@ -453,30 +453,58 @@
     }
   }
 
-  function bindTabClose(closeBtn, tabId) {
-    let closing = false;
-    const onClose = (e) => {
+  /** Ids em fechamento — evita double-fire pointerdown+click / reentrância. */
+  const closingTabIds = new Set();
+
+  /**
+   * Fecha pelo X no maior nível de hierarquia (#tabs, capture).
+   * Assim o clique vence drag/reorder/cursor em abas dinâmicas ou condensadas.
+   */
+  function ensureCloseDelegation() {
+    const root = document.getElementById('tabs');
+    if (!root || root.dataset.closeDelegateBound === '1') return;
+    root.dataset.closeDelegateBound = '1';
+
+    const onCloseIntent = (e) => {
+      const closeBtn =
+        e.target && typeof e.target.closest === 'function'
+          ? e.target.closest('.tab-close')
+          : null;
+      if (!closeBtn || !root.contains(closeBtn)) return;
+
+      const tab = closeBtn.closest('.tab');
+      const tabId = tab && tab.dataset ? tab.dataset.id : null;
+      if (!tabId) return;
+
       e.preventDefault();
       e.stopPropagation();
-      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-      if (closing) return;
-      if (!document.querySelector(`.tab[data-id="${CSS.escape(tabId)}"]`)) return;
-      closing = true;
-      closeTab(tabId);
+      if (typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation();
+      }
+
+      if (closingTabIds.has(tabId)) return;
+      if (!document.querySelector(`#tabs .tab[data-id="${CSS.escape(tabId)}"]`)) return;
+
+      closingTabIds.add(tabId);
+      try {
+        closeTab(tabId);
+      } finally {
+        queueMicrotask(() => closingTabIds.delete(tabId));
+      }
     };
-    // pointerdown (capture) fecha antes do drag/reorder engolir o clique.
-    closeBtn.addEventListener('pointerdown', onClose, true);
-    closeBtn.addEventListener('click', onClose, true);
+
+    root.addEventListener('pointerdown', onCloseIntent, true);
+    root.addEventListener('click', onCloseIntent, true);
   }
 
-  function createCloseButton(tabId) {
+  function createCloseButton(_tabId) {
+    ensureCloseDelegation();
     const closeBtn = document.createElement('span');
     closeBtn.classList.add('tab-close');
     closeBtn.setAttribute('role', 'button');
     closeBtn.setAttribute('aria-label', 'Fechar aba');
     closeBtn.title = 'Fechar';
-    closeBtn.innerHTML = '×';
-    bindTabClose(closeBtn, tabId);
+    closeBtn.textContent = '×';
     return closeBtn;
   }
 
@@ -802,4 +830,10 @@
   window.getOpenTabSnapshots = getOpenTabSnapshots;
   window.createTabFromSnapshot = createTabFromSnapshot;
   window.clearTabsForGroupSwitch = clearTabsForGroupSwitch;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureCloseDelegation, { once: true });
+  } else {
+    ensureCloseDelegation();
+  }
 })();

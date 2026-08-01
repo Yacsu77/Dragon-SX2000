@@ -13,7 +13,8 @@ const ApiError = require('../Exceptions/ApiError');
 
 /** @type {Map<string, { userId: string, key: Buffer, expiresAt: number }>} */
 const unlockSessions = new Map();
-const SESSION_TTL_MS = 15 * 60 * 1000;
+/** Sessão longa enquanto o perfil está ativo — password manager não pede cofre de novo. */
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 function createSession(userId, key) {
   const token = crypto.randomBytes(24).toString('hex');
@@ -46,26 +47,57 @@ function lockUserSessions(userId) {
   }
 }
 
+/**
+ * Garante salt de dispositivo para perfis sem senha/PIN (unlock silencioso).
+ * @param {object} row
+ * @returns {Promise<string>}
+ */
+async function ensureDeviceVaultSalt(row) {
+  if (row.vault_pin_salt && !row.vault_pin_hash) {
+    return row.vault_pin_salt;
+  }
+  const salt = crypto.randomBytes(16).toString('hex');
+  await run('UPDATE users SET vault_pin_salt = ?, updated_at = ? WHERE id = ?', [
+    salt,
+    new Date().toISOString(),
+    row.id,
+  ]);
+  return salt;
+}
+
 async function unlockVault(userId, secret) {
   const row = await usersService.getUserRow(userId);
+  const provided = secret == null ? '' : String(secret);
 
   let salt = null;
   if (row.password_hash) {
-    const ok = verifySecret(secret, row.password_salt, row.password_hash);
+    if (!provided) {
+      throw new ApiError('Senha do perfil é obrigatória para o cofre', 401);
+    }
+    const ok = verifySecret(provided, row.password_salt, row.password_hash);
     if (!ok) throw new ApiError('Senha incorreta para o cofre', 401);
     salt = row.password_salt;
   } else if (row.vault_pin_hash) {
-    const ok = verifySecret(secret, row.vault_pin_salt, row.vault_pin_hash);
+    if (!provided) {
+      throw new ApiError('PIN do cofre é obrigatório', 401);
+    }
+    const ok = verifySecret(provided, row.vault_pin_salt, row.vault_pin_hash);
     if (!ok) throw new ApiError('PIN do cofre incorreto', 401);
     salt = row.vault_pin_salt;
   } else {
-    throw new ApiError(
-      'Configure uma senha de usuário ou PIN do cofre antes de usar o gerenciador de senhas',
-      400
-    );
+    // Sem senha de perfil nem PIN: unlock silencioso (chave de dispositivo).
+    salt = await ensureDeviceVaultSalt(row);
+    const key = deriveVaultKey(`dsx-device:${userId}`, salt);
+    const token = createSession(userId, key);
+    return {
+      token,
+      expires_in_ms: SESSION_TTL_MS,
+      unlocked: true,
+      mode: 'device',
+    };
   }
 
-  const key = deriveVaultKey(secret, salt);
+  const key = deriveVaultKey(provided, salt);
   const token = createSession(userId, key);
   return {
     token,

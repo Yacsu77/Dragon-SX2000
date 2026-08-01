@@ -204,11 +204,13 @@
         'autoplay *',
         'encrypted-media *',
         'fullscreen *',
+        'geolocation *',
         'microphone *',
         'camera *',
         'display-capture *',
         'clipboard-read *',
         'clipboard-write *',
+        'midi *',
       ].join('; ')
     );
     const partition =

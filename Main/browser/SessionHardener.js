@@ -3,6 +3,34 @@
 const { isSessionHardener } = require('../contracts/ISessionHardener');
 
 /**
+ * Permissões web que o DSX concede a sites (request + check alinhados).
+ * Check e request precisam bater: sites consultam Permissions API antes
+ * de pedir — se o check negar, muitos nunca chegam no request.
+ */
+const ALLOWED_PERMISSIONS = new Set([
+  'media',
+  'mediaKeySystem',
+  'display-capture',
+  'fullscreen',
+  'notifications',
+  'pointerLock',
+  'keyboardLock',
+  'clipboard-sanitized-write',
+  'clipboard-read',
+  'geolocation',
+  'midi',
+  'midiSysex',
+  'idle-detection',
+  'openExternal',
+  'speaker-selection',
+  'storage-access',
+  'top-level-storage-access',
+  'window-management',
+  'fileSystem',
+  'autoplay',
+]);
+
+/**
  * SessionHardener — permissões, display-media e UA headers na Session.
  *
  * Depende de IUserAgentPolicy (DIP). Não decide popups OAuth.
@@ -26,6 +54,14 @@ class SessionHardener {
     this._session = sessionModule;
     this._desktopCapturer = desktopCapturer;
     this._ua = userAgentPolicy;
+  }
+
+  /**
+   * @param {string} permission
+   * @returns {boolean}
+   */
+  _isAllowed(permission) {
+    return ALLOWED_PERMISSIONS.has(String(permission || ''));
   }
 
   /**
@@ -57,41 +93,16 @@ class SessionHardener {
 
     try {
       ses.setPermissionRequestHandler((_wc, permission, callback) => {
-        const allow = new Set([
-          'media',
-          'mediaKeySystem',
-          'display-capture',
-          'fullscreen',
-          'notifications',
-          'pointerLock',
-          'clipboard-sanitized-write',
-          'clipboard-read',
-          'geolocation',
-          'midiSysex',
-          'idle-detection',
-          'openExternal',
-          'window-management',
-        ]);
-        callback(allow.has(String(permission || '')));
+        callback(this._isAllowed(permission));
       });
     } catch (_) {
       /* ignore */
     }
 
     try {
-      ses.setPermissionCheckHandler((_wc, permission) => {
-        const allow = new Set([
-          'media',
-          'mediaKeySystem',
-          'display-capture',
-          'fullscreen',
-          'notifications',
-          'clipboard-sanitized-write',
-          'clipboard-read',
-          'autoplay',
-        ]);
-        return allow.has(String(permission || ''));
-      });
+      // Sync check (Permissions.query / pré-check do Chromium).
+      // Sem geolocation aqui, sites tratam como "denied" e não pedem de novo.
+      ses.setPermissionCheckHandler((_wc, permission) => this._isAllowed(permission));
     } catch (_) {
       /* ignore */
     }
@@ -201,4 +212,4 @@ function createSessionHardener(deps) {
   return hardener;
 }
 
-module.exports = { SessionHardener, createSessionHardener };
+module.exports = { SessionHardener, createSessionHardener, ALLOWED_PERMISSIONS };

@@ -4,10 +4,11 @@
  * Prioridade:
  * 1. Campo editável
  * 2. Texto selecionado
- * 3. Link
- * 4. Aba
- * 5. Página comum
- * 6. Desconhecido
+ * 3. Imagem
+ * 4. Link
+ * 5. Aba
+ * 6. Página comum
+ * 7. Desconhecido
  */
 (function () {
   const urlUtils = () => window.CursorUrlUtils;
@@ -47,6 +48,7 @@
   function resolveContextType(partial) {
     if (partial.isEditable && !partial.isReadOnly && !partial.isDisabled) return 'text-input';
     if (partial.selectedText && partial.selectedText.trim()) return 'selected-text';
+    if (partial.imageUrl) return 'image';
     if (partial.linkUrl) return 'link';
     if (partial.tabId) return 'tab';
     if (partial.currentUrl || partial.webview) return 'page';
@@ -68,6 +70,10 @@
     const editFlags = params.editFlags || 0;
     const isReadOnly = Boolean(editFlags & 2);
     const isDisabled = Boolean(editFlags & 1);
+    const mediaType = String(params.mediaType || '');
+    const srcURL = params.srcURL || params.imageURL || '';
+    const imageUrl =
+      mediaType === 'image' || params.hasImageContents ? srcURL : '';
 
     const partial = {
       type: 'unknown',
@@ -75,6 +81,8 @@
       selectedText: selectionText || undefined,
       linkUrl: linkUrl || undefined,
       linkText: params.linkText || undefined,
+      imageUrl: imageUrl || undefined,
+      mediaType: mediaType || undefined,
       currentUrl: state.currentUrl || undefined,
       tabId: tabId || undefined,
       isEditable,

@@ -1,5 +1,5 @@
 /**
- * @typedef {'selected-text' | 'tab' | 'text-input' | 'page' | 'link' | 'unknown'} CursorContextType
+ * @typedef {'selected-text' | 'tab' | 'text-input' | 'page' | 'link' | 'image' | 'unknown'} CursorContextType
  */
 
 /**
@@ -15,6 +15,8 @@
  * @property {string} [selectedText]
  * @property {string} [linkUrl]
  * @property {string} [linkText]
+ * @property {string} [imageUrl]
+ * @property {string} [mediaType]
  * @property {string} [currentUrl]
  * @property {string} [tabId]
  * @property {string} [tabTitle]

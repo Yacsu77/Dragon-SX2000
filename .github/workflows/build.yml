@@ -37,10 +37,10 @@ jobs:
               release/DSX-*.AppImage
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # Electron 41 → Node 24 (ABI alinhado para sqlite3 / rebuild)
           node-version: "24"

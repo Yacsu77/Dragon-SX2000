@@ -58,12 +58,15 @@ function createMainApp(options) {
   const files = createFilesServices({ app, dialog });
   const downloads = createDownloadsServices({
     getActiveUserId: () => user.get(),
+    app,
+    dialog,
   });
   const shortcuts = createShortcutsServices();
 
   user.register(ipcMain);
   wallpaper.register(ipcMain);
   files.register(ipcMain);
+  downloads.register(ipcMain);
   shortcuts.register(ipcMain);
 
   function attachWebviewPopupHandler(win) {

@@ -57,7 +57,9 @@ Frontend/src/Janelas/
 │   ├── DetachController.js   ← Soltar abaixo do limiar → nova BrowserWindow
 │   └── TransferController.js ← Drop em outra janela (mesma zona de abas)
 ├── split/
-│   ├── SplitHost.js          ← Dois painéis no mesmo #browser
+│   ├── SplitHost.js          ← Dois painéis + assignTabToSide / swap
+│   ├── SplitPaneChrome.js    ← Abas invertidas no topo de cada viewport
+│   ├── SplitDropController.js← Drop barra↔painel e entre painéis
 │   ├── SplitDivider.js       ← Bolinha central → hover X → fechar split
 │   └── SplitActions.js       ← Menu “Dividir” esquerda/direita
 ├── layouts/
@@ -140,12 +142,21 @@ UserINTer/.../Customise/components/janelas/
 | Regra | Detalhe |
 |-------|---------|
 | Entrada | Menu direito da aba → **Dividir** → Esquerda \| Direita |
-| Modelo | Dois slots: `leftTabId` / `rightTabId`; um é o **foco** (onde cliques de aba atuam) |
-| Clique em outra aba | Troca só o painel **focado**; o outro permanece |
-| Fechar split | Bolinha no meio → hover vira X; cursor “pointer”; ao fechar, permanece a aba da **esquerda** |
-| Home / grupos | Definir na implementação: split incompatível com home-only; grupos continuam por janela |
+| Modelo | Dois slots: `leftTabId` / `rightTabId`; um é o **foco** |
+| Chrome | Cada painel mostra uma **aba invertida** (estilo Chrome de cabeça para baixo) no topo do viewport (`SplitPaneChrome`) |
+| Barra superior | Abas dos painéis **saem** da `#tabs` (classe `janelas-tab-in-pane`); só as demais ficam em cima |
+| Clique na barra | **Não** substitui o painel — troca só via drag-and-drop |
+| Clique na aba invertida | `focusPane(side)` |
+| Drag barra → painel | Swap: a aba do painel volta à barra; a arrastada ocupa o painel (`swapPaneWithTab`) |
+| Drag entre painéis | Swap left ↔ right |
+| Drag painel → barra | Fecha o split e foca a aba solta (`releasePaneTabToBar`) |
+| Fechar split | Bolinha no meio → hover vira X; ao fechar, permanece a aba da **esquerda** (ou `keepId`) |
+| Home | Ativar home encerra o split |
 
-**Status:** ✅ Fase 4 implementada (2026-07-20). Menu da aba: “Dividir — lado esquerdo/direito”; bolinha central fecha o split (mantém aba esquerda).
+**Módulos:** `split/SplitHost.js`, `split/SplitPaneChrome.js`, `split/SplitDropController.js`, `split/SplitDivider.js`, `split/SplitActions.js`  
+**Prioridade de drop:** Transfer > Split pane > Detach > Reorder
+
+**Status:** ✅ Fase 4 + chrome invertido (2026-08-06).
 
 ### 5 — Customise (Janela / Multi / Geral)
 

@@ -71,16 +71,23 @@
     });
   }
 
+  function getVisibleBarTabs() {
+    return Array.from(document.querySelectorAll('#tabs .tab')).filter(
+      (tab) => !tab.classList.contains('janelas-tab-in-pane')
+    );
+  }
+
   function updateTabsBarVisibility() {
     const tabsBar = document.querySelector('.tabs-bar');
-    const tabs = document.querySelectorAll('#tabs .tab');
+    const allTabs = document.querySelectorAll('#tabs .tab');
+    const tabs = getVisibleBarTabs();
     const hasGroupsButton = Boolean(document.getElementById('tabGroupsBtn'));
 
     if (
       !hasGroupsButton &&
-      tabs.length === 1 &&
-      tabs[0].dataset.id &&
-      tabs[0].dataset.id.startsWith('home-tab')
+      allTabs.length === 1 &&
+      allTabs[0].dataset.id &&
+      allTabs[0].dataset.id.startsWith('home-tab')
     ) {
       if (tabsBar) tabsBar.classList.add('hidden');
     } else if (tabsBar) {
@@ -91,33 +98,35 @@
     if (!tabsContainer) return;
     if (tabs.length === 0) {
       resetTabSizing(tabsContainer);
+      allTabs.forEach((tab) => ensureLedRing(tab));
       return;
     }
 
     const containerWidth = tabsContainer.clientWidth;
-    const shouldCondense = tabs.length >= MANY_TABS_THRESHOLD;
-    const shouldDense = tabs.length >= DENSE_TABS_THRESHOLD;
+    const tabCount = tabs.length;
+    const shouldCondense = tabCount >= MANY_TABS_THRESHOLD;
+    const shouldDense = tabCount >= DENSE_TABS_THRESHOLD;
 
     if (!shouldCondense) {
       resetTabSizing(tabsContainer);
-      tabs.forEach((tab) => ensureLedRing(tab));
+      allTabs.forEach((tab) => ensureLedRing(tab));
       return;
     }
 
-    const activeWidth = computeActiveWidthForManyTabs(containerWidth, tabs.length);
+    const activeWidth = computeActiveWidthForManyTabs(containerWidth, tabCount);
     if (!activeWidth) {
       resetTabSizing(tabsContainer);
       return;
     }
 
-    const inactiveCount = Math.max(1, tabs.length - 1);
+    const inactiveCount = Math.max(1, tabCount - 1);
     const remaining = Math.max(0, containerWidth - activeWidth);
     const inactiveWidth = Math.max(
       INACTIVE_MIN_WIDTH,
       Math.floor(remaining / inactiveCount)
     );
 
-    const signature = `${tabs.length}|${containerWidth}|${activeWidth}|${inactiveWidth}|${shouldDense ? 1 : 0}`;
+    const signature = `${tabCount}|${containerWidth}|${activeWidth}|${inactiveWidth}|${shouldDense ? 1 : 0}`;
     if (signature !== lastSignature) {
       lastSignature = signature;
       tabsContainer.classList.add('many-tabs');
@@ -131,7 +140,7 @@
       tabsContainer.classList.toggle('dense-tabs', shouldDense);
     }
 
-    tabs.forEach((tab) => ensureLedRing(tab));
+    allTabs.forEach((tab) => ensureLedRing(tab));
   }
 
   let visibilityRaf = 0;

@@ -252,6 +252,8 @@
     const tabId = tabElement.dataset.id;
 
     positionGhost(s, e.clientX, e.clientY);
+    s.lastClientX = e.clientX;
+    s.lastClientY = e.clientY;
 
     const hoveringTransfer = Boolean(
       window.JanelasNS?.TransferController?.isHoveringTarget?.()
@@ -259,6 +261,11 @@
     const inLocalTabs = Boolean(
       window.JanelasNS?.DetachThreshold?.isInLocalTabsZone?.(e.clientX, e.clientY)
     );
+    const splitSide = window.JanelasNS?.SplitDropController?.onDragMove?.({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      tabId,
+    });
 
     if (window.JanelasNS?.DetachController) {
       window.JanelasNS.DetachController.onDragMove({
@@ -281,7 +288,7 @@
 
     syncOsGhostMode(s, e.clientX, e.clientY);
 
-    if (!inLocalTabs || hoveringTransfer) {
+    if (!inLocalTabs || hoveringTransfer || splitSide) {
       if (s.placeholder) s.placeholder.classList.add('tab-placeholder--hidden');
       return;
     }
@@ -411,6 +418,7 @@
     endOsGhost(s);
     window.JanelasNS?.WindowBridge?.clearDragHover?.();
     window.JanelasNS?.DropIndicator?.hide?.();
+    window.JanelasNS?.SplitDropController?.endDrag?.();
     window.JanelasNS?.DetachController?.reset?.();
     window.JanelasNS?.TransferController?.endDrag?.();
     window.JanelasNS?.ThumbnailCache?.resume?.();
@@ -457,6 +465,21 @@
     if (window.JanelasNS?.TransferController?.onDragEnd) {
       try {
         handled = await window.JanelasNS.TransferController.onDragEnd({ tabId });
+      } catch (_) {
+        handled = false;
+      }
+    }
+
+    // Split drop (antes do detach): swap com painel E/D
+    if (!handled && window.JanelasNS?.SplitDropController?.onDragEnd) {
+      try {
+        handled = Boolean(
+          window.JanelasNS.SplitDropController.onDragEnd({
+            tabId,
+            clientX: s.lastClientX,
+            clientY: s.lastClientY,
+          })
+        );
       } catch (_) {
         handled = false;
       }
@@ -553,7 +576,11 @@
       if (!tabsContainer) return;
 
       const tabsOrder = Array.from(tabsContainer.children)
-        .filter((child) => child.classList.contains('tab'))
+        .filter(
+          (child) =>
+            child.classList.contains('tab') &&
+            !child.classList.contains('janelas-tab-in-pane')
+        )
         .map((tab) => tab);
 
       const rect = tabElement.getBoundingClientRect();
@@ -567,6 +594,8 @@
         hasStartedDrag: false,
         dragStartX: e.clientX,
         dragStartY: e.clientY,
+        lastClientX: e.clientX,
+        lastClientY: e.clientY,
         mouseOffsetX: rect.width / 2,
         mouseOffsetY: rect.height / 2,
         ghostWidth: rect.width,

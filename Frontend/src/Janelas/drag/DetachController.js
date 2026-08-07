@@ -63,11 +63,15 @@
     const hoveringTransfer = Boolean(
       ctx.hoveringTransfer || NS.TransferController?.isHoveringTarget?.()
     );
-    const next = DetachThreshold.isWindowMode(
-      ctx.clientX,
-      ctx.clientY,
-      hoveringTransfer
-    );
+
+    // Em split, sobre um painel: não armar detach (o drop vai para o swap)
+    const overSplitPane =
+      NS.SplitHost?.getState?.()?.mode === 'split' &&
+      Boolean(NS.SplitDropController?.hitTestSide?.(ctx.clientX, ctx.clientY));
+
+    const next =
+      !overSplitPane &&
+      DetachThreshold.isWindowMode(ctx.clientX, ctx.clientY, hoveringTransfer);
 
     if (next && ctx.ghostEl) {
       paintDetachGhost(ctx.ghostEl, ctx.tabId);
@@ -75,7 +79,7 @@
       clearDetachGhost(ctx.ghostEl);
     }
 
-    setArmed(next, { tabId: ctx.tabId });
+    setArmed(Boolean(next), { tabId: ctx.tabId });
   }
 
   /**

@@ -1,10 +1,12 @@
 /**
  * Visibilidade da barra de abas e ponto "+" (nova aba).
- * Com 7+ abas: só CSS variables no container — a troca de .active anima via CSS,
- * sem reescrever inline style em todas as abas (causava travamento).
+ *
+ * 6+  → many-tabs  (larguras condensadas; X substitui logo à ESQUERDA no hover)
+ * 13+ → dense-tabs (ícone/X centralizados — só quando muito apertado)
  */
 (function () {
-  const MANY_TABS_THRESHOLD = 7;
+  const MANY_TABS_THRESHOLD = 6;
+  const DENSE_TABS_THRESHOLD = 13;
   const REFERENCE_TAB_COUNT = 5;
   const INACTIVE_MIN_WIDTH = 36;
 
@@ -12,7 +14,7 @@
 
   function resetTabSizing(tabsContainer) {
     if (!tabsContainer) return;
-    tabsContainer.classList.remove('many-tabs');
+    tabsContainer.classList.remove('many-tabs', 'dense-tabs');
     tabsContainer.style.removeProperty('--many-active-tab-width');
     tabsContainer.style.removeProperty('--many-inactive-tab-width');
     lastSignature = '';
@@ -94,6 +96,7 @@
 
     const containerWidth = tabsContainer.clientWidth;
     const shouldCondense = tabs.length >= MANY_TABS_THRESHOLD;
+    const shouldDense = tabs.length >= DENSE_TABS_THRESHOLD;
 
     if (!shouldCondense) {
       resetTabSizing(tabsContainer);
@@ -114,14 +117,18 @@
       Math.floor(remaining / inactiveCount)
     );
 
-    const signature = `${tabs.length}|${containerWidth}|${activeWidth}|${inactiveWidth}`;
+    const signature = `${tabs.length}|${containerWidth}|${activeWidth}|${inactiveWidth}|${shouldDense ? 1 : 0}`;
     if (signature !== lastSignature) {
       lastSignature = signature;
       tabsContainer.classList.add('many-tabs');
+      tabsContainer.classList.toggle('dense-tabs', shouldDense);
       tabsContainer.style.setProperty('--many-active-tab-width', `${activeWidth}px`);
       tabsContainer.style.setProperty('--many-inactive-tab-width', `${inactiveWidth}px`);
-    } else if (!tabsContainer.classList.contains('many-tabs')) {
-      tabsContainer.classList.add('many-tabs');
+    } else {
+      if (!tabsContainer.classList.contains('many-tabs')) {
+        tabsContainer.classList.add('many-tabs');
+      }
+      tabsContainer.classList.toggle('dense-tabs', shouldDense);
     }
 
     tabs.forEach((tab) => ensureLedRing(tab));
@@ -151,6 +158,7 @@
     scheduleVisibilityUpdate,
     computeActiveWidthForManyTabs,
     MANY_TABS_THRESHOLD,
+    DENSE_TABS_THRESHOLD,
   };
 
   window.updateTabsBarVisibility = updateTabsBarVisibility;

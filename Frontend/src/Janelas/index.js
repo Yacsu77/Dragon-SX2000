@@ -135,6 +135,7 @@
     splitTab: (tabId, side) => NS.SplitHost?.openSplit?.(tabId, side),
     closeSplit: () => NS.SplitHost?.closeSplit?.(),
     focusPane: (side) => NS.SplitHost?.focusPane?.(side),
+    assignTabToSide: (tabId, side) => NS.SplitHost?.assignTabToSide?.(tabId, side),
     showTabPreview: (tabId, anchor) => NS.TabPreview?.show?.(tabId, anchor),
     hideTabPreview: () => NS.TabPreview?.hide?.(),
     NS,

@@ -77,6 +77,18 @@ class AuthPopupPolicy {
         return true;
       }
       if (host.includes('auth0.com') || host.includes('okta.com')) return true;
+
+      // Contas / SSO em subdomínio (encurtadores, SaaS, etc.)
+      const accountHost =
+        /^(accounts?|login|auth|sso|id|signin|oauth|secure|myaccount)\./i.test(
+          host
+        );
+      const accountPath =
+        /\/(login|signin|signup|register|oauth|authorize|account|sso|auth)(\/|$)/i.test(
+          pathName
+        );
+      if (accountHost || accountPath) return true;
+
       return false;
     } catch {
       return false;

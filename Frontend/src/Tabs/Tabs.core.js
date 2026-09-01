@@ -818,6 +818,7 @@
     getOpenTabSnapshots,
     createTabFromSnapshot,
     clearTabsForGroupSwitch,
+    syncPageScrollbar,
   };
 
   window.createTab = createTab;

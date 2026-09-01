@@ -1,10 +1,12 @@
 /**
  * Visibilidade da barra de abas e ponto "+" (nova aba).
- * Com 7+ abas: só CSS variables no container — a troca de .active anima via CSS,
- * sem reescrever inline style em todas as abas (causava travamento).
+ *
+ * 6+  → many-tabs  (larguras condensadas; X substitui logo à ESQUERDA no hover)
+ * 13+ → dense-tabs (ícone/X centralizados — só quando muito apertado)
  */
 (function () {
-  const MANY_TABS_THRESHOLD = 7;
+  const MANY_TABS_THRESHOLD = 6;
+  const DENSE_TABS_THRESHOLD = 13;
   const REFERENCE_TAB_COUNT = 5;
   const INACTIVE_MIN_WIDTH = 36;
 
@@ -12,7 +14,7 @@
 
   function resetTabSizing(tabsContainer) {
     if (!tabsContainer) return;
-    tabsContainer.classList.remove('many-tabs');
+    tabsContainer.classList.remove('many-tabs', 'dense-tabs');
     tabsContainer.style.removeProperty('--many-active-tab-width');
     tabsContainer.style.removeProperty('--many-inactive-tab-width');
     lastSignature = '';
@@ -69,16 +71,23 @@
     });
   }
 
+  function getVisibleBarTabs() {
+    return Array.from(document.querySelectorAll('#tabs .tab')).filter(
+      (tab) => !tab.classList.contains('janelas-tab-in-pane')
+    );
+  }
+
   function updateTabsBarVisibility() {
     const tabsBar = document.querySelector('.tabs-bar');
-    const tabs = document.querySelectorAll('#tabs .tab');
+    const allTabs = document.querySelectorAll('#tabs .tab');
+    const tabs = getVisibleBarTabs();
     const hasGroupsButton = Boolean(document.getElementById('tabGroupsBtn'));
 
     if (
       !hasGroupsButton &&
-      tabs.length === 1 &&
-      tabs[0].dataset.id &&
-      tabs[0].dataset.id.startsWith('home-tab')
+      allTabs.length === 1 &&
+      allTabs[0].dataset.id &&
+      allTabs[0].dataset.id.startsWith('home-tab')
     ) {
       if (tabsBar) tabsBar.classList.add('hidden');
     } else if (tabsBar) {
@@ -89,42 +98,49 @@
     if (!tabsContainer) return;
     if (tabs.length === 0) {
       resetTabSizing(tabsContainer);
+      allTabs.forEach((tab) => ensureLedRing(tab));
       return;
     }
 
     const containerWidth = tabsContainer.clientWidth;
-    const shouldCondense = tabs.length >= MANY_TABS_THRESHOLD;
+    const tabCount = tabs.length;
+    const shouldCondense = tabCount >= MANY_TABS_THRESHOLD;
+    const shouldDense = tabCount >= DENSE_TABS_THRESHOLD;
 
     if (!shouldCondense) {
       resetTabSizing(tabsContainer);
-      tabs.forEach((tab) => ensureLedRing(tab));
+      allTabs.forEach((tab) => ensureLedRing(tab));
       return;
     }
 
-    const activeWidth = computeActiveWidthForManyTabs(containerWidth, tabs.length);
+    const activeWidth = computeActiveWidthForManyTabs(containerWidth, tabCount);
     if (!activeWidth) {
       resetTabSizing(tabsContainer);
       return;
     }
 
-    const inactiveCount = Math.max(1, tabs.length - 1);
+    const inactiveCount = Math.max(1, tabCount - 1);
     const remaining = Math.max(0, containerWidth - activeWidth);
     const inactiveWidth = Math.max(
       INACTIVE_MIN_WIDTH,
       Math.floor(remaining / inactiveCount)
     );
 
-    const signature = `${tabs.length}|${containerWidth}|${activeWidth}|${inactiveWidth}`;
+    const signature = `${tabCount}|${containerWidth}|${activeWidth}|${inactiveWidth}|${shouldDense ? 1 : 0}`;
     if (signature !== lastSignature) {
       lastSignature = signature;
       tabsContainer.classList.add('many-tabs');
+      tabsContainer.classList.toggle('dense-tabs', shouldDense);
       tabsContainer.style.setProperty('--many-active-tab-width', `${activeWidth}px`);
       tabsContainer.style.setProperty('--many-inactive-tab-width', `${inactiveWidth}px`);
-    } else if (!tabsContainer.classList.contains('many-tabs')) {
-      tabsContainer.classList.add('many-tabs');
+    } else {
+      if (!tabsContainer.classList.contains('many-tabs')) {
+        tabsContainer.classList.add('many-tabs');
+      }
+      tabsContainer.classList.toggle('dense-tabs', shouldDense);
     }
 
-    tabs.forEach((tab) => ensureLedRing(tab));
+    allTabs.forEach((tab) => ensureLedRing(tab));
   }
 
   let visibilityRaf = 0;
@@ -151,6 +167,7 @@
     scheduleVisibilityUpdate,
     computeActiveWidthForManyTabs,
     MANY_TABS_THRESHOLD,
+    DENSE_TABS_THRESHOLD,
   };
 
   window.updateTabsBarVisibility = updateTabsBarVisibility;

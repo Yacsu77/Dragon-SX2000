@@ -49,6 +49,8 @@ function main() {
     'Frontend/src/Janelas/index.js',
     'Frontend/src/Janelas/animations/AnimationHook.js',
     'Frontend/src/Janelas/split/SplitHost.js',
+    'Frontend/src/Janelas/split/SplitPaneChrome.js',
+    'Frontend/src/Janelas/split/SplitDropController.js',
     'Frontend/src/Janelas/effects/RgbClock.js',
     'Frontend/src/search/SmartSearch.js',
     'Backend/API-DSX/boot.js',

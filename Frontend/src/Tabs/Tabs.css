@@ -248,7 +248,7 @@
   transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Quando há muitas abas (7+): larguras via CSS vars — micro-motion leve (sem morph pesado). */
+/* Quando há muitas abas (6+): larguras via CSS vars — micro-motion leve (sem morph pesado). */
 .tabs.many-tabs {
   justify-content: flex-start;
   width: 100%;
@@ -320,31 +320,94 @@ body.janelas-content-switching .tab.active {
   width: var(--many-inactive-tab-width, 40px) !important;
   padding-left: 8px;
   padding-right: 8px;
-  justify-content: center;
+  /* 6–12 abas: conteúdo à esquerda (logo + X no hover) */
+  justify-content: flex-start;
 }
 
-/* Com muitas abas, o título das inativas fica truncado pelo próprio tamanho */
-.tabs.many-tabs .tab:not(.active) .tab-title {
-  font-size: 11px;
-}
-
-/* Com muitas abas: X no hover (substitui o ícone) — sempre clicável */
+/* 6+: X substitui o favicon no hover, sempre à ESQUERDA */
 .tabs.many-tabs .tab:not(.active) .tab-close {
-  left: 50% !important;
-  transform: translate(-50%, -50%);
+  left: 6px !important;
+  top: 50% !important;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
   opacity: 0;
+  pointer-events: none !important;
   z-index: 100 !important;
 }
 
 .tabs.many-tabs .tab:not(.active):hover .tab-close {
-  opacity: 0.9;
+  opacity: 0.95;
+  pointer-events: auto !important;
+}
+
+.tabs.many-tabs .tab:not(.active) .tab-icon {
+  margin-left: 0;
+  transition: opacity 0.15s ease;
 }
 
 .tabs.many-tabs .tab:not(.active):hover .tab-icon {
   opacity: 0;
+  pointer-events: none;
+}
+
+.tabs.many-tabs .tab:not(.active) .tab-title {
+  font-size: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tabs.many-tabs .tab:not(.active) .new-tab-dot {
+  display: none;
+}
+
+/* Aba ativa condensada: X cobre o favicon à esquerda no hover */
+.tabs.many-tabs .tab.active {
+  padding-left: 10px !important;
+}
+
+.tabs.many-tabs .tab.active .tab-close {
+  left: 8px !important;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.tabs.many-tabs .tab.active:hover .tab-close,
+.tabs.many-tabs .tab.active .tab-close:hover {
+  opacity: 0.95;
+  pointer-events: auto;
+}
+
+.tabs.many-tabs .tab.active .tab-icon {
+  transition: opacity 0.15s ease;
+}
+
+.tabs.many-tabs .tab.active:hover .tab-icon {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tabs.many-tabs .tab.active .tab-title {
+  margin-left: 2px;
+}
+
+/* 13+: layout denso — ícone/X centralizados nas inativas */
+.tabs.dense-tabs .tab:not(.active) {
+  justify-content: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.tabs.dense-tabs .tab:not(.active) .tab-close {
+  left: 50% !important;
+  transform: translate(-50%, -50%);
+}
+
+.tabs.dense-tabs .tab:not(.active) .tab-title {
   display: none;
 }
 
@@ -574,7 +637,8 @@ body.active-tab-led .tab.active > *:not(.tab-led-ring):not(.tab-close) {
   transform: translateY(-50%);
   /* Acima de ícone, LED, separadores e handlers de drag/cursor */
   z-index: 100 !important;
-  pointer-events: auto !important;
+  /* Invisível não pode roubar clique de troca de aba */
+  pointer-events: none;
   margin: 0;
   -webkit-app-region: no-drag;
 }
@@ -582,6 +646,7 @@ body.active-tab-led .tab.active > *:not(.tab-led-ring):not(.tab-close) {
 .tab:hover .tab-close,
 .tab.active .tab-close {
   opacity: 0.75;
+  pointer-events: auto;
 }
 
 .tab-close:hover {
@@ -589,14 +654,7 @@ body.active-tab-led .tab.active > *:not(.tab-led-ring):not(.tab-close) {
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* Com muitas abas, a ativa mantém área de clique confortável no X */
-.tabs.many-tabs .tab.active {
-  padding-left: 22px !important;
-}
-
-.tabs.many-tabs .tab.active .tab-icon {
-  margin-left: 2px;
-}
+/* Com muitas abas a ativa: X cobre o favicon no hover (regras acima em .tabs.many-tabs) */
 
 .tab-groups-slot {
   position: relative;

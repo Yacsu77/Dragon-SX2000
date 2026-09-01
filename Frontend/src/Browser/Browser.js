@@ -55,16 +55,42 @@
 
     window.DragonBrowser.onOpenUrl((url) => {
       if (!url || typeof url !== 'string') return;
+      const trimmed = url.trim();
+      if (!trimmed || trimmed === 'about:blank') return;
 
       try {
-        const parsed = new URL(url);
+        const parsed = new URL(trimmed);
         if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
       } catch {
         return;
       }
 
+      // Evita aba duplicada se o destino já está aberto (redirects de encurtador).
+      try {
+        const open = document.querySelectorAll('#browser webview[data-id]');
+        for (let i = 0; i < open.length; i += 1) {
+          const view = open[i];
+          let current = '';
+          try {
+            current =
+              (typeof view.getURL === 'function' && view.getURL()) || view.src || '';
+          } catch (_) {
+            current = view.src || '';
+          }
+          if (current && window.CursorUrlUtils?.urlsMatch?.(current, trimmed)) {
+            const tabId = view.dataset.id;
+            if (tabId && typeof window.activateTab === 'function') {
+              window.activateTab(tabId);
+              return;
+            }
+          }
+        }
+      } catch (_) {
+        /* segue para createTab */
+      }
+
       if (typeof window.createTab === 'function') {
-        window.createTab(url);
+        window.createTab(trimmed);
       }
     });
   }

@@ -115,7 +115,18 @@
     view.setAttribute('partition', partition());
     view.dataset.requestedUrl = url;
     view.src = url;
+    attachPageScrollbarHiding(view);
     return view;
+  }
+
+  function attachPageScrollbarHiding(webview) {
+    const sync = window.TabsCore?.syncPageScrollbar;
+    if (typeof sync !== 'function') return;
+
+    const apply = () => sync(webview);
+    webview.addEventListener('dom-ready', apply);
+    webview.addEventListener('did-navigate', apply);
+    webview.addEventListener('did-navigate-in-page', apply);
   }
 
   function hideAllViews() {

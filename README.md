@@ -5,14 +5,20 @@
 <h1 align="center">DSX</h1>
 
 <p align="center">
-  <strong>v1.3.0 Beta</strong>
+  <strong>v1.4.0 Beta</strong>
 </p>
 
 <p align="center">
-  <em>Lançamento: Jul/2026</em>
+  <em>Lançamento: 04/08/2026</em>
 </p>
 
 <p align="center">
+  <a href="https://dragonsx.com.br">
+    <img
+      src="https://img.shields.io/badge/Site-dragonsx.com.br-111111?style=for-the-badge"
+      alt="Site oficial"
+    />
+  </a>
   <a href="https://github.com/Yacsu77/Dragon-SX2000/releases">
     <img
       src="https://img.shields.io/badge/Download-GitHub%20Releases-24292F?style=for-the-badge&logo=github&logoColor=white"
@@ -93,37 +99,72 @@ O **DSX** (sucessor do Dragon SX2000) é um navegador desktop **open source** pe
 
 | | |
 |---|---|
-| **Versão disponível** | **v1.3.0 Beta** |
-| **Lançamento** | **Jul/2026** |
-| **Executáveis** | Somente via [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
+| **Versão disponível** | **v1.4.0 Beta** |
+| **Lançamento** | **04/08/2026** |
+| **Site** | [dragonsx.com.br](https://dragonsx.com.br) |
+| **Executáveis** | [dragonsx.com.br](https://dragonsx.com.br) · [GitHub Releases](https://github.com/Yacsu77/Dragon-SX2000/releases) |
 
-Os instaladores são publicados na branch `main` com o prefixo **DSX**:
+Os instaladores usam o prefixo **DSX**:
 
-- Windows: `DSX-1.3.0-win-x64.exe`
-- macOS: `DSX-1.3.0-mac-x64.dmg` / `arm64`
-- Linux: `DSX-1.3.0-linux-x64.deb` e `.AppImage`
-
-Não há distribuição de binários fora do Release.
+- Windows: `DSX-1.4.0-win-x64.exe`
+- macOS: `DSX-1.4.0-mac-x64.dmg` / `arm64`
+- Linux: `DSX-1.4.0-linux-x64.deb` e `.AppImage`
 
 ---
 
-## Funcionalidades (v1.3)
+## Destaques da v1.4
 
-- **Home** com wallpaper visível e widgets AutoTune flutuantes
+- **Grupos de abas** por usuário (API SQLite + UI + sincronização de snapshots)
+- **Layout Topo Global** no Customise — busca, botões, Music, acabamento e abas
+- **Busca Inteligente** compartilhada (topo, AutoTune, Shortcuts) com autocomplete por domínio e sugestões do Google
+- **Gerenciador de senhas** estilo Safari com login automático por formulário e por URL
+- **Music minimal** com posições: esquerda, direita (entre busca e botões) ou embaixo
+- **Multijanelas (Janelas)** — preview de aba, detach, transfer entre janelas OS, split in-window, layouts e animações no Customise
+- **Desempenho P0–P4** — idle, drag leve, TabWarmth, troca de tela sem piscar, RGB estável em multi-monitor
+- Barra de abas mais estável: destaque configurável, condensação com 7+, borda LED opcional
+- API SQLite isolada por usuário + boot resiliente (`boot.js`, `/ready` com `starting`)
+- **Build empacotado**: API-DSX + Media SDK em `extraResources`; wallpapers WWP incluídos
+
+---
+
+## Funcionalidades
+
+### Navegação e abas
+
 - Sistema de **abas** com drag-and-drop, animações e visão geral estilo Safari
-- **Barra superior** modular: menu, histórico, favoritos, arquivos locais, downloads
-- Busca integrada com o **Google** na barra de endereço
-- **Favoritos** com persistência em localStorage
-- **AutoTune** — widgets flutuantes (Timer, Music, Clock, Share, Tasklist)
-- **AutoTune Music minimal** — player compacto no topo com volume integrado ao SDK
-- **Wallpaper** com imagem e vídeo — persistência em disco (`userData/wallpapers/`)
-- **Factory** de personalização visual por componente
-- **Dragon Media SDK** — now playing, controles e volume em tempo real via WebSocket
-- **Atalhos globais** de teclado e mouse ([documentação](Frontend/src/shortcuts/README.md)) — Tela de Atalhos, Ctrl+Space/T/W/H/R, botões extras
-- **Tela Editar** — opção de manter abas renderizadas (desempenho)
-- Prefetch de conexão, cache persistente de webviews e troca de aba sem flash
+- **Grupos de abas** — painel minimalista, hover com preview, reordenação por arraste
+- **Home** com wallpaper visível e widgets AutoTune flutuantes
+- Prefetch de conexão, **TabWarmth** (hidratação/discard) e troca de aba sem flash
 
-> Changelog completo: [`Version/Lançamento/Log v1.3.MD`](Version/Lançamento/Log%20v1.3.MD)  
+### Interface e personalização
+
+- **Barra superior** modular: menu, histórico, favoritos, arquivos locais, downloads
+- **Layout Topo Global** — grid centrado, slots de Music à esquerda/direita/embaixo
+- **AutoTune** — widgets flutuantes (Timer, Music, Clock, Share, Tasklist)
+- **Wallpaper** com imagem e vídeo — persistência em disco (`userData/wallpapers/`)
+- **Factory / Customise** de personalização visual por componente
+
+### Busca, senhas e mídia
+
+- **Busca Inteligente** — histórico, Vault, sessões ativas e sugestões do Google
+- **Gerenciador de senhas** com preenchimento automático
+- **Dragon Media SDK** — now playing, controles e volume em tempo real via WebSocket
+
+### Multijanelas
+
+- **Preview** de aba ao passar o mouse (≥ 0,5 s)
+- **Detach** — arrastar aba para baixo abre nova janela OS
+- **Transfer** — soltar aba na barra de outra janela move o conteúdo
+- **Split** — dividir em dois painéis no mesmo BrowserWindow
+
+### Atalhos e sistema
+
+- **Atalhos globais** de teclado e mouse ([documentação](Frontend/src/shortcuts/README.md))
+- **Tela Editar** — opção de manter abas renderizadas (desempenho)
+- **Favoritos** com persistência em localStorage
+
+> Changelog completo: [`Version/Lançamento/Log v1.4.MD`](Version/Lançamento/Log%20v1.4.MD)  
+> Release anterior: [`Log v1.3.MD`](Version/Lançamento/Log%20v1.3.MD)  
 > Documentação do Frontend: [`Version/Docs/Frontend/Inicial.MD`](Version/Docs/Frontend/Inicial.MD)
 
 ---
@@ -170,6 +211,6 @@ npm run dist:linux  # Linux
 
 <p align="center">
   <sub>
-    © 2026 — Todos os direitos reservados a <strong>Pedro Henrique Carneichuk Rosa</strong>
+    DSX 1.4.0 Beta — lançamento 04/08/2026 · dragonsx.com.br — © 2026 Pedro Henrique Carneichuk Rosa
   </sub>
 </p>

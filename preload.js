@@ -109,6 +109,13 @@ contextBridge.exposeInMainWorld('DragonDownloads', {
   },
 });
 
+// Marcos de boot para o baseline de desempenho (main ignora sem DSX_PERF_OUT).
+contextBridge.exposeInMainWorld('DragonPerf', {
+  mark: (name) => {
+    if (typeof name === 'string') ipcRenderer.send('perf:mark', name);
+  },
+});
+
 contextBridge.exposeInMainWorld('DragonShortcuts', {
   setGlobalCombos: (combos) => {
     const list = Array.isArray(combos) ? combos.filter((c) => typeof c === 'string') : [];

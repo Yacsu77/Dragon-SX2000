@@ -112,6 +112,7 @@ async function recoverBoot() {
 
 async function mountWorkspace(options = {}) {
   const cleanSession = Boolean(options.cleanSession);
+  window.DragonPerf?.mark('workspace-mount-start');
 
   if (window.UserGate && typeof window.UserGate.showBootLoader === 'function') {
     window.UserGate.showBootLoader('Carregando seu espaço…');
@@ -137,6 +138,7 @@ async function mountWorkspace(options = {}) {
 
   if (window.Tabline && typeof window.Tabline.init === 'function') {
     await window.Tabline.init();
+    window.DragonPerf?.mark('tabline-widgets-loaded');
   }
 
   if (window.TopBar) window.TopBar.init();
@@ -196,9 +198,11 @@ async function mountWorkspace(options = {}) {
     if (typeof window.UserGate.hideBootLoader === 'function') window.UserGate.hideBootLoader();
     window.UserGate.close();
   }
+  window.DragonPerf?.mark('workspace-mounted');
 }
 
 async function initApp() {
+  window.DragonPerf?.mark('scripts-parsed');
   if (!window.UserSession || !window.UserGate) {
     console.error('[initApp] UserSession/UserGate indisponíveis');
     document.body.insertAdjacentHTML(

@@ -21,6 +21,7 @@ class AppLifecycle {
    *   downloads: { attach: (c: Electron.WebContents) => void },
    *   getJanelas: () => { destroyGhost: () => void }|null,
    *   setQuitting: (v: boolean) => void,
+   *   perf?: { mark: (name: string) => void, attachWindow: (win: Electron.BrowserWindow) => void },
    * }} deps
    */
   constructor(deps) {
@@ -32,6 +33,8 @@ class AppLifecycle {
     this._downloads = deps.downloads;
     this._getJanelas = deps.getJanelas;
     this._setQuitting = deps.setQuitting;
+    // PerfProbe é no-op sem DSX_PERF_OUT; fallback inerte quando não injetado.
+    this._perf = deps.perf || { mark() {}, attachWindow() {} };
   }
 
   installEarly() {
@@ -39,12 +42,17 @@ class AppLifecycle {
   }
 
   async whenReady() {
+    this._perf.mark('app-ready');
     await this._drm.bootstrap();
+    this._perf.mark('drm-ready');
     this._browser.configureAppIdentity();
     this._windows.setupApplicationMenu();
     this._backend.startMediaSdk();
+    this._perf.mark('sdk-spawned');
     await this._backend.startApiDsx();
-    this._windows.createMain();
+    this._perf.mark('api-ready');
+    const win = this._windows.createMain();
+    this._perf.attachWindow(win);
   }
 
   async onActivate() {

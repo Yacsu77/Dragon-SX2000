@@ -10,6 +10,7 @@ const { createFilesServices } = require('../files');
 const { createDownloadsServices } = require('../downloads');
 const { createShortcutsServices } = require('../shortcuts');
 const { createAppLifecycle } = require('./AppLifecycle');
+const { createPerfProbe } = require('./PerfProbe');
 
 /**
  * Composition Root — instancia domínios, registra IPC e devolve o bootstrap.
@@ -47,6 +48,13 @@ function createMainApp(options) {
     projectRoot,
     getIsQuitting: () => isAppQuitting,
   });
+
+  // Baseline de desempenho (Etapa 0 da v1.5) — inerte sem DSX_PERF_OUT.
+  const perf = createPerfProbe({
+    app,
+    getChildPids: () => backend.getChildPids(),
+  });
+  perf.register(ipcMain);
 
   const browser = createBrowserServices({ app, session, desktopCapturer });
   const user = createUserServices({ app, session });
@@ -112,6 +120,7 @@ function createMainApp(options) {
     setQuitting: (v) => {
       isAppQuitting = Boolean(v);
     },
+    perf,
   });
 
   return {

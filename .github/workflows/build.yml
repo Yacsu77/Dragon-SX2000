@@ -73,3 +73,33 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
           if-no-files-found: error
+
+  # v1.5 Etapa 0 — valida a toolchain C (dsx-core) nos 3 SOs.
+  # Job independente: não bloqueia o empacotamento Electron enquanto o core não é integrado.
+  core-build:
+    name: Core (C) ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure (CMake)
+        run: cmake -S Core -B Core/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build Core/build --config Release
+
+      - name: Test (ctest)
+        run: ctest --test-dir Core/build -C Release --output-on-failure
+
+      - name: Upload dsx-core
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsx-core-${{ matrix.os }}
+          path: |
+            Core/build/bin/dsx-core
+            Core/build/bin/Release/dsx-core.exe
+          if-no-files-found: error

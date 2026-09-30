@@ -52,6 +52,17 @@ class BackendServices {
     this.mediaSdk.stop();
     this.apiDsx.stop();
   }
+
+  /**
+   * PIDs dos processos filhos vivos (usado pelo PerfProbe / baseline).
+   * @returns {Array<{ name: string, pid: number|null }>}
+   */
+  getChildPids() {
+    return [
+      { name: 'api-dsx', pid: this.apiDsx.getPid() },
+      { name: 'media-sdk', pid: this.mediaSdk.getPid() },
+    ];
+  }
 }
 
 module.exports = { BackendServices };

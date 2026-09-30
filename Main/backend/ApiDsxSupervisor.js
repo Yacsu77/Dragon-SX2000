@@ -45,6 +45,11 @@ class ApiDsxSupervisor {
     return Boolean(this._process);
   }
 
+  /** @returns {number|null} PID do processo filho, se vivo. */
+  getPid() {
+    return this._process && this._process.pid ? this._process.pid : null;
+  }
+
   /**
    * @param {string} urlPath
    * @param {number} [timeoutMs]

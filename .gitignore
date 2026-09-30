@@ -4,4 +4,6 @@ dist/
 .DS_Store
 Backend/SDK/bin/
 node_modules
+Core/build/
+/perf-results/
 

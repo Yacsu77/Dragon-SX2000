@@ -1,0 +1,65 @@
+{
+  "source": "Backend/API-DSX/Utils/crypto.js",
+  "node": "22.13.1",
+  "openssl": "3.0.15+quic",
+  "scrypt": {
+    "N": 16384,
+    "r": 8,
+    "p": 1,
+    "maxmem": 33554432,
+    "note": "Defaults de crypto.scryptSync quando options não é passado."
+  },
+  "aes": {
+    "algorithm": "aes-256-gcm",
+    "ivBytes": 12,
+    "tagBytes": 16,
+    "tagPlacement": "appended-to-ciphertext",
+    "encoding": "ciphertext e iv em base64, separados"
+  },
+  "saltEncoding": {
+    "hashSecret": "string hex de 32 caracteres ASCII (NAO os 16 bytes decodificados)",
+    "deriveVaultKey": "Buffer.from(saltHex, \"hex\") — 16 bytes"
+  },
+  "cases": [
+    {
+      "id": "profile-hash",
+      "op": "hashSecret",
+      "secret": "dsx-test-password",
+      "salt": "00112233445566778899aabbccddeeff",
+      "saltPassedAs": "utf8-string",
+      "keylen": 64,
+      "hash": "10cfa5fec39beed756b3ef0bdfd2edda06a0d822951773d60a2b195604286e05ffd406e49673cc4075e66b28b8b7e963a76c2207870a498c015e67d09baf34af"
+    },
+    {
+      "id": "vault-key",
+      "op": "deriveVaultKey",
+      "secret": "dsx-test-password",
+      "saltHex": "00112233445566778899aabbccddeeff",
+      "saltPassedAs": "hex-decoded-bytes",
+      "keylen": 32,
+      "key": "2f7a5e00a642e396e1e3a4acadce6b941783d3cd381cbfd80dafe05a734773a6"
+    },
+    {
+      "id": "device-key",
+      "op": "deriveVaultKey",
+      "secret": "dsx-device:user-fixed-id",
+      "userId": "user-fixed-id",
+      "secretFormat": "dsx-device:{userId}",
+      "saltHex": "00112233445566778899aabbccddeeff",
+      "saltPassedAs": "hex-decoded-bytes",
+      "keylen": 32,
+      "key": "780b161b16b3896784b02231444048c531845d97d0f7d5b0da4f41e370828371"
+    },
+    {
+      "id": "vault-seal",
+      "op": "encryptAesGcm",
+      "keyFrom": "vault-key",
+      "plaintext": "senha-do-site-ção",
+      "plaintextEncoding": "utf8",
+      "ivHex": "0102030405060708090a0b0c",
+      "ciphertext": "/J88g50g6z2sR1DC9eoyq7K5GpqtcomycSOXaDuXG2oRNBE=",
+      "iv": "AQIDBAUGBwgJCgsM",
+      "tagBytes": 16
+    }
+  ]
+}

@@ -36,3 +36,12 @@ Core/
 ```
 
 Contratos a preservar (rotas, schema, crypto, eventos WS): seção 2.3 do plano.
+
+## Testes já existentes (golden da API Node)
+
+```bash
+npm run test:crypto      # Core/tests/crypto — bytes de scrypt/AES que o C tem que reproduzir
+npm run test:contract    # sobe a API-DSX numa porta livre com SQLite temporário
+```
+
+`vectors.json` documenta a pegadinha do salt: `hashSecret` passa a string hex (32 bytes ASCII); `deriveVaultKey` passa os 16 bytes decodificados.

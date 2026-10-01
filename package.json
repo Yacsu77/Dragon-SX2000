@@ -17,6 +17,8 @@
     "dist:mac": "npm run icons:prepare && npm run prebuild:mac && electron-builder --mac --arm64 --x64 --publish=never",
     "dist:linux": "npm run icons:prepare && npm run prebuild:linux && electron-builder --linux --x64 --publish=never",
     "test:cursor-controll": "node scripts/test-cursor-controll.js",
+    "test:crypto": "node Core/tests/crypto/verify-vectors.js",
+    "test:contract": "node Core/tests/contract/api-contract.js",
     "perf:measure": "node scripts/perf/measure.js",
     "perf:static": "node scripts/perf/measure.js --static --md",
     "core:build": "cmake -S Core -B Core/build -DCMAKE_BUILD_TYPE=Release && cmake --build Core/build --config Release",

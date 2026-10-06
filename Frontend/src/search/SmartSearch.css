@@ -180,21 +180,6 @@
   font-size: calc(11px * var(--smart-font-scale, 1));
 }
 
-/* Preview dentro do editor Buscadores do Customise. */
-.customise-smart-preview {
-  position: relative;
-  top: auto !important;
-  left: auto;
-  right: auto;
-  width: min(340px, 100%);
-  margin: 12px auto;
-  max-height: none;
-}
-
-.customise-smart-preview .smart-search-item {
-  cursor: default;
-}
-
 .nav-search-wrap {
   position: relative;
 }

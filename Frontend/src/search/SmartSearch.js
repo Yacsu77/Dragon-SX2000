@@ -173,37 +173,13 @@
   }
 
   function readPanelSettings() {
-    const defaults = {
+    return {
       animation: 'descida',
       border: 'rgb',
       borderColor: '#7a8cff',
       backgroundOpacity: 82,
       fontScale: 100,
     };
-    try {
-      const raw = window.UserStorage
-        ? window.UserStorage.getItem('customiseSettings')
-        : localStorage.getItem('customiseSettings');
-      if (!raw) return defaults;
-      const record = JSON.parse(raw)?.['dragonsx.smart-search'];
-      if (!record || typeof record !== 'object') return defaults;
-      const num = (value, min, max, fallback) => {
-        const parsed = Number(value);
-        if (!Number.isFinite(parsed)) return fallback;
-        return Math.max(min, Math.min(max, parsed));
-      };
-      return {
-        animation: record.animation === 'none' ? 'none' : 'descida',
-        border: record.border === 'solid' ? 'solid' : 'rgb',
-        borderColor: /^#[0-9a-f]{6}$/i.test(record.borderColor || '')
-          ? record.borderColor
-          : defaults.borderColor,
-        backgroundOpacity: num(record.backgroundOpacity, 40, 100, defaults.backgroundOpacity),
-        fontScale: num(record.fontScale, 90, 140, defaults.fontScale),
-      };
-    } catch (_) {
-      return defaults;
-    }
   }
 
   function hexToRgbTriplet(hex) {

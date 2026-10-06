@@ -1,5 +1,5 @@
 /**
- * Aplica o layout customizável do Topo Global.
+ * Aplica o layout fixo do Topo Global (constantes em ChromeLayoutSettings).
  */
 (function () {
   if (window.ChromeLayout) return;
@@ -57,11 +57,6 @@
     }
     initialized = true;
     apply();
-    document.addEventListener('chrome-layout:changed', (event) => {
-      apply(event.detail?.settings || window.ChromeLayoutSettings?.read?.());
-    });
-    document.addEventListener('customise:reloaded', () => apply());
-    document.addEventListener('user:changed', () => setTimeout(() => apply(), 0));
     window.addEventListener('resize', () => apply());
   }
 

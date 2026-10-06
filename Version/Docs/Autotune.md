@@ -211,22 +211,14 @@ Sem isso, o motor ignora o tipo na restauração e nos toggles.
 
 Cada widget precisa de uma linha no catálogo:
 
+O visual do widget fica no CSS (e, no relógio, em `Clock/config.js`). Não há editor em runtime.
+
 ```html
 <div class="autotune-catalog-row">
   <div class="autotune-row-text">
     <strong>Clock</strong>
-    <span>Relogio personalizavel</span>
+    <span>Relógio</span>
   </div>
-  <button
-    type="button"
-    class="autotune-row-factory-btn"
-    data-open-factory="true"
-    data-factory-key="autotune-widget-clock"
-    data-factory-target='[data-widget-type="clock"]'
-    data-factory-label="AutoTune Clock"
-  >
-    ⚙
-  </button>
   <label class="autotune-panel-toggle">
     <span class="autotune-panel-toggle-label" data-autotune-panel-label="clock">Inativo</span>
     <input type="checkbox" data-autotune-panel-toggle="clock" />
@@ -238,8 +230,6 @@ Cada widget precisa de uma linha no catálogo:
 | Atributo | Deve coincidir com |
 |----------|-------------------|
 | `data-autotune-panel-toggle` | tipo em `TYPES` |
-| `data-factory-key` | `autotune-widget-{tipo}` |
-| `data-factory-target` | `[data-widget-type="{tipo}"]` |
 
 ---
 
@@ -302,8 +292,7 @@ Além do widget flutuante clássico, o Music tem o modo **minimal** (`Music/mini
 | `left` | `#navMusicSlotLeft` (entre nav e busca) | Não |
 | `bottom` | Fixed sob a tabs-bar | Sim (`minimalOffsetX`) |
 
-Controle: **Customise → Layout Topo Global → Music** (`musicPosition` em `dragonsx.chrome.layout`).  
-Valor legado `between` é tratado como `right`.
+Posição do Music: constante `musicPosition: 'right'` em `Frontend/src/settings/chromeLayoutSettings.js`.
 
 Persistência complementar em `settingsAUTO.music`: `minimal`, `minimalOffsetX`, `minimalVolumeLevel`.
 
@@ -316,6 +305,5 @@ Espaçamento simétrico busca ↔ Music: CSS var `--nav-music-gap` no Top. Detal
 | API | Local |
 |-----|-------|
 | `window.AutoTuneEngine.spawnWidget(type, root, layout)` | `AutoTune/index.js` |
-| `window.AutoTuneFactory.applyPersistedToElement(el)` | `Factory/index.js` |
 | `window.setAutoTuneHomeVisible(bool)` | `AutoTune/index.js` |
 | Release v1.4 | [`Log v1.4.MD`](../Lançamento/Log%20v1.4.MD) |

@@ -93,21 +93,9 @@ indício de autenticação e expõe somente as origens, nunca nome ou valor
 - Borda LED animada igual às abas selecionadas, com opção **RGB** (padrão) que
   cicla o espectro, ou **1 cor** com cor escolhida pelo usuário.
 
-## Customise → Buscadores
+## Aparência
 
-O editor no Customise (chave `dragonsx.smart-search`, arquivos em
-`Customise/components/smartSearch/`) permite configurar:
-
-| Opção | Valores |
-|---|---|
-| Estilo da borda | RGB (espectro animado) ou 1 cor (com color picker) |
-| Opacidade do fundo | 40–100% |
-| Tamanho da fonte | 90–140% |
-| Animação de abertura | Descida ou sem animação por item |
-
-As opções são gravadas em `customiseSettings['dragonsx.smart-search']` e o painel
-as relê a cada abertura — não é preciso reiniciar. O `SmartSearch.js` aplica via
-variáveis CSS (`--smart-bg-alpha`, `--smart-font-scale`, `--smart-led-rgb`).
+O painel usa um visual fixo em `Frontend/src/search/SmartSearch.js`: borda RGB, opacidade de fundo 82%, escala de fonte 100% e animação de descida. O programador altera essas constantes. `SmartSearch.js` aplica via variáveis CSS (`--smart-bg-alpha`, `--smart-font-scale`, `--smart-led-rgb`).
 
 ## API
 

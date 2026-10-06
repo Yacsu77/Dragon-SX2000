@@ -36,12 +36,6 @@ async function reloadForActiveUser() {
 
   if (window.AutoTune && typeof window.AutoTune.reloadFromStorage === 'function') {
     window.AutoTune.reloadFromStorage();
-  } else if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === 'function') {
-    window.AutoTuneFactory.reloadFromStorage();
-  }
-
-  if (window.Customise && typeof window.Customise.reloadFromStorage === 'function') {
-    window.Customise.reloadFromStorage();
   }
 
   if (window.Favoritos && typeof window.Favoritos.reload === 'function') {

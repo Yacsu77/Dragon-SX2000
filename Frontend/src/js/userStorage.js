@@ -48,6 +48,35 @@
     toRemove.forEach((k) => localStorage.removeItem(k));
   }
 
+  const VISUAL_KEYS = [
+    'autotuneFactorySettings',
+    'customiseSettings',
+    'autotuneCustomFonts',
+    'autotuneCosmetics',
+    'dragonsx.chrome.layout',
+    'sidebar.layout',
+    'dragonsx.janelas',
+  ];
+
+  function isVisualKey(storageKey) {
+    return VISUAL_KEYS.some((base) => storageKey === base || storageKey.endsWith(`.${base}`));
+  }
+
+  function purgeVisualKeys() {
+    try {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const storageKey = localStorage.key(i);
+        if (storageKey && isVisualKey(storageKey)) toRemove.push(storageKey);
+      }
+      toRemove.forEach((storageKey) => localStorage.removeItem(storageKey));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  purgeVisualKeys();
+
   window.UserStorage = {
     ACTIVE_META_KEY,
     key,
@@ -56,5 +85,6 @@
     removeItem,
     clearUserNamespace,
     getActiveUserId,
+    purgeVisualKeys,
   };
 })();

@@ -7,7 +7,7 @@
 
   const SECTIONS = Object.freeze(['tools', 'llm', 'chats', 'widgets', 'footer']);
 
-  /** Seções que o Customise poderá editar (etapa futura). */
+  /** Seções com itens de URL no seed. A lista em si é constante do código. */
   const EDITABLE_SECTIONS = Object.freeze(['llm', 'chats']);
 
   function uid(prefix) {

@@ -1,9 +1,9 @@
 /**
- * Persistência da sidebar por usuário (UserStorage).
+ * Sidebar a partir do seed em defaults.js.
+ * A lista não é preferência do usuário: o programador altera createDefaults().
  */
 (function () {
   const NS = (window.SidebarNS = window.SidebarNS || {});
-  const STORE_KEY = 'sidebar.layout';
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -37,36 +37,6 @@
     };
   }
 
-  function migrateLegacyIfNeeded() {
-    try {
-      if (!window.UserStorage?.getItem || !window.UserStorage?.setItem) return;
-      if (window.UserStorage.getItem(STORE_KEY) != null) return;
-      const legacy = localStorage.getItem(STORE_KEY);
-      if (legacy == null) return;
-      window.UserStorage.setItem(STORE_KEY, legacy);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function readRaw() {
-    try {
-      migrateLegacyIfNeeded();
-      const raw = window.UserStorage
-        ? window.UserStorage.getItem(STORE_KEY)
-        : localStorage.getItem(STORE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function write(state) {
-    const payload = JSON.stringify(state);
-    if (window.UserStorage) window.UserStorage.setItem(STORE_KEY, payload);
-    else localStorage.setItem(STORE_KEY, payload);
-  }
-
   function emit(state) {
     document.dispatchEvent(new CustomEvent('sidebar:changed', { detail: clone(state) }));
   }
@@ -74,13 +44,12 @@
   let cached = null;
 
   function getState() {
-    if (!cached) cached = normalize(readRaw());
+    if (!cached) cached = normalize(NS.createDefaults ? NS.createDefaults() : null);
     return clone(cached);
   }
 
   function setState(next) {
     cached = normalize(next);
-    write(cached);
     emit(cached);
     return getState();
   }
@@ -163,18 +132,12 @@
   }
 
   function reload() {
-    cached = normalize(readRaw());
-    emit(cached);
+    cached = null;
+    emit(getState());
     return getState();
   }
 
-  document.addEventListener('user:changed', () => {
-    cached = null;
-    reload();
-  });
-
   NS.Store = {
-    KEY: STORE_KEY,
     getState,
     setState,
     resetToDefaults,

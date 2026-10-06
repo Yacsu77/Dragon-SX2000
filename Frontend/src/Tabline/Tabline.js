@@ -4,49 +4,17 @@
 (function () {
   const TEMPLATE_PATH = 'Tabline/Tabline.html';
 
-  const CUSTOMISE_BASE = '../../UserINTer/Tabline/idget/Customise';
   const WIDGET_SCRIPTS = [
     '../../UserINTer/Tabline/idget/Wallpaper/index.js',
     '../../UserINTer/Tabline/idget/Tema/index.js',
-    `${CUSTOMISE_BASE}/core/keys.js`,
-    `${CUSTOMISE_BASE}/core/utils.js`,
-    `${CUSTOMISE_BASE}/adapters/storageAdapter.js`,
-    `${CUSTOMISE_BASE}/adapters/runtimeAdapter.js`,
-    `${CUSTOMISE_BASE}/adapters/settingsAdapterRegistry.js`,
-    `${CUSTOMISE_BASE}/core/store.js`,
-    `${CUSTOMISE_BASE}/factory/registry.js`,
-    `${CUSTOMISE_BASE}/factory/shared/dragList.js`,
-    `${CUSTOMISE_BASE}/components/radialMenu/defaults.js`,
-    `${CUSTOMISE_BASE}/components/radialMenu/geometry.js`,
-    `${CUSTOMISE_BASE}/components/radialMenu/preview.js`,
-    `${CUSTOMISE_BASE}/components/radialMenu/editor.js`,
-    `${CUSTOMISE_BASE}/components/searchPalette/defaults.js`,
-    `${CUSTOMISE_BASE}/components/searchPalette/preview.js`,
-    `${CUSTOMISE_BASE}/components/searchPalette/editor.js`,
-    `${CUSTOMISE_BASE}/components/smartSearch/defaults.js`,
-    `${CUSTOMISE_BASE}/components/smartSearch/editor.js`,
-    `${CUSTOMISE_BASE}/components/topoGlobal/defaults.js`,
-    `${CUSTOMISE_BASE}/components/topoGlobal/meta.js`,
-    `${CUSTOMISE_BASE}/components/topoGlobal/preview.js`,
-    `${CUSTOMISE_BASE}/components/topoGlobal/editor.js`,
-    `${CUSTOMISE_BASE}/components/sidebarLayout/defaults.js`,
-    `${CUSTOMISE_BASE}/components/sidebarLayout/preview.js`,
-    `${CUSTOMISE_BASE}/components/sidebarLayout/editor.js`,
-    `${CUSTOMISE_BASE}/components/janelas/defaults.js`,
-    `${CUSTOMISE_BASE}/components/janelas/preview.js`,
-    `${CUSTOMISE_BASE}/components/janelas/editor.js`,
-    `${CUSTOMISE_BASE}/core/shell.js`,
-    `${CUSTOMISE_BASE}/index.js`,
     '../../UserINTer/Tabline/idget/AutoTune/Timer/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Share/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Music/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Music/minimal.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/config.js',
-    '../../UserINTer/Tabline/idget/AutoTune/Clock/fonts.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/render.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/index.js',
-    '../../UserINTer/Tabline/idget/AutoTune/Clock/factory.js',
     '../../UserINTer/Tabline/idget/AutoTune/index.js',
   ];
 
@@ -174,13 +142,6 @@
     flyout.querySelector('[data-widget="donate"]')?.addEventListener('click', () => {
       if (window.TablineAnim?.flashTooltip) {
         window.TablineAnim.flashTooltip(orb, 'Em desenvolvimento');
-      }
-    });
-
-    flyout.querySelector('[data-widget="customise"]')?.addEventListener('click', (event) => {
-      if (window.Customise?.open) {
-        event.preventDefault();
-        window.Customise.open();
       }
     });
   }

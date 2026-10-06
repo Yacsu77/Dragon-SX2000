@@ -164,7 +164,7 @@
       bodyEl.appendChild(view);
       pool.set(itemId, view);
     } else if (view.dataset.requestedUrl !== url) {
-      // Só navega se o atalho mudou de URL (Customise) — não recarrega sessão ativa
+      // Só navega se o atalho mudou de URL — não recarrega sessão ativa
       view.dataset.requestedUrl = url;
       view.src = url;
     }

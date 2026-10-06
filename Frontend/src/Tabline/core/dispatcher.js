@@ -33,15 +33,6 @@
         return { handled: true };
       }
 
-      if (target === 'customise') {
-        if (window.Customise && typeof window.Customise.open === 'function') {
-          window.Customise.open();
-        } else {
-          window.location.hash = 'customise-widget';
-        }
-        return { handled: true };
-      }
-
       if (target === 'donate') {
         return { handled: true, stub: true, message: 'Em desenvolvimento' };
       }

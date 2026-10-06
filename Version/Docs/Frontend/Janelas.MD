@@ -1,14 +1,14 @@
 # Janelas/ — Multijanelas, split e layouts
 
 **Caminho runtime:** `Frontend/src/Janelas/`  
-**Caminho Customise:** `UserINTer/Tabline/idget/Customise/components/janelas/`  
+**Layout:** fixo em `Janelas/core/defaults.js` (janela e multijanela `standard`, sem borda RGB, `tabTransition: none`).  
 **Namespace:** `window.JanelasNS` / API pública `window.Janelas`
 
 ---
 
 ## Visão
 
-Permitir ao usuário trabalhar com **várias janelas OS**, **transferir abas entre elas**, **dividir uma janela em dois painéis** (esquerda/direita) e **personalizar layouts/animações** no Customise — sem duplicar a lógica de `Tabs.core` (snapshots, create/activate/close).
+Permitir ao usuário trabalhar com **várias janelas OS**, **transferir abas entre elas** e **dividir uma janela em dois painéis** (esquerda/direita) — sem duplicar a lógica de `Tabs.core` (snapshots, create/activate/close). O layout visual é o padrão do código.
 
 ---
 
@@ -20,7 +20,6 @@ Permitir ao usuário trabalhar com **várias janelas OS**, **transferir abas ent
 | Drag de abas | `Tabs.reorder.js` | Estender com limiar Y → detach / transfer |
 | Nova janela OS | `main.js` + `DragonCursorControl.createWindow` | Abrir janela com snapshot pendente |
 | Menu de aba | `CursorControll/contexts/tabContext.js` | Ação **Dividir** (E/D) |
-| Customise Factory | `Customise/components/*` | Editor Janela / Multi / Geral |
 | Hover preview (grupos) | `TabGroups.render.js` | Referência UX — **não** reutilizar DOM; módulo próprio |
 
 Cada `BrowserWindow` carrega o app inteiro (`index.html`). Estado de abas é **por janela**. Cross-window = IPC + snapshots.
@@ -81,11 +80,6 @@ Frontend/src/Janelas/
 │   └── WindowBridge.js       ← IPC create / move-tab / list / focus
 ├── Janelas.css               ← Classes de layout / preview / divider / anims
 └── index.js                  ← Init + API pública window.Janelas
-
-UserINTer/.../Customise/components/janelas/
-├── defaults.js               ← Adapter + seed (espelha core/defaults)
-├── preview.js                ← Mini preview no editor Factory
-└── editor.js                 ← Abas: Janela | Multi janela | Geral
 ```
 
 ---
@@ -158,15 +152,9 @@ UserINTer/.../Customise/components/janelas/
 
 **Status:** ✅ Fase 4 + chrome invertido (2026-08-06).
 
-### 5 — Customise (Janela / Multi / Geral)
+### 5 — Layout fixo
 
-#### 5.1 Abas do editor
-
-| Aba | Opções |
-|-----|--------|
-| **Janela** | Padrão · Flutuante (bordas arredondadas + espaçamento + fundo transparente) |
-| **Multi janela** | Padrão (split E/D) · Flutuantes (gap + divisor + arredondadas + fundo transparente) |
-| **Geral** | Bordas entre janela · Animada · RGB · Animação de transição de abas |
+O editor foi removido. `core/defaults.js` entrega janela e multijanela `standard`, sem bordas e com `tabTransition: none`. Variantes (flutuante, RGB, flip, file-drop) continuam no código dos layouts, mas não há UI que as ligue.
 
 #### Animações de transição de aba (`animations/`)
 
@@ -183,7 +171,7 @@ Hook: interceptar / envolver `activateTab` via `AnimationRegistry.play({ fromId,
 ## Estado (`core/store.js`)
 
 ```js
-// Preferências (persistidas — chave dragonsx.janelas)
+// Preferências fixas (core/defaults.js — não persistem)
 {
   version: 1,
   windowLayout: 'standard' | 'floating',
@@ -244,7 +232,7 @@ Preload: `window.DragonJanelas`. Boot: `Janelas.applyPendingTab()` em `app.js` /
 | **4** | SplitHost + Divider + menu Dividir | Fase 0 ✅ |
 | **5** | LayoutRegistry + 4 layouts + CSS | Fase 4 (multi) / Fase 0 (janela) ✅ |
 | **6** | AnimationRegistry (flip, file-drop) | Fase 0 |
-| **7** | Customise editor (3 abas) + catalog row | Fases 5–6 |
+| **7** | Editor visual | removido — layout fica em `core/defaults.js` |
 
 Fases 4 e 1 podem avançar em paralelo após a fase 0.
 
@@ -259,9 +247,6 @@ Fases 4 e 1 podem avançar em paralelo após a fase 0.
 | `tabContext.js` | Ações Dividir → `SplitActions` |
 | `main.js` / `preload.js` | Registry + canais `janelas:*` |
 | `index.html` | Scripts `Janelas/**` após Tabs |
-| `Customise/catalog.html` | Linha “Janelas” |
-| `Tabline.js` | Incluir scripts do componente Customise |
-| `Customise/core/keys.js` | `JANELAS: 'dragonsx.janelas'` |
 
 ---
 
@@ -305,7 +290,7 @@ Crossfade de conteúdo: ver [`Browser.MD`](./Browser.MD) e [`Tabs.MD`](./Tabs.MD
 2. Arrastar aba abaixo do limiar → ghost quadrado; soltar → nova janela com aquela aba.  
 3. Arrastar aba para a barra de outra janela → aba some na origem e aparece no destino.  
 4. Dividir E/D; clique troca só o lado focado; bolinha/X fecha e deixa a esquerda.  
-5. Customise altera layout/animação em tempo real sem reload completo.
+5. A janela abre no layout `standard` de `core/defaults.js`, sem ler preferência salva.
 
 ---
 

@@ -24,10 +24,7 @@ Top/
 └── Search/
 ```
 
-**Preferências:** `Frontend/src/settings/chromeLayoutSettings.js` → chave `dragonsx.chrome.layout`
-
-**Customise:** `UserINTer/Tabline/idget/Customise/` → item **Layout Topo Global**  
-Detalhes da arquitetura: [`Customise.md`](../Customise.md)
+**Layout:** constantes em `Frontend/src/settings/chromeLayoutSettings.js` (`DEFAULTS`). Não há preferência por usuário.
 
 ---
 
@@ -51,7 +48,7 @@ Detalhes da arquitetura: [`Customise.md`](../Customise.md)
 | `body[data-music-position]` | `left` \| `right` \| `bottom` |
 | `body[data-right-slot]` | Sempre `right` (v1.4) |
 
-A coluna do meio do grid é `minmax(0, var(--nav-search-width))`, então o slider do Customise altera o tamanho real da busca.
+A coluna do meio do grid é `minmax(0, var(--nav-search-width))`. A largura vem de `searchWidth` em `ChromeLayoutSettings` (520 px).
 
 ---
 
@@ -67,7 +64,7 @@ A coluna do meio do grid é `minmax(0, var(--nav-search-width))`, então o slide
 | `#downloadBtn`, `#arquivosBtn`, `#newTabBtn`, `#configBtn` | TopActions |
 | `#editarBtn` | Tela Editar (`EditarScreen.open`) |
 
-Ordem dos botões da direita: `rightOrder` em `ChromeLayoutSettings` (arraste no Customise).
+Ordem dos botões da direita: `rightOrder` em `ChromeLayoutSettings`.
 
 ---
 
@@ -132,7 +129,7 @@ Array `MENU_ITEMS`:
 - `updateAddressBar()`: sem webview ativa → `clearAddressBar()` (Home sempre limpa)
 - `onWebviewNavigated`: ignora se não for o `webview.active` (evita URL fantasma)
 
-**Largura:** controlada por `--nav-search-width` (Customise → Busca).
+**Largura:** controlada por `--nav-search-width` (`searchWidth` em `chromeLayoutSettings.js`).
 
 **Prefetch ao digitar:** `js/connectionPrefetch.js` escuta `#addressInput`.
 

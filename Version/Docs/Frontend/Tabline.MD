@@ -6,7 +6,7 @@
 
 ## Responsabilidade
 
-Barra lateral esquerda (Wallpaper, Tema, Customise, Donate, AutoTune): markup, hover, tooltip, carregamento dos scripts de `UserINTer/Tabline/idget/`.
+Barra lateral esquerda (Wallpaper, Tema, Donate, AutoTune): markup, hover, tooltip, carregamento dos scripts de `UserINTer/Tabline/idget/`.
 
 ---
 
@@ -56,7 +56,6 @@ Array `WIDGET_SCRIPTS` (ordem importa):
 |------|------------|------|
 | Wallpaper | `wallpaper` | Link `#wallpaper-widget` |
 | Tema | `tema` | `#temaTabBtn` — ciclo claro/escuro/sistema |
-| Customise | `customise` | Catálogo (Layout Topo Global, Radial Menu, Factory) |
 | Donate | `donate` | Placeholder |
 | AutoTune | `autotune` | Link `#autotune-widget` |
 
@@ -87,10 +86,7 @@ Click em `.tab-item` alterna classe `.active` (visual apenas; links usam hash).
 | Iget | Documento |
 |------|-------------|
 | AutoTune | [Autotune.md](../Autotune.md) |
-| Factory | [Factory.md](../Factory.md) |
-| Customise | [Customise.md](../Customise.md) |
-| Layout Topo Global | [Top.MD](./Top.MD) · [Customise.md](../Customise.md) · [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) |
-| Novo widget | [NewComponet.md](../NewComponet.md) |
+| Layout do topo | [Top.MD](./Top.MD) |
 
 ---
 

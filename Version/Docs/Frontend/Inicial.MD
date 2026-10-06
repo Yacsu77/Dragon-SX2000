@@ -27,8 +27,7 @@ Guia de referência do código em `Frontend/src/` após a refatoração v1.2.
 
 Documentação relacionada fora desta pasta:
 
-- AutoTune / Factory → [Autotune.md](../Autotune.md), [Factory.md](../Factory.md)
-- Customise (Factory + Adapters) → [Customise.md](../Customise.md)
+- AutoTune → [Autotune.md](../Autotune.md)
 - Regressão manual → [ChecklistRegressao.MD](../ChecklistRegressao.MD)
 - Histórico da refatoração → [TaskPlanejamento.MD](../TaskPlanejamento.MD)
 - Release notes → [Log v1.4.MD](../../Lançamento/Log%20v1.4.MD) · [Log v1.3.MD](../../Lançamento/Log%20v1.3.MD)
@@ -77,7 +76,7 @@ Frontend/MiniTelas/
 | **AppShell** | Home ↔ browser com crossfade (`SURFACE_MS`); eventos `app:home-shown` / `app:browser-shown` |
 | **Top + TopActions** | Interação do usuário na barra superior |
 | **Tabs** | CRUD de abas, grupos (snapshots), TabWarmth, drag, many-tabs, LED |
-| **Janelas** | Preview, detach OS, transfer, split, layouts Customise, tabTransition |
+| **Janelas** | Preview, detach OS, transfer, split, layout padrão do código |
 | **ChromeLayout** | Layout Topo Global: busca, botões, Music, bordas, opacidade da aba |
 | **Tabline** | Idgets laterais; carrega scripts de `UserINTer/Tabline/idget/` |
 | **Home + Browser** | Área principal: wallpaper (home) ou webview (navegação + crossfade) |
@@ -160,7 +159,7 @@ Ordem de scripts no `index.html`: ver [index.MD](./index.MD).
 | Busca inteligente / autocomplete | `search/SmartSearch.js` — ver [`BuscaInteligente.md`](../BuscaInteligente.md) |
 | Nova aba, fechar, ativar | `Tabs/Tabs.core.js` |
 | Grupos de abas | `Tabs/TabGroups.*` + API `/tab-groups` |
-| Layout Topo Global / Music no Top | `settings/chromeLayoutSettings.js`, `Top/ChromeLayout.js`, Customise |
+| Layout do topo / Music no Top | `settings/chromeLayoutSettings.js`, `Top/ChromeLayout.js` |
 | Drag ou animação de abas | `Tabs/Tabs.reorder.js`, `Tabs/Tabs.anim.js` |
 | Many-tabs / LED / opacidade | `Tabs/Tabs.visibility.js` + Customize Abas |
 | Idgets laterais | `Tabline/Tabline.html`, `Tabline/Tabline.js` |

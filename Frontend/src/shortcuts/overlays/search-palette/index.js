@@ -5,14 +5,12 @@
  * ShortcutManager). Permite o usuário pesquisar/abrir uma URL sem voltar para
  * a home. Cancela sem efeito ao clicar fora ou pressionar Esc.
  *
- * Visual configurável em Customise → Search Palette (`customise-search-palette`).
+ * Visual fixo nas constantes DEFAULT_SETTINGS deste arquivo.
  */
 (function () {
   if (window.SearchPalette) return; // idempotente
 
   const ROOT_ID = "shortcut-search-palette";
-  const STORE_KEY = "customiseSettings";
-  const TARGET_KEY = "customise-search-palette";
 
   const DEFAULT_SETTINGS = {
     color: "#7a8cff",
@@ -33,27 +31,7 @@
   let currentSettings = { ...DEFAULT_SETTINGS };
 
   function readSettings() {
-    try {
-      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
-      if (!raw) return { ...DEFAULT_SETTINGS };
-      const store = JSON.parse(raw);
-      const record = store && store[TARGET_KEY];
-      if (!record || typeof record !== "object") return { ...DEFAULT_SETTINGS };
-      return {
-        color: typeof record.color === "string" ? record.color : DEFAULT_SETTINGS.color,
-        width: Number(record.width) > 0 ? Number(record.width) : DEFAULT_SETTINGS.width,
-        backgroundOpacity:
-          Number(record.backgroundOpacity) >= 0
-            ? Number(record.backgroundOpacity)
-            : DEFAULT_SETTINGS.backgroundOpacity,
-        placeholder:
-          typeof record.placeholder === "string" && record.placeholder.trim()
-            ? record.placeholder.trim()
-            : DEFAULT_SETTINGS.placeholder,
-      };
-    } catch (_) {
-      return { ...DEFAULT_SETTINGS };
-    }
+    return { ...DEFAULT_SETTINGS };
   }
 
   function parseColor(input) {
@@ -257,18 +235,10 @@
     }
   }
 
-  function reloadFromStore() {
-    applySettings(readSettings());
-  }
-
-  document.addEventListener("user:changed", reloadFromStore);
-  document.addEventListener("customise:reloaded", reloadFromStore);
-
   window.SearchPalette = {
     open,
     close,
     toggle,
-    reload: reloadFromStore,
     getSettings: readSettings,
     get isOpen() {
       return isOpen;
@@ -301,11 +271,4 @@
     tryRegister();
   }
 
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORE_KEY) reloadFromStore();
-  });
-
-  window.addEventListener("customise:settings-changed", (event) => {
-    if (!event.detail || event.detail.key === TARGET_KEY) reloadFromStore();
-  });
 })();

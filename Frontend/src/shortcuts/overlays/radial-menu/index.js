@@ -5,22 +5,20 @@
  * da Tabline. O ângulo do cursor pré-seleciona o item; soltar Alt abre
  * o item pré-selecionado (ou nada, se o cursor estiver no centro).
  *
- * Configuração (cor + itens) via Customise → Radial Menu.
+ * Visual e itens são constantes neste arquivo.
  * Visual inspirado em: https://animate-ui.com/docs/components/community/radial-menu
  */
 (function () {
   if (window.RadialMenu) return;
 
   const ROOT_ID = "shortcut-radial-menu";
-  const STORE_KEY = "customiseSettings";
-  const TARGET_KEY = "customise-radial-menu";
   const FULL_CIRCLE = 360;
   const START_ANGLE = -90;
 
   const DEFAULT_SETTINGS = {
     color: "#7a8cff",
     size: 280,
-    items: ["wallpaper", "tema", "autotune", "customise", "donate"],
+    items: ["wallpaper", "tema", "autotune", "donate"],
   };
 
   /** Catálogo canônico dos idgets da Tabline (fonte única). */
@@ -36,12 +34,6 @@
       label: "Tema",
       icon: "moon",
       description: "Alternar tema claro/escuro/sistema",
-    },
-    {
-      id: "customise",
-      label: "Customise",
-      icon: "sliders",
-      description: "Abrir painel Customise",
     },
     {
       id: "donate",
@@ -70,23 +62,11 @@
   let currentSettings = { ...DEFAULT_SETTINGS };
 
   function readSettings() {
-    try {
-      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
-      if (!raw) return { ...DEFAULT_SETTINGS };
-      const store = JSON.parse(raw);
-      const record = store && store[TARGET_KEY];
-      if (!record || typeof record !== "object") return { ...DEFAULT_SETTINGS };
-      const items = Array.isArray(record.items)
-        ? record.items.filter((id) => IDGET_CATALOG.some((item) => item.id === id))
-        : DEFAULT_SETTINGS.items.slice();
-      return {
-        color: typeof record.color === "string" ? record.color : DEFAULT_SETTINGS.color,
-        size: Number(record.size) > 0 ? Number(record.size) : DEFAULT_SETTINGS.size,
-        items: items.length > 0 ? items : DEFAULT_SETTINGS.items.slice(),
-      };
-    } catch (_) {
-      return { ...DEFAULT_SETTINGS };
-    }
+    return {
+      color: DEFAULT_SETTINGS.color,
+      size: DEFAULT_SETTINGS.size,
+      items: DEFAULT_SETTINGS.items.slice(),
+    };
   }
 
   function resolveItems(settings) {
@@ -279,13 +259,6 @@
       case "autotune":
         window.location.hash = "autotune-widget";
         break;
-      case "customise":
-        if (window.Customise && typeof window.Customise.open === "function") {
-          window.Customise.open();
-        } else {
-          window.location.hash = "customise-widget";
-        }
-        break;
       case "tema":
         if (window.DragonTheme && typeof window.DragonTheme.cycle === "function") {
           window.DragonTheme.cycle();
@@ -366,28 +339,15 @@
     );
   }
 
-  function reloadFromStore() {
-    currentSettings = readSettings();
-    currentItems = resolveItems(currentSettings);
-    if (isOpen) paintMenu();
-  }
-
-  document.addEventListener("user:changed", reloadFromStore);
-  document.addEventListener("customise:reloaded", reloadFromStore);
-
   window.RadialMenu = {
     open: () => openAt(lastPointer.x, lastPointer.y),
     close: () => close(false),
-    reload: reloadFromStore,
     getCatalog: () => IDGET_CATALOG.map((item) => ({ ...item })),
     getSettings: readSettings,
     get isOpen() {
       return isOpen;
     },
   };
-
-  // Expõe catálogo para o Customise Factory.
-  window.DragonIdgetCatalog = IDGET_CATALOG;
 
   function tryRegister() {
     if (!window.ShortcutManager) {
@@ -400,7 +360,7 @@
       description:
         "Abra o menu circular de idgets com o atalho que você definir em Atalhos. " +
         "Segure a tecla (hold) para abrir, mova o cursor para pré-selecionar e solte para confirmar. " +
-        "Itens e cor configuráveis em Customise. Sem atalho definido, o menu não abre.",
+        "Sem atalho definido, o menu não abre.",
       defaultKeys: "",
       category: "Navegação",
       allowInInputs: true,
@@ -420,11 +380,4 @@
     tryRegister();
   }
 
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORE_KEY) reloadFromStore();
-  });
-
-  window.addEventListener("customise:settings-changed", (event) => {
-    if (!event.detail || event.detail.key === TARGET_KEY) reloadFromStore();
-  });
 })();

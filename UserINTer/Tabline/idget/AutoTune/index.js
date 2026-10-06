@@ -647,9 +647,6 @@
     applyLayout(el, c);
     bringToFront(el);
     root.appendChild(el);
-    if (window.AutoTuneFactory && typeof window.AutoTuneFactory.applyPersistedToElement === "function") {
-      window.AutoTuneFactory.applyPersistedToElement(el);
-    }
     attachDragResize(el, root, (node) => {
       const fused = maybeFuseByOverlap(root, node);
       snapshotAll(root);
@@ -931,9 +928,6 @@
     }
     syncVisibilityFromHome();
     syncMediaGatedVisibility();
-    if (window.AutoTuneFactory && typeof window.AutoTuneFactory.reloadFromStorage === "function") {
-      window.AutoTuneFactory.reloadFromStorage();
-    }
   }
 
   document.addEventListener("user:changed", () => {

@@ -4,21 +4,12 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 (function () {
   const Config = window.AutoTuneClockConfig;
   const Render = window.AutoTuneClockRender;
-  const STORE_KEY = "autotuneFactorySettings";
 
   const LOCALE = "pt-BR";
   const WEEKDAYS = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sabado"];
 
   function readClockConfig() {
-    try {
-      const raw = (window.UserStorage ? window.UserStorage.getItem(STORE_KEY) : localStorage.getItem(STORE_KEY));
-      if (!raw) return Config.DEFAULT_CLOCK;
-      const store = JSON.parse(raw);
-      const record = store[Config.FACTORY_KEY];
-      return Config.readFromRecord(record || {});
-    } catch (_err) {
-      return Config.DEFAULT_CLOCK;
-    }
+    return Config.mergeClock(null);
   }
 
   function pad2(n) {
@@ -75,14 +66,8 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
     applyConfig();
     const intervalId = setInterval(tick, 1000);
 
-    bodyEl.addEventListener("autotune-clock-config", applyConfig);
-
-    const observer = new MutationObserver(() => applyConfig());
-    observer.observe(bodyEl, { attributes: true, attributeFilter: ["data-clock-config"] });
-
     bodyEl._clockCleanup = () => {
       clearInterval(intervalId);
-      observer.disconnect();
     };
   };
 })();

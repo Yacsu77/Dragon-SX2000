@@ -23,9 +23,6 @@ Contrato estável para futura exportação/importação de um usuário local.
   "preferences": {
     "themeMode": "dark|light|system",
     "settingsAUTO": {},
-    "autotuneFactorySettings": {},
-    "customiseSettings": {},
-    "chromeLayout": {},
     "sessionTabs": {},
     "perfSettings": {},
     "shortcutBindings": {}
@@ -41,6 +38,6 @@ Contrato estável para futura exportação/importação de um usuário local.
 Notas:
 
 - `password_hash` / `password_salt` / plaintext de vault **nunca** entram no bundle sem re-criptografia com senha fornecida no momento do export.
-- `preferences` espelha as chaves locais `dsx.u.{userId}.*` (inclui `chromeLayout` / Layout Topo Global na v1.4).
+- `preferences` espelha as chaves locais `dsx.u.{userId}.*`. Visual de interface (Factory, Customise, layout do topo, sidebar e janelas) não entra: é constante no código. No boot, `UserStorage.purgeVisualKeys()` apaga `autotuneFactorySettings`, `customiseSettings`, `autotuneCustomFonts`, `autotuneCosmetics`, `dragonsx.chrome.layout`, `sidebar.layout` e `dragonsx.janelas`.
 - `tab_groups` espelha as tabelas SQLite `tab_groups` + `tab_group_tabs` do usuário (v1.4).
 - Import futuro deve gerar novo `id` se houver colisão de nickname, ou exigir rename.

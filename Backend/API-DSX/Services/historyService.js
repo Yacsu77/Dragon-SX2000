@@ -1,23 +1,11 @@
 const { run, get, all } = require('../DB/sqlite');
-const {
-  getSessionCache,
-  setSessionCache,
-  invalidateSessionCache,
-  invalidateAllSessionCache,
-  updateUrlRank,
-  getRankedUrls,
-  removeUrlRank,
-  clearUrlRank,
-} = require('../DB/redis');
+const { getSessionCache, setSessionCache } = require('../DB/redis');
+const sessionService = require('./sessionService');
 const { formatHistoryResponse } = require('../DTO/historyDTO');
 const ApiError = require('../Exceptions/ApiError');
 
 function resolveUserId(data) {
   return data.user_id || data.profile_id || null;
-}
-
-function cacheKey(userId) {
-  return userId || 'default';
 }
 
 function frecencyScore(row) {
@@ -28,8 +16,10 @@ function frecencyScore(row) {
 }
 
 async function createHistoryEntry(data) {
-  const now = new Date().toISOString();
   const userId = resolveUserId(data);
+  if (userId) return sessionService.recordVisit(userId, data);
+
+  const now = new Date().toISOString();
 
   const existing = await get(
     `SELECT * FROM browser_history
@@ -94,19 +84,10 @@ async function createHistoryEntry(data) {
     result = await getHistoryById(insert.id);
   }
 
-  await invalidateSessionCache(cacheKey(userId));
-  await invalidateSessionCache('all');
-  await updateUrlRank(userId, result.url, frecencyScore(result));
-
   return result;
 }
 
 async function getAllHistory(userId = null) {
-  const cacheKeyStr = userId ? cacheKey(userId) : 'all';
-  const cached = await getSessionCache(cacheKeyStr);
-
-  if (cached) return cached;
-
   let rows;
 
   if (userId) {
@@ -116,17 +97,18 @@ async function getAllHistory(userId = null) {
        ORDER BY last_visit_time DESC`,
       [userId, userId]
     );
+    rows = sessionService.overlayHistory(userId, rows);
   } else {
     rows = await all('SELECT * FROM browser_history ORDER BY last_visit_time DESC');
   }
 
-  const formatted = rows.map(formatHistoryResponse);
-  await setSessionCache(cacheKeyStr, formatted);
-
-  return formatted;
+  return rows.map(formatHistoryResponse);
 }
 
 async function getHistoryById(id) {
+  const cached = sessionService.findHistory(id);
+  if (cached && !cached.row.persisted) return formatHistoryResponse(cached.row);
+
   const row = await get('SELECT * FROM browser_history WHERE id = ?', [id]);
 
   if (!row) {
@@ -161,7 +143,18 @@ async function searchHistory(query, userId = null) {
     );
   }
 
-  return rows.map(formatHistoryResponse);
+  const needle = query.trim().toLowerCase();
+  const memory = userId ? sessionService.historyRows(userId) || [] : [];
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  memory.forEach((row) => {
+    const url = String(row.url || '').toLowerCase();
+    const title = String(row.title || '').toLowerCase();
+    if (url.includes(needle) || title.includes(needle)) byId.set(row.id, row);
+  });
+
+  return Array.from(byId.values())
+    .sort((a, b) => (Date.parse(b.last_visit_time || 0) || 0) - (Date.parse(a.last_visit_time || 0) || 0))
+    .map(formatHistoryResponse);
 }
 
 function siteLabel(url) {
@@ -284,24 +277,15 @@ async function smartSuggestions(query, userId) {
   const term = String(query || '').trim().toLowerCase();
   if (!term) return { sites: [], google: [] };
 
-  const rows = userId
+  const cached = userId ? sessionService.historyRows(userId) : null;
+  const rows = cached || (userId
     ? await all(
         `SELECT * FROM browser_history
          WHERE user_id = ? OR (user_id IS NULL AND profile_id = ?)`,
         [userId, userId]
       )
-    : [];
+    : []);
 
-  let rankedUrls = await getRankedUrls(userId, 150);
-  if (!rankedUrls.length && rows.length) {
-    await Promise.all(rows.map((row) => updateUrlRank(userId, row.url, frecencyScore(row))));
-    rankedUrls = rows
-      .slice()
-      .sort((a, b) => frecencyScore(b) - frecencyScore(a))
-      .map((row) => row.url);
-  }
-
-  const rankPosition = new Map(rankedUrls.map((url, index) => [url, index]));
   const matches = rows
     .filter((row) => {
       if (isSearchResultUrl(row.url)) return false;
@@ -310,11 +294,7 @@ async function smartSuggestions(query, userId) {
       if (haystack.includes(term) || host.includes(term)) return true;
       return host.split('.').some((part) => part.startsWith(term));
     })
-    .sort((a, b) => {
-      const rankA = rankPosition.has(a.url) ? rankPosition.get(a.url) : Number.MAX_SAFE_INTEGER;
-      const rankB = rankPosition.has(b.url) ? rankPosition.get(b.url) : Number.MAX_SAFE_INTEGER;
-      return rankA - rankB || frecencyScore(b) - frecencyScore(a);
-    });
+    .sort((a, b) => frecencyScore(b) - frecencyScore(a));
 
   const savedLogins = userId
     ? await all(
@@ -370,6 +350,12 @@ async function smartSuggestions(query, userId) {
 }
 
 async function deleteHistoryById(id) {
+  const cached = sessionService.findHistory(id);
+  if (cached && !cached.row.persisted) {
+    sessionService.forgetHistory(id);
+    return { id: Number(id), deleted: true };
+  }
+
   const existing = await get('SELECT * FROM browser_history WHERE id = ?', [id]);
 
   if (!existing) {
@@ -377,10 +363,7 @@ async function deleteHistoryById(id) {
   }
 
   await run('DELETE FROM browser_history WHERE id = ?', [id]);
-  const uid = existing.user_id || existing.profile_id;
-  await invalidateSessionCache(cacheKey(uid));
-  await invalidateSessionCache('all');
-  await removeUrlRank(uid, existing.url);
+  sessionService.forgetHistory(id);
 
   return { id: Number(id), deleted: true };
 }
@@ -393,15 +376,10 @@ async function clearHistory(userId = null) {
       'DELETE FROM browser_history WHERE user_id = ? OR profile_id = ?',
       [userId, userId]
     );
-    await invalidateSessionCache(cacheKey(userId));
-    await clearUrlRank(userId);
+    sessionService.clearHistory(userId);
   } else {
     result = await run('DELETE FROM browser_history');
-    await invalidateAllSessionCache();
-    await clearUrlRank(null);
   }
-
-  await invalidateSessionCache('all');
 
   return { deleted: result.changes };
 }

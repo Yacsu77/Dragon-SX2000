@@ -79,6 +79,11 @@
     if (activeUser?.id) {
       localStorage.setItem(ACTIVE_META_KEY, activeUser.id);
       try {
+        if (window.SessionApi?.open) await window.SessionApi.open(activeUser.id);
+      } catch {
+        /* a lista abre de novo na primeira visita */
+      }
+      try {
         await window.UsersApi.touch(activeUser.id);
       } catch {
         /* ignore */

@@ -1,6 +1,7 @@
 'use strict';
 
 const { isAppBootstrap } = require('../contracts/IAppBootstrap');
+const { flushApiSession } = require('../backend/SessionFlush');
 
 /**
  * AppLifecycle — handlers do ciclo de vida Electron.
@@ -35,6 +36,19 @@ class AppLifecycle {
     this._setQuitting = deps.setQuitting;
     // PerfProbe é no-op sem DSX_PERF_OUT; fallback inerte quando não injetado.
     this._perf = deps.perf || { mark() {}, attachWindow() {} };
+    this._app = null;
+    this._sessionFlushed = false;
+    this._sessionFlushing = false;
+  }
+
+  _broadcastSaving() {
+    try {
+      this._BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) win.webContents.send('app:saving');
+      });
+    } catch (_) {
+      /* a janela pode já ter ido */
+    }
   }
 
   installEarly() {
@@ -71,7 +85,7 @@ class AppLifecycle {
     this._backend.stopAll();
   }
 
-  onBeforeQuit() {
+  onBeforeQuit(event) {
     this._setQuitting(true);
     try {
       const janelas = this._getJanelas();
@@ -79,7 +93,24 @@ class AppLifecycle {
     } catch (_) {
       /* ignore */
     }
-    this._backend.stopAll();
+
+    if (this._sessionFlushed) {
+      this._backend.stopAll();
+      return;
+    }
+
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (this._sessionFlushing) return;
+    this._sessionFlushing = true;
+    this._broadcastSaving();
+
+    flushApiSession()
+      .catch(() => false)
+      .finally(() => {
+        this._sessionFlushed = true;
+        this._backend.stopAll();
+        if (this._app) this._app.quit();
+      });
   }
 
   onWillQuit() {
@@ -102,6 +133,7 @@ class AppLifecycle {
    * @param {NodeJS.Process} [proc]
    */
   start(app, proc = process) {
+    this._app = app;
     this.installEarly();
 
     app.on('web-contents-created', (event, contents) => {
@@ -119,7 +151,7 @@ class AppLifecycle {
       if (process.platform !== 'darwin') app.quit();
     });
 
-    app.on('before-quit', () => this.onBeforeQuit());
+    app.on('before-quit', (event) => this.onBeforeQuit(event));
     app.on('will-quit', () => this.onWillQuit());
 
     proc.on('exit', () => this.stopBackgroundServices());

@@ -189,6 +189,8 @@ async function migrateUsersExtras() {
 }
 
 async function initializeDatabase() {
+  await run('PRAGMA journal_mode = WAL');
+  await run('PRAGMA synchronous = NORMAL');
   await run('PRAGMA foreign_keys = ON');
 
   for (const sql of CREATE_STATEMENTS) {

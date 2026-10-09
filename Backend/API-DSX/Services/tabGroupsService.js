@@ -5,6 +5,7 @@ const {
   formatTabSnapshot,
 } = require('../DTO/tabGroupsDTO');
 const ApiError = require('../Exceptions/ApiError');
+const sessionService = require('./sessionService');
 
 async function listTabsForGroup(groupId, userId) {
   const rows = await all(
@@ -28,6 +29,9 @@ async function ensureGroupForUser(groupId, userId) {
 }
 
 async function listGroups(userId) {
+  const cached = sessionService.listGroups(userId);
+  if (cached) return cached;
+
   const rows = await all(
     `SELECT * FROM tab_groups
      WHERE user_id = ?
@@ -42,18 +46,13 @@ async function listGroups(userId) {
 }
 
 async function createGroup(data) {
-  const id = data.id || randomId();
-  const now = new Date().toISOString();
-  await run(
-    `INSERT INTO tab_groups
-     (id, user_id, name, color, icon, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.user_id, data.name, data.color, data.icon, data.position, now, now]
-  );
-  return hydrateGroup(await ensureGroupForUser(id, data.user_id));
+  return sessionService.createGroup(data);
 }
 
 async function updateGroup(id, userId, data) {
+  const cached = sessionService.updateGroup(userId, id, data);
+  if (cached) return cached;
+
   const row = await ensureGroupForUser(id, userId);
   const next = {
     name: data.name !== undefined ? data.name : row.name,
@@ -74,13 +73,19 @@ async function updateGroup(id, userId, data) {
 }
 
 async function deleteGroup(id, userId) {
-  await ensureGroupForUser(id, userId);
+  const cached = sessionService.forgetGroup(userId, id);
+  if (cached && !cached.persisted) return { id, deleted: true };
+
+  if (!cached) await ensureGroupForUser(id, userId);
   await run('DELETE FROM tab_group_tabs WHERE group_id = ? AND user_id = ?', [id, userId]);
   await run('DELETE FROM tab_groups WHERE id = ? AND user_id = ?', [id, userId]);
   return { id, deleted: true };
 }
 
 async function replaceGroupTabs(groupId, userId, tabs) {
+  const cached = sessionService.replaceGroupTabs(userId, groupId, tabs);
+  if (cached) return cached;
+
   await ensureGroupForUser(groupId, userId);
   const now = new Date().toISOString();
 

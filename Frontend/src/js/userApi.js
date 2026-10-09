@@ -1,61 +1,28 @@
 /**
- * Cliente HTTP para users / favorites / downloads / vault (API-DSX).
+ * Cliente de users, favoritos, downloads, cofre, grupos e sessão.
+ *
+ * O HTTP em si está em apiClient.js. Aqui ficam só as rotas.
  */
 (function () {
-  const API_BASE = 'http://localhost:3333';
+  const http = window.DsxHttp;
+  if (!http) {
+    console.error('[userApi] apiClient.js precisa carregar antes.');
+    return;
+  }
 
-  async function request(path, options = {}) {
+  const { API_BASE, waitForApi } = http;
+
+  async function request(path, options) {
     try {
-      const response = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-        ...options,
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        if (response.status === 404 && String(path).startsWith('/users')) {
-          throw new Error(
-            'API local desatualizada (sem /users). Feche processos antigos na porta 3333 e reinicie o DSX.'
-          );
-        }
-        throw new Error(payload.message || `Erro HTTP ${response.status}`);
-      }
-      return payload;
+      return await http.request(path, options);
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-        throw new Error('API-DSX offline. Verifique se o servidor está rodando na porta 3333.');
+      if (err.status === 404 && String(path).startsWith('/users')) {
+        throw new Error(
+          'API local desatualizada (sem /users). Feche processos antigos na porta 3333 e reinicie o DSX.'
+        );
       }
       throw err;
     }
-  }
-
-  async function waitForApi(retries = 60, delayMs = 250) {
-    for (let i = 0; i < retries; i += 1) {
-      try {
-        // Exige API com multi-usuário (/ready ou /users), não só /health legado.
-        const ready = await fetch(`${API_BASE}/ready`);
-        if (ready.ok) {
-          const payload = await ready.json().catch(() => ({}));
-          if (payload.success && Array.isArray(payload.features) && payload.features.includes('users')) {
-            return true;
-          }
-        }
-      } catch {
-        /* try /users below */
-      }
-
-      try {
-        const users = await fetch(`${API_BASE}/users`);
-        if (users.ok) {
-          const payload = await users.json().catch(() => ({}));
-          if (payload.success === true) return true;
-        }
-      } catch {
-        /* retry */
-      }
-
-      await new Promise((r) => setTimeout(r, delayMs));
-    }
-    return false;
   }
 
   const UsersApi = {
@@ -183,10 +150,23 @@
       ).data,
   };
 
+  const SessionApi = {
+    open: async (userId) =>
+      (
+        await request('/session/open', {
+          method: 'POST',
+          body: JSON.stringify({ user_id: userId }),
+        })
+      ).data,
+    flush: async () =>
+      (await request('/session/flush', { method: 'POST', body: '{}' })).data,
+  };
+
   window.UsersApi = UsersApi;
   window.FavoritesApi = FavoritesApi;
   window.DownloadsApi = DownloadsApi;
   window.VaultApi = VaultApi;
   window.TabGroupsApi = TabGroupsApi;
+  window.SessionApi = SessionApi;
   window.DsxApi = { waitForApi, API_BASE };
 })();

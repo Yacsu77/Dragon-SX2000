@@ -110,6 +110,15 @@ contextBridge.exposeInMainWorld('DragonDownloads', {
 });
 
 // Marcos de boot para o baseline de desempenho (main ignora sem DSX_PERF_OUT).
+contextBridge.exposeInMainWorld('DragonApp', {
+  onSaving: (handler) => {
+    if (typeof handler !== 'function') return () => {};
+    const listener = () => handler();
+    ipcRenderer.on('app:saving', listener);
+    return () => ipcRenderer.removeListener('app:saving', listener);
+  },
+});
+
 contextBridge.exposeInMainWorld('DragonPerf', {
   mark: (name) => {
     if (typeof name === 'string') ipcRenderer.send('perf:mark', name);

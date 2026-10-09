@@ -1,6 +1,8 @@
 # Banco local API-DSX
 
-SQLite em `DB/dsx-browser.db`. Foreign keys ligadas.
+SQLite em `DB/dsx-browser.db`. Foreign keys ligadas. O arquivo abre em WAL (`synchronous = NORMAL`) para o flush da sessão custar um sync.
+
+Visitas, downloads em andamento, favoritos novos e snapshots de abas ficam na lista em memória e descem ao disco a cada 5 minutos ou ao fechar. Senha e DELETE gravam na hora. Contrato: [Sessao.md](Sessao.md).
 
 ## Tabelas
 

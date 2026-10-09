@@ -6,7 +6,7 @@ Documentação das rotas e regras de negócio do módulo de histórico de navega
 
 ## Objetivo
 
-O módulo de histórico de navegação registra, consulta e gerencia todas as URLs visitadas pelo usuário no Dragon SX2000. Os dados são persistidos localmente via SQLite e complementados por cache Redis para a sessão ativa.
+O módulo de histórico registra as URLs visitadas. A visita entra na lista da sessão (`POST /history`) e o SQLite recebe o lote no flush de 5 minutos ou ao fechar. A busca inteligente lê essa lista, com as mesmas recomendações de antes. A tela de histórico lê a tabela e mistura o diário. Ver [Sessao.md](Sessao.md).
 
 **Base URL:** `http://localhost:3333`
 

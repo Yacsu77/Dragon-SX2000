@@ -11,6 +11,8 @@ const favoritesRoutes = require('./routes/favoritesRoutes');
 const downloadsRoutes = require('./routes/downloadsRoutes');
 const vaultRoutes = require('./routes/vaultRoutes');
 const tabGroupsRoutes = require('./routes/tabGroupsRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
+const { start: startSessionTimer } = require('./Session/sessionTimer');
 const errorHandler = require('./Exceptions/errorHandler');
 
 const app = express();
@@ -30,6 +32,7 @@ const READY_FEATURES = [
   'smart-suggestions',
   'janelas',
   'tab-warmth',
+  'session',
 ];
 
 /** false até SQLite/Redis concluírem — /ready responde starting sem derrubar o listen. */
@@ -70,6 +73,7 @@ app.use('/favorites', favoritesRoutes);
 app.use('/downloads', downloadsRoutes);
 app.use('/vault', vaultRoutes);
 app.use('/tab-groups', tabGroupsRoutes);
+app.use('/session', sessionRoutes);
 app.use(errorHandler);
 
 async function startServer() {
@@ -87,6 +91,7 @@ async function startServer() {
   try {
     await initializeDatabase();
     await initializeRedis();
+    startSessionTimer();
     isReady = true;
     console.log(`[API-DSX] Servidor pronto em http://127.0.0.1:${PORT}`);
   } catch (err) {

@@ -1,33 +1,18 @@
 /**
- * Cliente HTTP para a API local API-DSX (histórico de navegação).
+ * Cliente do histórico. O HTTP é o de apiClient.js.
+ * Visitas entram na lista da sessão; a API não espera o disco.
  */
 (function () {
-  const API_BASE = 'http://localhost:3333';
+  const http = window.DsxHttp;
+  if (!http) {
+    console.error('[historyApi] apiClient.js precisa carregar antes.');
+    return;
+  }
+
+  const { API_BASE, request } = http;
 
   function activeUserId() {
     return window.UserSession?.getActiveUserId?.() || null;
-  }
-
-  async function request(path, options = {}) {
-    try {
-      const response = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-        ...options,
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload.message || `Erro HTTP ${response.status}`);
-      }
-
-      return payload;
-    } catch (err) {
-      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-        throw new Error('API-DSX offline. Verifique se o servidor está rodando na porta 3333.');
-      }
-      throw err;
-    }
   }
 
   async function fetchHistory(params = {}) {

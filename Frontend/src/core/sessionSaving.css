@@ -1,0 +1,25 @@
+/**
+ * Overlay do flush ao fechar o navegador.
+ */
+
+.dsx-session-saving {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.72);
+}
+
+.dsx-session-saving__card {
+  min-width: 180px;
+  padding: 22px 28px;
+  border-radius: 14px;
+  background: rgba(22, 26, 36, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e8ecff;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+}

@@ -1,9 +1,11 @@
 const { run, get, all } = require('../DB/sqlite');
-const { randomId } = require('../Utils/crypto');
 const { formatDownload } = require('../DTO/downloadsDTO');
 const ApiError = require('../Exceptions/ApiError');
+const sessionService = require('./sessionService');
 
 async function listDownloads(userId) {
+  const cached = sessionService.listDownloads(userId);
+  if (cached) return cached;
   const rows = await all(
     'SELECT * FROM downloads WHERE user_id = ? ORDER BY started_at DESC',
     [userId]
@@ -12,28 +14,13 @@ async function listDownloads(userId) {
 }
 
 async function createDownload(data) {
-  const id = data.id || randomId();
-  await run(
-    `INSERT INTO downloads
-     (id, user_id, url, filename, mime, size, state, save_path, started_at, finished_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      data.user_id,
-      data.url,
-      data.filename,
-      data.mime,
-      data.size,
-      data.state,
-      data.save_path,
-      data.started_at,
-      data.finished_at,
-    ]
-  );
-  return formatDownload(await get('SELECT * FROM downloads WHERE id = ?', [id]));
+  return sessionService.createDownload(data);
 }
 
 async function updateDownload(id, data) {
+  const cached = sessionService.updateDownload(data.user_id, id, data);
+  if (cached) return cached;
+
   const row = await get('SELECT * FROM downloads WHERE id = ?', [id]);
   if (!row) throw new ApiError('Download não encontrado', 404);
 
@@ -57,17 +44,22 @@ async function updateDownload(id, data) {
 }
 
 async function deleteDownload(id, userId) {
-  const row = await get('SELECT * FROM downloads WHERE id = ?', [id]);
+  const cached = sessionService.forgetDownload(userId, id);
+  if (cached && !cached.persisted) return { id, deleted: true };
+
+  const row = cached || (await get('SELECT * FROM downloads WHERE id = ?', [id]));
   if (!row) throw new ApiError('Download não encontrado', 404);
   if (userId && row.user_id !== userId) {
     throw new ApiError('Download não pertence ao usuário', 403);
   }
   await run('DELETE FROM downloads WHERE id = ?', [id]);
+  sessionService.forgetDownload(userId || row.user_id, id);
   return { id, deleted: true };
 }
 
 async function clearDownloads(userId) {
   const result = await run('DELETE FROM downloads WHERE user_id = ?', [userId]);
+  sessionService.clearDownloads(userId);
   return { deleted: result.changes };
 }
 

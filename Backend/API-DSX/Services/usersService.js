@@ -2,6 +2,7 @@ const { run, get, all } = require('../DB/sqlite');
 const { randomId, hashSecret, verifySecret } = require('../Utils/crypto');
 const { formatUserResponse } = require('../DTO/usersDTO');
 const ApiError = require('../Exceptions/ApiError');
+const sessionService = require('./sessionService');
 
 async function listUsers() {
   const rows = await all(
@@ -129,23 +130,25 @@ async function unlockUser(id, password) {
   return { unlocked: true, user: formatUserResponse(row) };
 }
 
-async function touchActive(id) {
-  const now = new Date().toISOString();
-  await run('UPDATE users SET last_active_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
+function touchActive(id) {
+  sessionService.rememberTouch(id);
 }
 
 async function deleteUser(id) {
-  await getUserRow(id);
+  return sessionService.exclusive(async () => {
+    await getUserRow(id);
+    sessionService.drop(id);
 
-  await run('DELETE FROM browser_history WHERE user_id = ? OR profile_id = ?', [id, id]);
-  await run('DELETE FROM downloads WHERE user_id = ?', [id]);
-  await run('DELETE FROM favorites WHERE user_id = ?', [id]);
-  await run('DELETE FROM password_vault WHERE user_id = ?', [id]);
-  await run('DELETE FROM tab_group_tabs WHERE user_id = ?', [id]);
-  await run('DELETE FROM tab_groups WHERE user_id = ?', [id]);
-  await run('DELETE FROM users WHERE id = ?', [id]);
+    await run('DELETE FROM browser_history WHERE user_id = ? OR profile_id = ?', [id, id]);
+    await run('DELETE FROM downloads WHERE user_id = ?', [id]);
+    await run('DELETE FROM favorites WHERE user_id = ?', [id]);
+    await run('DELETE FROM password_vault WHERE user_id = ?', [id]);
+    await run('DELETE FROM tab_group_tabs WHERE user_id = ?', [id]);
+    await run('DELETE FROM tab_groups WHERE user_id = ?', [id]);
+    await run('DELETE FROM users WHERE id = ?', [id]);
 
-  return { id, deleted: true };
+    return { id, deleted: true };
+  });
 }
 
 module.exports = {

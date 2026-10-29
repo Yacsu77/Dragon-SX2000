@@ -88,6 +88,19 @@ function main() {
     );
   }
 
+  const patterns = (pkg.build?.files || []).filter((entry) => typeof entry === 'string');
+  const included = patterns.filter((entry) => !entry.startsWith('!'));
+  const leaked = included.filter((entry) => /(^|\/)Tests(\/|$)|test-main\.js/.test(entry));
+  if (leaked.length) {
+    throw new Error(`build.files não pode incluir testes:\n  - ${leaked.join('\n  - ')}`);
+  }
+  const excludesSuite =
+    patterns.some((entry) => entry.includes('Tests')) &&
+    patterns.some((entry) => entry.includes('test-main.js'));
+  if (!excludesSuite) {
+    throw new Error('build.files deve excluir Tests/** e test-main.js');
+  }
+
   if (!pkg.build?.extraResources?.length) {
     throw new Error('package.json build.extraResources deve incluir Backend');
   }

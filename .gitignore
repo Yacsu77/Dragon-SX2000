@@ -6,4 +6,6 @@ Backend/SDK/bin/
 node_modules
 Core/build/
 /perf-results/
+Tests/reports/
+.db
 

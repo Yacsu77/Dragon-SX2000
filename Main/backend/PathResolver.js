@@ -43,6 +43,7 @@ class PathResolver {
    */
   childEnv(extra = {}) {
     const userData = this._app.getPath('userData');
+    const suiteDb = process.env.DSX_SUITE_DB;
     return {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
@@ -51,7 +52,9 @@ class PathResolver {
         ? process.resourcesPath
         : this._projectRoot,
       DSX_USER_DATA: userData,
-      DSX_API_DB_PATH: path.join(userData, 'API-DSX', 'dsx-browser.db'),
+      DSX_API_DB_PATH: suiteDb
+        ? path.resolve(suiteDb)
+        : path.join(userData, 'API-DSX', 'dsx-browser.db'),
       ...extra,
     };
   }

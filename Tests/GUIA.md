@@ -30,6 +30,11 @@ O relatório sai em `Tests/reports/`, em JSON e em Markdown. Essa pasta não vai
 | `Tests/scenarios/autotune.js` | Teste 3, música, outros AutoTunes e wallpapers. |
 | `Tests/scenarios/atalhos.js` | Teste 4, troca e restaura cada atalho. |
 | `Tests/scenarios/banco.js` | Teste 5, tempo de cada operação no banco. |
+| `Tests/scenarios/atividade.js` | Teste 6, percorre as abas e conta quentes e congeladas. |
+| `Tests/scenarios/busca.js` | Teste 7, digitação humana e cache do YouTube. |
+| `Tests/scenarios/sdk.js` | Teste 8, comandos e formato do snapshot de mídia. |
+| `Tests/scenarios/carga.js` | Teste 9, abre abas até a primeira congelar. |
+| `Tests/scenarios/seguranca.js` | Teste 10, senha, injeção e cofre no banco temporário. |
 
 ## O que cada teste executa
 
@@ -40,7 +45,14 @@ O tempo da suíte começa quando o processo sobe, antes da janela.
 3. **Janelas.** Liga o painel lateral sempre carregado e abre WhatsApp, Discord e Instagram. Divide a janela. Cria outra janela do app a partir de uma aba, pela mesma ponte que o detach usa.
 4. **AutoTune e wallpaper.** Liga a música e manda pausar, avançar e voltar ao SDK. Liga e desliga timer, share, tarefas e relógio. Aplica WWP, WWP1 e WWP3.
 5. **Atalhos.** Abre a tela de atalhos, troca cada combinação, dispara e devolve a tecla.
-6. **Banco.** Cria, lista e apaga histórico, favorito, download, cofre e grupo de abas, e faz o flush da sessão. No fim apaga o usuário da suíte.
+6. **Banco.** Cria, lista e apaga histórico, favorito, download, cofre e grupo de abas, e faz o flush da sessão.
+7. **Atividade.** Ativa cada aba já aberta e anota total, quentes, congeladas e home.
+8. **Busca.** Digita `ultimas noticias infomoney` e depois `You`, medindo o tempo até a recomendação.
+9. **SDK.** Pausa, toca, avança, volta e para. Confere os campos do snapshot.
+10. **Carga.** Abre páginas leves até a primeira aba congelada, ou até 16.
+11. **Segurança.** Senha errada, texto de injeção e cofre sem devolver a senha.
+
+O usuário da suíte é apagado no fim. O SQLite fica em uma pasta temporária (`DSX_SUITE_DB`) e some quando o app fecha, inclusive os arquivos WAL. O banco do perfil real não é usado.
 
 Se uma página não terminar em 45 segundos, aquele passo falha e a suíte continua.
 

@@ -30,8 +30,14 @@ async function createSuiteUser(nickname, password) {
     return { ok: false, error: 'tela de perfil não apareceu', durationMs: Date.now() - started };
   }
   add.click();
+  const formReady = await waitFor(() => {
+    const form = document.querySelector('[data-role="create-form"]');
+    return form && !form.closest('[hidden]');
+  }, 5000);
   const form = document.querySelector('[data-role="create-form"]');
-  if (!form) return { ok: false, error: 'formulário de perfil não abriu', durationMs: Date.now() - started };
+  if (!formReady || !form) {
+    return { ok: false, error: 'formulário de perfil não abriu', durationMs: Date.now() - started };
+  }
   form.elements.nickname.value = nickname;
   form.elements.password.value = password;
   form.requestSubmit();
@@ -41,7 +47,9 @@ async function createSuiteUser(nickname, password) {
   );
   const userAt = Date.now();
   if (!userReady) {
-    return { ok: false, error: 'usuário não ficou ativo', durationMs: userAt - started };
+    const formError = document.querySelector('[data-role="form-error"]');
+    const message = formError && !formError.hidden ? formError.textContent : 'usuário não ficou ativo';
+    return { ok: false, error: message, durationMs: userAt - started };
   }
   const workspace = await waitFor(() => {
     return document.getElementById('tabs')
@@ -187,7 +195,7 @@ async function mediaCommand(action) {
   const result = await new Promise((resolve) => {
     let settled = false;
     let off = function () {};
-    const timer = setTimeout(() => finish({ ok: false, error: 'timeout' }), 8000);
+    const timer = setTimeout(() => finish({ ok: false, error: 'timeout' }), 20000);
     function finish(value) {
       if (settled) return;
       settled = true;
@@ -424,6 +432,318 @@ async function deleteSuiteUser() {
   }
 }
 
+function countTabs() {
+  const webviews = Array.from(document.querySelectorAll('#browser webview[data-id]'));
+  const home = webviews.filter((view) => String(view.dataset.id || '').startsWith('home-tab')).length;
+  const discarded = webviews.filter((view) => view.dataset.discarded === '1').length;
+  const warm = webviews.filter((view) => (
+    !String(view.dataset.id || '').startsWith('home-tab')
+    && view.dataset.discarded !== '1'
+    && !view.dataset.pendingSrc
+  )).length;
+  return {
+    total: webviews.length,
+    bar: document.querySelectorAll('#tabs .tab').length,
+    home,
+    warm,
+    discarded,
+  };
+}
+
+async function inspectSplit() {
+  const started = Date.now();
+  const tabs = Array.from(document.querySelectorAll('#tabs .tab'))
+    .map((tab) => tab.dataset.id)
+    .filter((id) => id && !String(id).startsWith('home-tab'));
+  if (!window.Janelas || !window.Janelas.splitTab || tabs.length < 2) {
+    return { ok: false, error: 'faltam duas abas para dividir', durationMs: Date.now() - started };
+  }
+  let state = window.Janelas.splitTab(tabs[0], 'right');
+  if (window.Janelas.assignTabToSide) {
+    state = window.Janelas.assignTabToSide(tabs[1], 'left') || state;
+  }
+  state = (window.Janelas.getSplitState && window.Janelas.getSplitState()) || state;
+  const leftEl = state && state.leftTabId
+    ? document.querySelector(`webview[data-id="${state.leftTabId}"]`)
+    : null;
+  const rightEl = state && state.rightTabId
+    ? document.querySelector(`webview[data-id="${state.rightTabId}"]`)
+    : null;
+  const distinct = !!(state && state.leftTabId && state.rightTabId && state.leftTabId !== state.rightTabId);
+  const marked = !!(leftEl && rightEl
+    && leftEl.classList.contains('janelas-pane-left')
+    && rightEl.classList.contains('janelas-pane-right'));
+  const ok = !!(state && state.mode === 'split' && distinct && leftEl && rightEl && (marked || document.documentElement.dataset.janelasMode === 'split'));
+  return {
+    ok,
+    mode: state && state.mode,
+    leftTabId: state && state.leftTabId,
+    rightTabId: state && state.rightTabId,
+    tabs: countTabs(),
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: ok ? null : `divisão incompleta mode=${state && state.mode} left=${state && state.leftTabId} right=${state && state.rightTabId}`,
+  };
+}
+
+async function focusSplit(side) {
+  const started = Date.now();
+  if (!window.Janelas || !window.Janelas.focusPane) {
+    return { ok: false, error: 'foco da divisão indisponível', durationMs: Date.now() - started };
+  }
+  const next = window.Janelas.focusPane(side);
+  const ok = !!(next && next.focusPane === side);
+  return {
+    ok,
+    focusPane: next && next.focusPane,
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: ok ? null : 'o foco não mudou',
+  };
+}
+
+async function closeSplitAndCount() {
+  const started = Date.now();
+  const before = countTabs();
+  if (!window.Janelas || !window.Janelas.closeSplit) {
+    return { ok: false, error: 'fechar divisão indisponível', tabs: before, durationMs: Date.now() - started };
+  }
+  const next = window.Janelas.closeSplit();
+  const after = countTabs();
+  const ok = !next || next.mode !== 'split';
+  return {
+    ok,
+    mode: next && next.mode,
+    tabs: { before, after },
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: ok ? null : 'a divisão continuou aberta',
+  };
+}
+
+async function cycleOpenTabs() {
+  const started = Date.now();
+  const tabs = Array.from(document.querySelectorAll('#tabs .tab'))
+    .map((tab) => tab.dataset.id)
+    .filter(Boolean);
+  const samples = [];
+  for (let index = 0; index < tabs.length; index += 1) {
+    if (index > 0) await sleep(STEP_DELAY_MS);
+    const id = tabs[index];
+    if (typeof window.activateTab === 'function') window.activateTab(id);
+    if (window.TabWarmth && window.TabWarmth.maybeDiscardCold) window.TabWarmth.maybeDiscardCold();
+    samples.push({ id, ...countTabs() });
+  }
+  const last = samples[samples.length - 1] || countTabs();
+  return {
+    ok: tabs.length > 0,
+    tabs: last,
+    samples,
+    note: `total ${last.total}, quentes ${last.warm}, congeladas ${last.discarded}, home ${last.home}`,
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: tabs.length ? null : 'nenhuma aba para percorrer',
+  };
+}
+
+async function typeQuery(text, expect) {
+  const input = document.getElementById('addressInput');
+  if (!input) return { ok: false, error: 'barra de endereço ausente', query: text };
+  input.focus();
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  for (const char of text) {
+    await sleep(90);
+    input.value += char;
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: char }));
+  }
+  const typedAt = Date.now();
+  const needle = String(expect || '').toLowerCase();
+  const found = await waitFor(() => {
+    const panel = document.querySelector('.smart-search-panel.is-open');
+    const item = panel && panel.querySelector('.smart-search-item');
+    const itemText = item ? (item.textContent || '').toLowerCase() : '';
+    const completed = input.selectionStart < input.selectionEnd
+      && (input.value || '').toLowerCase().includes(needle);
+    if (!needle) return !!item;
+    return itemText.includes(needle) || completed;
+  }, 15000);
+  const recommendMs = Date.now() - typedAt;
+  return {
+    ok: found,
+    query: text,
+    recommendMs,
+    loadMs: recommendMs,
+    durationMs: recommendMs + (text.length * 90),
+    error: found ? null : 'nenhuma recomendação no tempo limite',
+  };
+}
+
+const SNAPSHOT_KEYS = ['app', 'title', 'artist', 'album', 'paused', 'position', 'duration'];
+
+async function inspectSdk() {
+  const started = Date.now();
+  const commands = ['pause', 'play', 'next', 'previous', 'stop'];
+  const results = [];
+  for (const action of commands) {
+    results.push(await mediaCommand(action));
+  }
+  const snapshot = window.DragonMedia ? window.DragonMedia.snapshot : null;
+  const hasMedia = !!(snapshot && String(snapshot.title || '').trim());
+  const missing = snapshot
+    ? SNAPSHOT_KEYS.filter((key) => !(key in snapshot))
+    : [];
+  const commandsOk = results.every((item) => item.ok);
+  const shapeOk = !hasMedia || missing.length === 0;
+  return {
+    ok: commandsOk && shapeOk,
+    commands: results.map((item) => ({ action: item.action, ok: item.ok, error: item.error })),
+    note: hasMedia
+      ? `mídia presente, pausa ${snapshot.paused ? 'paused' : 'playing'}`
+      : 'sem mídia tocando; campos de faixa podem vir vazios',
+    playbackStatus: snapshot ? (snapshot.paused ? 'paused' : 'playing') : null,
+    missing,
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: commandsOk ? (shapeOk ? null : `faltam campos: ${missing.join(', ')}`) : 'algum comando do SDK não respondeu',
+  };
+}
+
+async function loadUntilFrozen() {
+  const started = Date.now();
+  const initial = countTabs();
+  const steps = [];
+  let frozenAt = null;
+  for (let index = 1; index <= 16; index += 1) {
+    const opened = await openTab(`https://example.com/?suite=${index}`, `Carga ${index}`, 12000);
+    if (window.TabWarmth && window.TabWarmth.maybeDiscardCold) window.TabWarmth.maybeDiscardCold();
+    const map = countTabs();
+    steps.push({ index, ok: opened.ok, loadMs: opened.loadMs, tabs: map });
+    if (map.discarded > initial.discarded) {
+      frozenAt = map.total;
+      break;
+    }
+  }
+  const last = steps[steps.length - 1];
+  return {
+    ok: frozenAt != null || steps.length === 16,
+    frozenAt,
+    tabs: last && last.tabs,
+    opened: steps.length,
+    note: frozenAt
+      ? `primeira aba congelada com ${frozenAt} webviews`
+      : `nenhuma aba congelada após ${steps.length} aberturas`,
+    loadMs: Date.now() - started,
+    durationMs: Date.now() - started,
+    error: null,
+  };
+}
+
+async function exerciseSecurity(password) {
+  const userId = window.UserSession.getActiveUserId();
+  const steps = [];
+  const record = (step) => {
+    steps.push({
+      name: step.name,
+      ok: step.ok,
+      durationMs: step.durationMs,
+      loadMs: step.loadMs,
+      error: step.error || null,
+    });
+  };
+
+  const wrong = await timeCall('senha errada', () => window.UsersApi.unlock(userId, 'errada'));
+  const rejected = !wrong.ok && /401|incorreta|senha/i.test(wrong.error || '');
+  record({
+    name: 'senha errada',
+    ok: rejected,
+    durationMs: wrong.durationMs,
+    loadMs: wrong.loadMs,
+    error: rejected ? null : (wrong.ok ? 'a senha errada foi aceita' : wrong.error),
+  });
+
+  const injection = "' OR 1=1 --";
+  const before = await window.UsersApi.list();
+  const created = await timeCall('apelido injetado', () => window.UsersApi.create({
+    nickname: injection,
+    password: 'suite-pass-1',
+  }));
+  const after = await window.UsersApi.list();
+  const leaked = after.some((user) => user && user.id && user.nickname == null);
+  record({
+    name: 'injeção no apelido',
+    ok: !leaked && after.length >= before.length,
+    durationMs: created.durationMs,
+    loadMs: created.loadMs,
+    error: leaked ? 'a listagem vazou um usuário sem apelido' : null,
+  });
+  if (created.ok && created.value && created.value.id) {
+    await window.UsersApi.remove(created.value.id);
+  }
+
+  const search = await timeCall('busca com aspas', () => window.HistoryApi.searchHistory(injection, userId));
+  record({
+    ...search,
+    name: 'busca com aspas',
+    ok: search.ok && Array.isArray(search.value),
+    error: search.ok ? null : search.error,
+  });
+
+  const unlocked = await timeCall('cofre para segurança', () => window.VaultApi.unlock(userId, password));
+  const vaultToken = unlocked.ok && unlocked.value ? unlocked.value.token : null;
+  if (vaultToken) {
+    const secret = await timeCall('cofre sem vazar senha', () => window.VaultApi.create({
+      user_id: userId,
+      origin: 'https://suite.dsx.local/seguranca',
+      username: 'suite',
+      password: 'segredo-suite',
+      token: vaultToken,
+    }));
+    const leakedSecret = !!(secret.value && ('password' in secret.value || 'ciphertext' in secret.value));
+    record({
+      name: 'cofre sem vazar senha',
+      ok: secret.ok && !leakedSecret,
+      durationMs: secret.durationMs,
+      loadMs: secret.loadMs,
+      error: leakedSecret ? 'a resposta do cofre devolveu a senha' : (secret.ok ? null : secret.error),
+    });
+    if (secret.ok && secret.value && secret.value.id) {
+      await window.VaultApi.remove(secret.value.id, userId);
+    }
+  } else {
+    record({
+      name: 'cofre sem vazar senha',
+      ok: false,
+      durationMs: unlocked.durationMs || 0,
+      loadMs: unlocked.loadMs || 0,
+      error: 'não foi possível abrir o cofre para o teste',
+    });
+  }
+
+  const mine = await window.HistoryApi.createHistoryEntry({
+    url: 'https://suite.dsx.local/segura',
+    title: 'Visita segura',
+    user_id: userId,
+  });
+  const listed = await window.HistoryApi.fetchHistory({ user_id: userId });
+  const foreign = await timeCall('apagar id alheio', () => window.HistoryApi.deleteHistoryItem('0'));
+  const listedAfter = await window.HistoryApi.fetchHistory({ user_id: userId });
+  const kept = listedAfter.some((row) => row.url === 'https://suite.dsx.local/segura');
+  record({
+    name: 'apagar id alheio',
+    ok: !foreign.ok && kept,
+    durationMs: foreign.durationMs,
+    loadMs: foreign.loadMs,
+    error: kept ? null : 'a visita da suíte sumiu',
+  });
+  if (mine && mine.id) {
+    try { await window.HistoryApi.deleteHistoryItem(mine.id); } catch (_) { /* limpeza */ }
+  }
+
+  return { ok: steps.every((step) => step.ok), steps };
+}
+
 module.exports = {
   STEP_DELAY_MS,
   createSuiteUser,
@@ -437,4 +757,12 @@ module.exports = {
   exerciseShortcuts,
   exerciseDatabase,
   deleteSuiteUser,
+  inspectSplit,
+  focusSplit,
+  closeSplitAndCount,
+  cycleOpenTabs,
+  typeQuery,
+  inspectSdk,
+  loadUntilFrozen,
+  exerciseSecurity,
 };

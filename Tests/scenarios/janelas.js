@@ -13,6 +13,10 @@ const STEPS = [
   { name: 'Lateral Discord', method: 'openSidePanel', args: ['https://discord.com/app', 'Discord', 'suite-discord'] },
   { name: 'Lateral Instagram', method: 'openSidePanel', args: ['https://www.instagram.com', 'Instagram', 'suite-instagram'] },
   { name: 'Janela dividida', method: 'splitFirstTab', args: [] },
+  { name: 'Painéis da divisão', method: 'inspectSplit', args: [] },
+  { name: 'Foco à direita', method: 'focusSplit', args: ['right'] },
+  { name: 'Foco à esquerda', method: 'focusSplit', args: ['left'] },
+  { name: 'Fechar divisão', method: 'closeSplitAndCount', args: [] },
   { name: 'Nova janela a partir da aba', method: 'openWindowFromTab', args: [] },
 ];
 

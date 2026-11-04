@@ -1,12 +1,12 @@
 /**
  * Orquestra a suíte no app que já está aberto.
  *
- * Espera a janela real, cria um usuário, roda os cinco testes e grava
- * o relatório. No fim pede para o Electron fechar.
+ * Espera a janela real, cria um usuário, roda os testes e grava
+ * o relatório. No fim apaga o usuário e pede para o Electron fechar.
  */
 
 const path = require('path');
-const { install } = require('./lib/drive');
+const { install, call } = require('./lib/drive');
 const { now, sleep } = require('./lib/clock');
 const machine = require('./probe/machine');
 const resources = require('./probe/resources');
@@ -17,8 +17,13 @@ const janelas = require('./scenarios/janelas');
 const autotune = require('./scenarios/autotune');
 const atalhos = require('./scenarios/atalhos');
 const banco = require('./scenarios/banco');
+const atividade = require('./scenarios/atividade');
+const busca = require('./scenarios/busca');
+const sdk = require('./scenarios/sdk');
+const carga = require('./scenarios/carga');
+const seguranca = require('./scenarios/seguranca');
 
-const SCENARIOS = [tabs, janelas, autotune, atalhos, banco];
+const SCENARIOS = [tabs, janelas, autotune, atalhos, banco, atividade, busca, sdk, carga, seguranca];
 
 async function waitForWindow(BrowserWindow) {
   const deadline = Date.now() + 90000;
@@ -39,6 +44,10 @@ function normalizeSteps(steps) {
     durationMs: step.durationMs || step.loadMs || 0,
     loadMs: step.loadMs != null ? step.loadMs : null,
     delayBeforeMs: step.delayBeforeMs || 0,
+    recommendMs: step.recommendMs != null ? step.recommendMs : null,
+    note: step.note || null,
+    tabs: step.tabs || null,
+    frozenAt: step.frozenAt != null ? step.frozenAt : null,
     error: step.error || null,
   }));
 }
@@ -95,6 +104,8 @@ async function runSuite({ startedAt, app, BrowserWindow }) {
     for (const scenario of SCENARIOS) {
       tests.push(await runScenario(scenario, win));
     }
+    console.log('[suite] apagando usuário da suíte');
+    await call(win, 'deleteSuiteUser');
   }
   probe.stop();
 
@@ -124,7 +135,8 @@ async function runSuite({ startedAt, app, BrowserWindow }) {
   const failed = !report.user.ok || tests.some((test) => !test.ok);
   console.log(`[suite] relatório ${written.mdPath}`);
   console.log(`[suite] ${failed ? 'falhou' : 'ok'}`);
-  app.exit(failed ? 1 : 0);
+  app.exitCode = failed ? 1 : 0;
+  app.quit();
 }
 
 module.exports = {

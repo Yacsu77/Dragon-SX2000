@@ -33,7 +33,7 @@ function markdown(report) {
     `- GPU: ${report.machine.gpu.name || 'não identificada'}`,
     `- Uso de GPU: ${report.machine.gpu.usagePercent == null ? report.machine.gpu.note : `${report.machine.gpu.usagePercent}%`}`,
     `- Arranque até a janela: ${report.boot.durationMs} ms`,
-    `- Criação do usuário: ${report.user.createMs} ms`,
+    `- Criação do usuário: ${report.user.createMs} ms${report.user.error ? ` (${report.user.error})` : ''}`,
     ``,
     `## Testes`,
     ``,
@@ -50,7 +50,10 @@ function markdown(report) {
     test.steps.forEach((step) => {
       const load = step.loadMs != null ? `, carga ${step.loadMs} ms` : '';
       const wait = step.delayBeforeMs ? `, espera ${step.delayBeforeMs} ms` : '';
-      lines.push(`- ${step.ok ? 'ok' : 'falha'} ${step.name}: ${step.durationMs} ms${load}${wait}`);
+      const recommend = step.recommendMs != null ? `, recomendação ${step.recommendMs} ms` : '';
+      lines.push(`- ${step.ok ? 'ok' : 'falha'} ${step.name}: ${step.durationMs} ms${load}${recommend}${wait}`);
+      if (step.note) lines.push(`  - ${step.note}`);
+      if (step.frozenAt != null) lines.push(`  - congelou com ${step.frozenAt} webviews`);
       if (step.error) lines.push(`  - ${step.error}`);
     });
   });

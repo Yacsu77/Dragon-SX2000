@@ -21,9 +21,10 @@ const atividade = require('./scenarios/atividade');
 const busca = require('./scenarios/busca');
 const sdk = require('./scenarios/sdk');
 const carga = require('./scenarios/carga');
+const cursor = require('./scenarios/cursor');
 const seguranca = require('./scenarios/seguranca');
 
-const SCENARIOS = [tabs, janelas, autotune, atalhos, banco, atividade, busca, sdk, carga, seguranca];
+const SCENARIOS = [tabs, janelas, autotune, atalhos, banco, atividade, busca, sdk, carga, cursor, seguranca];
 
 async function waitForWindow(BrowserWindow) {
   const deadline = Date.now() + 90000;

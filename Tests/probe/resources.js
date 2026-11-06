@@ -45,5 +45,6 @@ function start(app, intervalMs) {
 }
 
 module.exports = {
+  sample,
   start,
 };

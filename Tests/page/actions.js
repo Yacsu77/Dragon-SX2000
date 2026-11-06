@@ -744,6 +744,330 @@ async function exerciseSecurity(password) {
   return { ok: steps.every((step) => step.ok), steps };
 }
 
+async function probeGlobalCursor() {
+  const started = Date.now();
+  const views = Array.from(document.querySelectorAll('#browser webview[data-dsx-side-mouse="true"]'));
+  views.sort((a, b) => {
+    const rank = (view) => (view.dataset.discarded === '1' ? 0 : 2) + (view.classList.contains('active') ? 1 : 0);
+    return rank(b) - rank(a);
+  });
+  let webview = null;
+  for (const view of views) {
+    try {
+      const bound = await view.executeJavaScript('!!window.__dsxSideMouseBound', false);
+      if (bound) {
+        webview = view;
+        break;
+      }
+    } catch (_) { /* a próxima página */ }
+  }
+  if (!webview) {
+    return {
+      error: 'nenhuma página com a verificação global já injetada',
+      durationMs: Date.now() - started,
+      note: '',
+    };
+  }
+  try {
+    const measured = await webview.executeJavaScript(`(() => {
+      const burst = (button, kind) => {
+        const t0 = performance.now();
+        let prevented = 0;
+        for (let i = 0; i < 80; i++) {
+          const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: button });
+          const up = new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: button });
+          window.dispatchEvent(down);
+          window.dispatchEvent(up);
+          if (kind === 'wheel') {
+            window.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 4 }));
+          }
+          if (kind === 'side') {
+            const aux = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: button });
+            window.dispatchEvent(aux);
+            if (down.defaultPrevented || aux.defaultPrevented) prevented += 1;
+          } else if (down.defaultPrevented) {
+            prevented += 1;
+          }
+        }
+        return { ms: Math.round((performance.now() - t0) * 10) / 10, prevented };
+      };
+      return {
+        bound: !!window.__dsxSideMouseBound,
+        left: burst(0, 'wheel'),
+        side: burst(3, 'side'),
+      };
+    })()`, false);
+    const durationMs = Date.now() - started;
+    const leftOk = measured && measured.left && measured.left.prevented === 0;
+    const sideOk = measured && measured.side && measured.side.prevented === 80;
+    return {
+      error: leftOk && sideOk ? null : 'o filtro do botão não se comportou como esperado',
+      durationMs,
+      note: `80 cliques esquerdos com scroll levaram ${measured.left.ms} ms e bloquearam ${measured.left.prevented}. 80 botões laterais levaram ${measured.side.ms} ms e bloquearam ${measured.side.prevented}. O listener fica em captura em cada página, em mousedown, mouseup e auxclick.`,
+    };
+  } catch (err) {
+    return {
+      error: err && err.message ? err.message : String(err),
+      durationMs: Date.now() - started,
+      note: '',
+    };
+  }
+}
+
+async function exerciseCursor() {
+  const started = Date.now();
+  const steps = [];
+  const push = (step) => steps.push(step);
+
+  if (!window.CursorMouseEventService || !window.CursorContextMenu) {
+    return { ok: false, error: 'CursorControll não iniciou', steps };
+  }
+
+  const coverage = {
+    webviews: document.querySelectorAll('#browser webview').length,
+    webviewsWithCursor: document.querySelectorAll('#browser webview[data-cursor-events="true"]').length,
+    tabs: document.querySelectorAll('#tabs .tab').length,
+    tabsWithCursor: document.querySelectorAll('#tabs .tab[data-cursor-tab-events="true"]').length,
+  };
+
+  const contentTab = Array.from(document.querySelectorAll('#tabs .tab'))
+    .find((tab) => tab.dataset.id && !String(tab.dataset.id).startsWith('home-tab'));
+  if (contentTab) {
+    const stepStart = Date.now();
+    const tabId = contentTab.dataset.id;
+    contentTab.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    const active = window.currentActiveTab === tabId || contentTab.classList.contains('active');
+    push({
+      name: 'Clique esquerdo na aba',
+      ok: active,
+      durationMs: Date.now() - stepStart,
+      loadMs: Date.now() - stepStart,
+      error: active ? null : 'a aba não ficou ativa',
+    });
+
+    const rightStart = Date.now();
+    contentTab.dispatchEvent(new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: 30,
+      clientY: 20,
+    }));
+    const menuOpen = !!(window.CursorContextMenu.isOpen && window.CursorContextMenu.isOpen());
+    const items = document.querySelectorAll('.cursor-context-menu [data-action], .cursor-context-menu button').length;
+    if (window.CursorContextMenu.close) window.CursorContextMenu.close();
+    push({
+      name: 'Clique direito na aba',
+      ok: menuOpen && items > 0,
+      durationMs: Date.now() - rightStart,
+      loadMs: Date.now() - rightStart,
+      error: menuOpen ? null : 'o menu de contexto da aba não abriu',
+    });
+  } else {
+    push({ name: 'Clique na aba', ok: false, durationMs: 0, error: 'nenhuma aba de conteúdo' });
+  }
+
+  const homeTab = document.querySelector('#tabs .tab[data-id^="home-tab"]');
+  if (homeTab) {
+    const stepStart = Date.now();
+    homeTab.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    const homeActive = window.currentActiveTab === homeTab.dataset.id || homeTab.classList.contains('active');
+    homeTab.dispatchEvent(new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: 28,
+      clientY: 18,
+    }));
+    const homeMenu = !!(window.CursorContextMenu.isOpen && window.CursorContextMenu.isOpen());
+    if (window.CursorContextMenu.close) window.CursorContextMenu.close();
+    push({
+      name: 'Clique esquerdo e direito na aba inicial',
+      ok: homeActive && homeMenu,
+      durationMs: Date.now() - stepStart,
+      loadMs: Date.now() - stepStart,
+      error: homeActive && homeMenu ? null : 'a aba inicial não ativou ou não abriu o menu',
+    });
+  }
+
+  const input = document.getElementById('addressInput');
+  if (input) {
+    const stepStart = Date.now();
+    input.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    input.focus();
+    push({
+      name: 'Clique esquerdo na barra de endereço',
+      ok: document.activeElement === input,
+      durationMs: Date.now() - stepStart,
+      loadMs: Date.now() - stepStart,
+      error: document.activeElement === input ? null : 'a barra não recebeu o foco',
+    });
+
+    const rightStart = Date.now();
+    input.dispatchEvent(new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: 40,
+      clientY: 40,
+    }));
+    const handled = !!(window.CursorContextMenu.isOpen && window.CursorContextMenu.isOpen());
+    if (window.CursorContextMenu.close) window.CursorContextMenu.close();
+    push({
+      name: 'Clique direito na barra de endereço',
+      ok: true,
+      durationMs: Date.now() - rightStart,
+      loadMs: Date.now() - rightStart,
+      note: handled
+        ? 'o CursorControll abriu o menu'
+        : 'a barra não tem menu do CursorControll; o clique não quebrou a página',
+    });
+  }
+
+  const webview = document.querySelector('#browser webview.active[data-cursor-events="true"]')
+    || document.querySelector('#browser webview[data-cursor-events="true"]');
+  if (webview) {
+    const rightStart = Date.now();
+    const event = new MouseEvent('context-menu', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 80,
+      clientY: 80,
+    });
+    webview.dispatchEvent(event);
+    const menuOpen = !!(window.CursorContextMenu.isOpen && window.CursorContextMenu.isOpen());
+    if (window.CursorContextMenu.close) window.CursorContextMenu.close();
+    push({
+      name: 'Clique direito na página',
+      ok: menuOpen,
+      durationMs: Date.now() - rightStart,
+      loadMs: Date.now() - rightStart,
+      error: menuOpen ? null : 'o menu de contexto da página não abriu',
+    });
+
+    const scrollStart = Date.now();
+    let scrolled = false;
+    try {
+      const left = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 90, clientY: 90 });
+      webview.dispatchEvent(left);
+      const side = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 3, clientX: 90, clientY: 90 });
+      webview.dispatchEvent(side);
+      webview.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 120 }));
+      if (window.CursorMiddleMouseScroll.isActive && window.CursorMiddleMouseScroll.isActive()) {
+        window.CursorMiddleMouseScroll.stop();
+      }
+      webview.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        button: 1,
+        clientX: 110,
+        clientY: 110,
+      }));
+      scrolled = !!(window.CursorMiddleMouseScroll.isActive && window.CursorMiddleMouseScroll.isActive());
+      await sleep(180);
+      window.CursorMiddleMouseScroll.stop();
+      push({
+        name: 'Clique esquerdo e botão lateral na página',
+        ok: !left.defaultPrevented && side.defaultPrevented,
+        durationMs: Date.now() - scrollStart,
+        loadMs: Date.now() - scrollStart,
+        note: 'o esquerdo segue livre; o botão lateral é interceptado pela verificação global',
+        error: !left.defaultPrevented && side.defaultPrevented
+          ? null
+          : 'a verificação global segurou o clique errado',
+      });
+    } catch (err) {
+      push({
+        name: 'Scroll na página',
+        ok: false,
+        durationMs: Date.now() - scrollStart,
+        error: err && err.message ? err.message : String(err),
+      });
+      scrolled = null;
+    }
+    if (scrolled !== null) {
+      push({
+        name: 'Scroll na página',
+        ok: scrolled === true && !(window.CursorMiddleMouseScroll.isActive && window.CursorMiddleMouseScroll.isActive()),
+        durationMs: Date.now() - scrollStart,
+        loadMs: Date.now() - scrollStart,
+        note: 'autoscroll do botão do meio ligou e foi encerrado',
+        error: scrolled ? null : 'o autoscroll não ligou',
+      });
+    }
+  } else {
+    push({ name: 'Página', ok: false, durationMs: 0, error: 'nenhum webview com o cursor anexado' });
+  }
+
+  const disposableId = window.createTab('about:blank', 'Cursor meio');
+  const disposable = document.querySelector(`#tabs .tab[data-id="${disposableId}"]`);
+  if (disposable) {
+    const stepStart = Date.now();
+    disposable.dispatchEvent(new MouseEvent('auxclick', {
+      bubbles: true,
+      cancelable: true,
+      button: 1,
+    }));
+    await sleep(80);
+    const gone = !document.querySelector(`#tabs .tab[data-id="${disposableId}"]`);
+    push({
+      name: 'Clique do meio na aba',
+      ok: gone,
+      durationMs: Date.now() - stepStart,
+      loadMs: Date.now() - stepStart,
+      error: gone ? null : 'a aba não fechou com o botão do meio',
+    });
+  }
+
+  const sideViews = document.querySelectorAll('.side-panel__webview');
+  const sideWithCursor = document.querySelectorAll('.side-panel__webview[data-cursor-events="true"]').length;
+  const sideWithCheck = document.querySelectorAll('.side-panel__webview[data-dsx-side-mouse="true"]').length;
+  if (sideViews.length) {
+    const side = sideViews[0];
+    const stepStart = Date.now();
+    let threw = null;
+    try {
+      side.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      side.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 40 }));
+      side.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+    } catch (err) {
+      threw = err && err.message ? err.message : String(err);
+    }
+    push({
+      name: 'Clique e scroll no painel lateral',
+      ok: !threw,
+      durationMs: Date.now() - stepStart,
+      loadMs: Date.now() - stepStart,
+      note: `menu do cursor ${sideWithCursor}/${sideViews.length}, verificação global ${sideWithCheck}/${sideViews.length}`,
+      error: threw,
+    });
+  }
+
+  const globalViews = document.querySelectorAll('#browser webview[data-dsx-side-mouse="true"]').length;
+  const probe = await probeGlobalCursor();
+  push({
+    name: 'Custo da verificação global',
+    ok: !probe.error,
+    durationMs: probe.durationMs || 0,
+    loadMs: probe.durationMs || 0,
+    note: probe.note,
+    error: probe.error || null,
+  });
+
+  const covered = coverage.webviews === 0 || coverage.webviewsWithCursor === coverage.webviews;
+  const tabsCovered = coverage.tabs === 0 || coverage.tabsWithCursor === coverage.tabs;
+  push({
+    name: 'Cobertura dos listeners',
+    ok: covered && tabsCovered,
+    durationMs: Date.now() - started,
+    loadMs: Date.now() - started,
+    note: `${coverage.webviewsWithCursor}/${coverage.webviews} webviews com menu e scroll, ${coverage.tabsWithCursor}/${coverage.tabs} abas, ${globalViews}/${coverage.webviews} com a verificação global injetada`,
+    error: covered && tabsCovered ? null : 'algum elemento novo ficou sem o listener do cursor',
+  });
+
+  return { ok: steps.every((step) => step.ok), steps };
+}
+
 module.exports = {
   STEP_DELAY_MS,
   createSuiteUser,
@@ -765,4 +1089,5 @@ module.exports = {
   inspectSdk,
   loadUntilFrozen,
   exerciseSecurity,
+  exerciseCursor,
 };

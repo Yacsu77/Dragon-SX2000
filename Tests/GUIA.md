@@ -34,7 +34,8 @@ O relatório sai em `Tests/reports/`, em JSON e em Markdown. Essa pasta não vai
 | `Tests/scenarios/busca.js` | Teste 7, digitação humana e cache do YouTube. |
 | `Tests/scenarios/sdk.js` | Teste 8, comandos e formato do snapshot de mídia. |
 | `Tests/scenarios/carga.js` | Teste 9, abre abas até a primeira congelar. |
-| `Tests/scenarios/seguranca.js` | Teste 10, senha, injeção e cofre no banco temporário. |
+| `Tests/scenarios/seguranca.js` | Teste 12, senha, injeção e cofre no banco temporário. |
+| `Tests/scenarios/cursor.js` | Teste 11, cliques, scroll e custo da verificação global. |
 
 ## O que cada teste executa
 
@@ -50,7 +51,8 @@ O tempo da suíte começa quando o processo sobe, antes da janela.
 8. **Busca.** Digita `ultimas noticias infomoney` e depois `You`, medindo o tempo até a recomendação.
 9. **SDK.** Pausa, toca, avança, volta e para. Confere os campos do snapshot.
 10. **Carga.** Abre páginas leves até a primeira aba congelada, ou até 16.
-11. **Segurança.** Senha errada, texto de injeção e cofre sem devolver a senha.
+11. **Cursor.** Clique esquerdo, direito e do meio na aba, clique na barra e na página, scroll e autoscroll. Anota quantos webviews e abas têm o listener, e a RAM e a CPU em volta do gesto.
+12. **Segurança.** Senha errada, texto de injeção e cofre sem devolver a senha.
 
 O usuário da suíte é apagado no fim. O SQLite fica em uma pasta temporária (`DSX_SUITE_DB`) e some quando o app fecha, inclusive os arquivos WAL. O banco do perfil real não é usado.
 

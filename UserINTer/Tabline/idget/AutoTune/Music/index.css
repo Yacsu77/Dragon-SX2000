@@ -3,7 +3,7 @@
  * Dimensionamento otimizado para o tamanho default 360x150.
  */
 
-.floating-widget[data-widget-type="music"] {
+.autotune-block[data-widget-type="music"] {
   background: rgba(245, 245, 248, 0.96);
   color: #1a1c22;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -11,23 +11,11 @@
   overflow: hidden;
 }
 
-.floating-widget[data-widget-type="music"] .floating-widget-body {
+.autotune-block[data-widget-type="music"] .autotune-block-body {
   padding: 0;
   background: transparent;
   color: inherit;
-}
-
-.floating-widget[data-widget-type="music"].floating-widget--idle {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity 200ms ease, transform 200ms ease;
-}
-
-.floating-widget[data-widget-type="music"]:not(.floating-widget--idle) {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 220ms ease, transform 220ms ease;
+  height: 100%;
 }
 
 /* Card layout - cover à esquerda, info à direita */

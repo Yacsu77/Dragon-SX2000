@@ -27,7 +27,7 @@ O relatório sai em `Tests/reports/`, em JSON e em Markdown. Essa pasta não vai
 | `Tests/scenarios/boot.js` | Criação do usuário pelo formulário real. |
 | `Tests/scenarios/tabs.js` | Teste 1, seis abas. |
 | `Tests/scenarios/janelas.js` | Teste 2, lateral, divisão e nova janela. |
-| `Tests/scenarios/autotune.js` | Teste 3, música, outros AutoTunes e wallpapers. |
+| `Tests/scenarios/autotune.js` | Teste 3, grade fixa, música e wallpapers. |
 | `Tests/scenarios/atalhos.js` | Teste 4, troca e restaura cada atalho. |
 | `Tests/scenarios/banco.js` | Teste 5, tempo de cada operação no banco. |
 | `Tests/scenarios/atividade.js` | Teste 6, percorre as abas e conta quentes e congeladas. |
@@ -44,7 +44,7 @@ O tempo da suíte começa quando o processo sobe, antes da janela.
 1. **Arranque.** Até a janela carregar. Depois o formulário cria o perfil `suite-<número>`.
 2. **Abas.** G1, um vídeo do YouTube, Krunker, Canva, Excalidraw e Wikipédia. Duas segundos entre uma e outra. Cada uma guarda o início e o fim do carregamento do webview.
 3. **Janelas.** Liga o painel lateral sempre carregado e abre WhatsApp, Discord e Instagram. Divide a janela. Cria outra janela do app a partir de uma aba, pela mesma ponte que o detach usa.
-4. **AutoTune e wallpaper.** Liga a música e manda pausar, avançar e voltar ao SDK. Liga e desliga timer, share, tarefas e relógio. Aplica WWP, WWP1 e WWP3.
+4. **AutoTune e wallpaper.** Monta a grade 3×4, solta relógio, lista, timer, share e música nas células e recusa ocupação e soltura fora do modo de edição. A música manda pausar, avançar e voltar ao SDK. Aplica WWP, WWP1 e WWP3.
 5. **Atalhos.** Abre a tela de atalhos, troca cada combinação, dispara e devolve a tecla.
 6. **Banco.** Cria, lista e apaga histórico, favorito, download, cofre e grupo de abas, e faz o flush da sessão.
 7. **Atividade.** Ativa cada aba já aberta e anota total, quentes, congeladas e home.

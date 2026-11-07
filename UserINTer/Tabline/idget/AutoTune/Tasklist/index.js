@@ -1,4 +1,12 @@
 window.AutoTuneWidgets = window.AutoTuneWidgets || {};
+window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
+
+window.AutoTuneWidgetMeta.tasklist = {
+  title: "Lista",
+  placement: "fixo",
+  cols: 1,
+  rows: 2,
+};
 
 (function () {
   const TASKLIST_KEY = "autotuneTasklistData";

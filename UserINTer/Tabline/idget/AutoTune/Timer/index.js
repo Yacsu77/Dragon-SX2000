@@ -1,4 +1,12 @@
 window.AutoTuneWidgets = window.AutoTuneWidgets || {};
+window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
+
+window.AutoTuneWidgetMeta.timer = {
+  title: "Timer",
+  placement: "fixo",
+  cols: 1,
+  rows: 1,
+};
 
 (function () {
   const POMODORO_KEY = "autotunePomodoroSettings";

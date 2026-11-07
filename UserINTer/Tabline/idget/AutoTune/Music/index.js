@@ -1,23 +1,14 @@
 /**
- * AutoTune Music Widget
- *
- * Card horizontal de Now Playing alimentado pelo Dragon Media SDK
- * (`window.DragonMedia`). Comportamento especial:
- *   - Aparece em qualquer tela (home/browser) — flag `persistent`
- *   - Só renderiza quando há mídia ativa; some quando não há
- *   - Toggle do AutoTune controla "deve aparecer" (intenção do usuário);
- *     a presença real depende de ter snapshot do SDK.
+ * AutoTune Music — card de uma célula, ligado ao Dragon Media SDK.
  */
 window.AutoTuneWidgets = window.AutoTuneWidgets || {};
 window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 
 window.AutoTuneWidgetMeta.music = {
-  persistent: true,
-  defaultWidth: 360,
-  defaultHeight: 150,
-  minWidth: 280,
-  minHeight: 110,
-  showWhen: "media-active",
+  title: "Música",
+  placement: "fixo",
+  cols: 1,
+  rows: 1,
 };
 
 (function () {
@@ -94,10 +85,7 @@ window.AutoTuneWidgetMeta.music = {
     };
 
     function render(snapshot) {
-      const widgetEl = bodyEl.closest('.floating-widget');
-
       if (!snapshot || !snapshot.title) {
-        if (widgetEl) widgetEl.classList.add("floating-widget--idle");
         refs.title.textContent = FALLBACK_TITLE;
         refs.artist.textContent = FALLBACK_ARTIST;
         refs.position.textContent = "0:00";
@@ -110,8 +98,6 @@ window.AutoTuneWidgetMeta.music = {
         refs.coverFallback.style.display = "";
         return;
       }
-
-      if (widgetEl) widgetEl.classList.remove("floating-widget--idle");
 
       refs.title.textContent = snapshot.title;
       refs.artist.textContent = [snapshot.artist, snapshot.album].filter(Boolean).join(" — ") || snapshot.app || "";

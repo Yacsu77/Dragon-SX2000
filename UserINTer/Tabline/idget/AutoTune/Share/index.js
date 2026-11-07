@@ -1,4 +1,12 @@
 window.AutoTuneWidgets = window.AutoTuneWidgets || {};
+window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
+
+window.AutoTuneWidgetMeta.share = {
+  title: "Share",
+  placement: "fixo",
+  cols: 1,
+  rows: 1,
+};
 
 window.AutoTuneWidgets.share = function initShareWidget(bodyEl) {
   bodyEl.innerHTML = `

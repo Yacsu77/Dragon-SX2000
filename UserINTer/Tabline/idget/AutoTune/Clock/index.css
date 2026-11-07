@@ -7,7 +7,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 80px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -36,12 +36,13 @@
   letter-spacing: 0.04em;
 }
 
-.floating-widget[data-widget-type="clock"] {
+.autotune-block[data-widget-type="clock"] {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-.floating-widget[data-widget-type="clock"] .floating-widget-body {
+.autotune-block[data-widget-type="clock"] .autotune-block-body {
   padding: 0;
+  height: 100%;
 }

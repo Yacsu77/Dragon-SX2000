@@ -11,7 +11,6 @@
     '../../UserINTer/Tabline/idget/AutoTune/Tasklist/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Share/index.js',
     '../../UserINTer/Tabline/idget/AutoTune/Music/index.js',
-    '../../UserINTer/Tabline/idget/AutoTune/Music/minimal.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/config.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/render.js',
     '../../UserINTer/Tabline/idget/AutoTune/Clock/index.js',

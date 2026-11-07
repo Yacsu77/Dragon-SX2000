@@ -1,787 +1,333 @@
+/**
+ * Motor da grade fixa dos AutoTunes.
+ *
+ * A home tem 3 linhas por 4 colunas. Cada AutoTune fixo ocupa um vão
+ * declarado no próprio registro e só entra na grade em modo de edição.
+ * A posição salva é a célula. O tipo flutuante fica reservado e não monta.
+ */
 (function () {
   const SETTINGS_KEY = "settingsAUTO";
-  const LEGACY_KEY = "autotuneCosmetics";
-  const MIN_W = 140;
-  const MIN_H = 100;
-  const TYPES = ["timer", "share", "tasklist", "music", "clock"];
-  const TITLES = { timer: "Timer", share: "Share", tasklist: "Tasklist", music: "Music", clock: "Clock" };
-  const FUSION_TYPE = "focusflow";
-  const FUSION_RATIO_TRIGGER = 0.35;
-  // Widgets que ignoram a regra "só aparece na home" e ficam em todas as telas.
-  const PERSISTENT_TYPES = new Set(["music"]);
-  // Widgets que só renderizam quando o SDK indica mídia ativa.
-  const MEDIA_GATED_TYPES = new Set(["music"]);
-
-  if (document.body && document.body.dataset) {
-    const path = window.location.pathname || "";
-    if (path.includes("AutoTune/index.html")) {
-      document.body.dataset.widget = "AutoTune";
-    }
-  }
+  const COLS = 4;
+  const ROWS = 3;
 
   function emptyState() {
-    return { timer: null, share: null, tasklist: null, music: null, clock: null };
+    return { version: 2, items: [] };
   }
 
-  function migrateLegacySettings() {
-    if ((window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY))) return;
+  function readRaw() {
     try {
-      const raw = (window.UserStorage ? window.UserStorage.getItem(LEGACY_KEY) : localStorage.getItem(LEGACY_KEY));
-      if (!raw) return;
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr) || arr.length === 0) return;
-      const next = emptyState();
-      arr.forEach((item) => {
-        if (!item || !item.type || !next.hasOwnProperty(item.type)) return;
-        if (next[item.type]) return;
-        next[item.type] = {
-          id: item.id || `${item.type}-migrated`,
-          x: item.x,
-          y: item.y,
-          w: item.w,
-          h: item.h,
-          active: true
-        };
-      });
-      (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
-      (window.UserStorage ? window.UserStorage.removeItem(LEGACY_KEY) : localStorage.removeItem(LEGACY_KEY));
+      const raw = window.UserStorage
+        ? window.UserStorage.getItem(SETTINGS_KEY)
+        : localStorage.getItem(SETTINGS_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch {
-      /* ignore */
+      return null;
     }
   }
 
   function loadSettings() {
-    migrateLegacySettings();
-    try {
-      const raw = (window.UserStorage ? window.UserStorage.getItem(SETTINGS_KEY) : localStorage.getItem(SETTINGS_KEY));
-      if (!raw) return emptyState();
-      const data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return emptyState();
-
-      if (data.type && TYPES.includes(data.type) && data.timer === undefined) {
-        const next = emptyState();
-        next[data.type] = {
-          id: data.id || `${data.type}-legacy`,
-          x: data.x,
-          y: data.y,
-          w: data.w,
-          h: data.h,
-          active: data.active !== false
-        };
-        (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)));
-        return next;
-      }
-
-      const out = emptyState();
-      TYPES.forEach((t) => {
-        if (data[t] && typeof data[t] === "object") {
-          out[t] = {
-            id: data[t].id || `${t}-saved`,
-            x: data[t].x,
-            y: data[t].y,
-            w: data[t].w,
-            h: data[t].h,
-            active: data[t].active !== false
-          };
-          if (t === "music" && data[t].minimal === true) {
-            out[t].minimal = true;
-          }
-          if (t === "music" && typeof data[t].minimalOffsetX === "number") {
-            out[t].minimalOffsetX = data[t].minimalOffsetX;
-          }
-          if (t === "music" && typeof data[t].minimalVolumeLevel === "number") {
-            out[t].minimalVolumeLevel = data[t].minimalVolumeLevel;
-          }
-        }
-      });
-      return out;
-    } catch {
-      return emptyState();
-    }
+    const data = readRaw();
+    if (!data || data.version !== 2 || !Array.isArray(data.items)) return emptyState();
+    const items = data.items
+      .filter((item) => item && typeof item.id === "string")
+      .filter((item) => item.placement === "fixo" || item.placement === "flutuante")
+      .map((item) => ({
+        id: item.id,
+        placement: item.placement,
+        col: Number(item.col) || 0,
+        row: Number(item.row) || 0,
+        cols: Math.max(1, Number(item.cols) || 1),
+        rows: Math.max(1, Number(item.rows) || 1),
+      }));
+    return { version: 2, items };
   }
 
   function saveSettings(state) {
-    (window.UserStorage ? window.UserStorage.setItem(SETTINGS_KEY, JSON.stringify(state)) : localStorage.setItem(SETTINGS_KEY, JSON.stringify(state)));
+    const payload = JSON.stringify(state);
+    if (window.UserStorage) window.UserStorage.setItem(SETTINGS_KEY, payload);
+    else localStorage.setItem(SETTINGS_KEY, payload);
   }
 
-  function getContentBounds() {
-    const nav = document.querySelector(".nav-bar");
-    const tabs = document.querySelector(".tabs-bar");
-    let top = 0;
-    if (nav) top = Math.max(top, nav.getBoundingClientRect().bottom);
-    if (tabs) top = Math.max(top, tabs.getBoundingClientRect().bottom);
+  function widgetMap() {
+    return window.AutoTuneWidgetMeta || {};
+  }
+
+  function getWidget(id) {
+    const meta = widgetMap()[id];
+    if (!meta) return null;
     return {
-      top,
-      left: 0,
-      right: window.innerWidth,
-      bottom: window.innerHeight
+      id,
+      title: meta.title || id,
+      placement: meta.placement === "flutuante" ? "flutuante" : "fixo",
+      cols: Math.max(1, Number(meta.cols) || 1),
+      rows: Math.max(1, Number(meta.rows) || 1),
     };
   }
 
-  function clampState(x, y, w, h) {
-    const b = getContentBounds();
-    const maxW = b.right - b.left;
-    const maxH = b.bottom - b.top;
-    w = Math.max(MIN_W, Math.min(w, maxW));
-    h = Math.max(MIN_H, Math.min(h, maxH));
-    x = Math.max(b.left, Math.min(x, b.right - w));
-    y = Math.max(b.top, Math.min(y, b.bottom - h));
-    return { x, y, w, h };
+  function isEditing() {
+    return window.location.hash === "#autotune-widget";
   }
 
-  function getRect(el) {
-    const r = el.getBoundingClientRect();
-    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
-  }
-
-  function overlapRatio(a, b) {
-    const r1 = getRect(a);
-    const r2 = getRect(b);
-    const ix = Math.max(0, Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left));
-    const iy = Math.max(0, Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top));
-    const inter = ix * iy;
-    if (inter <= 0) return 0;
-    const aArea = Math.max(1, (r1.right - r1.left) * (r1.bottom - r1.top));
-    const bArea = Math.max(1, (r2.right - r2.left) * (r2.bottom - r2.top));
-    return inter / Math.min(aArea, bArea);
-  }
-
-  function unionRect(a, b) {
-    const r1 = getRect(a);
-    const r2 = getRect(b);
-    return {
-      left: Math.min(r1.left, r2.left),
-      top: Math.min(r1.top, r2.top),
-      right: Math.max(r1.right, r2.right),
-      bottom: Math.max(r1.bottom, r2.bottom)
-    };
-  }
-
-  function resolveOverlap(el, root) {
-    const others = root.querySelectorAll(".floating-widget");
-    if (others.length <= 1) return;
-    const self = getRect(el);
-    let dx = 0;
-    let dy = 0;
-    const step = 12;
-    for (let iter = 0; iter < 40; iter++) {
-      let hit = false;
-      others.forEach((other) => {
-        if (other === el) return;
-        const o = getRect(other);
-        const test = {
-          left: self.left + dx,
-          top: self.top + dy,
-          right: self.right + dx,
-          bottom: self.bottom + dy
-        };
-        const overlap = !(
-          test.right <= o.left ||
-          test.left >= o.right ||
-          test.bottom <= o.top ||
-          test.top >= o.bottom
-        );
-        if (overlap) hit = true;
-      });
-      if (!hit) break;
-      dx += step;
-      if (dx > 200) {
-        dx = 0;
-        dy += step;
+  function cellsFor(col, row, cols, rows) {
+    const list = [];
+    for (let y = row; y < row + rows; y += 1) {
+      for (let x = col; x < col + cols; x += 1) {
+        list.push({ col: x, row: y });
       }
     }
-    let left = parseFloat(el.style.left) || 0;
-    let top = parseFloat(el.style.top) || 0;
-    left += dx;
-    top += dy;
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
-    const next = clampState(left, top, w, h);
-    el.style.left = `${next.x}px`;
-    el.style.top = `${next.y}px`;
+    return list;
   }
 
-  let zStack = 12;
-
-  function bringToFront(el) {
-    zStack += 1;
-    el.style.zIndex = String(zStack);
+  function inside(col, row, cols, rows) {
+    return col >= 0 && row >= 0 && col + cols <= COLS && row + rows <= ROWS;
   }
 
-  function createWidgetElement(type, id) {
-    const wrap = document.createElement("div");
-    wrap.className = "floating-widget";
-    if (PERSISTENT_TYPES.has(type)) wrap.classList.add("floating-widget--persistent");
-    if (MEDIA_GATED_TYPES.has(type)) wrap.classList.add("floating-widget--media-gated");
-    wrap.dataset.widgetId = id;
-    wrap.dataset.widgetType = type;
-    wrap.dataset.factoryKey = `autotune-widget-${type}`;
-    wrap.innerHTML = `
-      <div class="floating-widget-body"></div>
-      <div class="floating-widget-resize" aria-label="Redimensionar"></div>
-    `;
-    const body = wrap.querySelector(".floating-widget-body");
-    const factory = window.AutoTuneWidgets && window.AutoTuneWidgets[type];
-    if (typeof factory === "function") {
-      factory(body);
-    }
-    return wrap;
+  function fits(col, row, cols, rows, items, ignoreId) {
+    if (!inside(col, row, cols, rows)) return false;
+    const occupied = new Set();
+    items.forEach((item) => {
+      if (item.id === ignoreId || item.placement !== "fixo") return;
+      cellsFor(item.col, item.row, item.cols, item.rows).forEach((cell) => {
+        occupied.add(`${cell.col},${cell.row}`);
+      });
+    });
+    return cellsFor(col, row, cols, rows).every((cell) => !occupied.has(`${cell.col},${cell.row}`));
   }
 
-  function applyLayout(el, state) {
-    el.style.width = `${state.w}px`;
-    el.style.height = `${state.h}px`;
-    el.style.left = `${state.x}px`;
-    el.style.top = `${state.y}px`;
+  function gridEl() {
+    return document.querySelector("#floating-cosmetics-root .autotune-grid");
   }
 
-  function removeWidgetOfType(root, type) {
-    const existing = root.querySelector(`.floating-widget[data-widget-type="${type}"]`);
-    if (existing) existing.remove();
+  function destroyBlock(block) {
+    const body = block.querySelector(".autotune-block-body");
+    if (body && typeof body._clockCleanup === "function") body._clockCleanup();
+    if (body && typeof body._dragonMediaCleanup === "function") body._dragonMediaCleanup();
+    block.remove();
   }
 
-  function removeFusion(root) {
-    const fusion = root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
-    if (fusion) fusion.remove();
+  function mountBlock(item) {
+    const grid = gridEl();
+    if (!grid) return null;
+    const existing = grid.querySelector(`.autotune-block[data-widget-type="${item.id}"]`);
+    if (existing) destroyBlock(existing);
+
+    const block = document.createElement("article");
+    block.className = "autotune-block";
+    block.dataset.widgetType = item.id;
+    block.dataset.placement = "fixo";
+    block.style.gridColumn = `${item.col + 1} / span ${item.cols}`;
+    block.style.gridRow = `${item.row + 1} / span ${item.rows}`;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "autotune-block-remove";
+    remove.textContent = "Tirar";
+    remove.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeWidget(item.id);
+    });
+
+    const body = document.createElement("div");
+    body.className = "autotune-block-body";
+    block.append(remove, body);
+    grid.appendChild(block);
+
+    const init = window.AutoTuneWidgets && window.AutoTuneWidgets[item.id];
+    if (typeof init === "function") init(body);
+    return block;
   }
 
-  function fusionExists(root) {
-    return !!root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
+  function clearBlocks() {
+    const grid = gridEl();
+    if (!grid) return;
+    grid.querySelectorAll(".autotune-block").forEach(destroyBlock);
   }
 
-  function snapshotAll(root) {
+  function syncShelf() {
+    const placed = new Set(loadSettings().items.filter((item) => item.placement === "fixo").map((item) => item.id));
+    document.querySelectorAll("[data-autotune-preview]").forEach((node) => {
+      const id = node.getAttribute("data-autotune-preview");
+      node.hidden = placed.has(id);
+    });
+  }
+
+  function restore() {
+    clearBlocks();
     const state = loadSettings();
-    root.querySelectorAll(".floating-widget").forEach((node) => {
-      const t = node.dataset.widgetType;
-      if (!t || !state.hasOwnProperty(t)) return;
-      const entry = {
-        id: node.dataset.widgetId,
-        x: parseFloat(node.style.left) || 0,
-        y: parseFloat(node.style.top) || 0,
-        w: node.offsetWidth,
-        h: node.offsetHeight,
-        active: true
+    const accepted = [];
+    state.items.forEach((item) => {
+      if (item.placement !== "fixo") return;
+      const widget = getWidget(item.id);
+      if (!widget || widget.placement !== "fixo") return;
+      if (!fits(item.col, item.row, widget.cols, widget.rows, accepted)) return;
+      const next = {
+        id: item.id,
+        placement: "fixo",
+        col: item.col,
+        row: item.row,
+        cols: widget.cols,
+        rows: widget.rows,
       };
-      if (t === "music" && state.music && state.music.minimal === true) {
-        entry.minimal = true;
-      }
-      if (t === "music" && typeof state.music?.minimalOffsetX === "number") {
-        entry.minimalOffsetX = state.music.minimalOffsetX;
-      }
-      state[t] = entry;
+      accepted.push(next);
+      mountBlock(next);
     });
+    syncShelf();
+  }
+
+  function place(id, col, row) {
+    const widget = getWidget(id);
+    if (!widget) return { ok: false, error: "autotune desconhecido", item: null };
+    if (widget.placement !== "fixo") {
+      return { ok: false, error: "flutuante ainda não entra na grade", item: null };
+    }
+    if (!isEditing()) return { ok: false, error: "fora do modo de edição", item: null };
+
+    const state = loadSettings();
+    if (state.items.some((item) => item.id === id && item.placement === "fixo")) {
+      return { ok: false, error: "já está na grade", item: null };
+    }
+    if (!inside(col, row, widget.cols, widget.rows)) {
+      return { ok: false, error: "fora da grade", item: null };
+    }
+    if (!fits(col, row, widget.cols, widget.rows, state.items)) {
+      return { ok: false, error: "célula ocupada", item: null };
+    }
+
+    const item = {
+      id,
+      placement: "fixo",
+      col,
+      row,
+      cols: widget.cols,
+      rows: widget.rows,
+    };
+    state.items.push(item);
     saveSettings(state);
+    mountBlock(item);
+    syncShelf();
+    return { ok: true, error: null, item };
   }
 
-  function attachDragResize(el, root, onInteractionEnd) {
-    const handle = el.querySelector(".floating-widget-resize");
+  function removeWidget(id) {
+    if (!isEditing()) return { ok: false, error: "fora do modo de edição" };
+    const state = loadSettings();
+    const next = state.items.filter((item) => item.id !== id);
+    if (next.length === state.items.length) return { ok: false, error: "não está na grade" };
+    saveSettings({ version: 2, items: next });
+    const grid = gridEl();
+    const block = grid && grid.querySelector(`.autotune-block[data-widget-type="${id}"]`);
+    if (block) destroyBlock(block);
+    syncShelf();
+    return { ok: true, error: null };
+  }
 
-    let drag = false;
-    let resize = false;
-    let sx = 0;
-    let sy = 0;
-    let sl = 0;
-    let st = 0;
-    let sw = 0;
-    let sh = 0;
-
-    function readLayout() {
-      return {
-        x: parseFloat(el.style.left) || el.offsetLeft,
-        y: parseFloat(el.style.top) || el.offsetTop,
-        w: el.offsetWidth,
-        h: el.offsetHeight
-      };
+  function ensureGrid(root) {
+    let grid = root.querySelector(".autotune-grid");
+    if (grid) return grid;
+    grid = document.createElement("div");
+    grid.className = "autotune-grid";
+    grid.dataset.cols = String(COLS);
+    grid.dataset.rows = String(ROWS);
+    for (let row = 0; row < ROWS; row += 1) {
+      for (let col = 0; col < COLS; col += 1) {
+        const cell = document.createElement("div");
+        cell.className = "autotune-cell";
+        cell.dataset.col = String(col);
+        cell.dataset.row = String(row);
+        cell.style.gridColumn = String(col + 1);
+        cell.style.gridRow = String(row + 1);
+        grid.appendChild(cell);
+      }
     }
+    root.appendChild(grid);
+    return grid;
+  }
 
-    el.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return;
-      if (e.target.closest("button, a, input, select, textarea, .floating-widget-resize")) return;
-      drag = true;
-      bringToFront(el);
-      const r = readLayout();
-      sx = e.clientX;
-      sy = e.clientY;
-      sl = r.x;
-      st = r.y;
-      e.preventDefault();
+  function cellFromPoint(grid, clientX, clientY) {
+    const rect = grid.getBoundingClientRect();
+    const styles = window.getComputedStyle(grid);
+    const padLeft = parseFloat(styles.paddingLeft) || 0;
+    const padTop = parseFloat(styles.paddingTop) || 0;
+    const padRight = parseFloat(styles.paddingRight) || 0;
+    const padBottom = parseFloat(styles.paddingBottom) || 0;
+    const gap = parseFloat(styles.columnGap) || 0;
+    const innerW = rect.width - padLeft - padRight;
+    const innerH = rect.height - padTop - padBottom;
+    const colSize = (innerW - gap * (COLS - 1)) / COLS;
+    const rowSize = (innerH - gap * (ROWS - 1)) / ROWS;
+    const x = clientX - rect.left - padLeft;
+    const y = clientY - rect.top - padTop;
+    if (x < 0 || y < 0) return null;
+    const col = Math.floor(x / (colSize + gap));
+    const row = Math.floor(y / (rowSize + gap));
+    if (col < 0 || row < 0 || col >= COLS || row >= ROWS) return null;
+    return { col, row };
+  }
+
+  function clearHover(grid) {
+    grid.querySelectorAll(".autotune-cell").forEach((cell) => {
+      cell.classList.remove("is-hover", "is-blocked");
     });
+  }
 
-    handle.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return;
-      resize = true;
-      bringToFront(el);
-      const r = readLayout();
-      sx = e.clientX;
-      sy = e.clientY;
-      sw = r.w;
-      sh = r.h;
-      e.preventDefault();
-      e.stopPropagation();
+  function paintHover(grid, id, cell) {
+    clearHover(grid);
+    if (!cell || !id) return;
+    const widget = getWidget(id);
+    if (!widget) return;
+    const ok = fits(cell.col, cell.row, widget.cols, widget.rows, loadSettings().items);
+    cellsFor(cell.col, cell.row, widget.cols, widget.rows).forEach((spot) => {
+      const node = grid.querySelector(`.autotune-cell[data-col="${spot.col}"][data-row="${spot.row}"]`);
+      if (node) node.classList.add(ok ? "is-hover" : "is-blocked");
     });
+  }
 
-    document.addEventListener("mousemove", (e) => {
-      if (drag) {
-        const dx = e.clientX - sx;
-        const dy = e.clientY - sy;
-        const r = readLayout();
-        const c = clampState(sl + dx, st + dy, r.w, r.h);
-        el.style.left = `${c.x}px`;
-        el.style.top = `${c.y}px`;
-      }
-      if (resize) {
-        const dx = e.clientX - sx;
-        const dy = e.clientY - sy;
-        const pos = readLayout();
-        const c = clampState(pos.x, pos.y, sw + dx, sh + dy);
-        el.style.width = `${c.w}px`;
-        el.style.height = `${c.h}px`;
-      }
-    });
+  function bindDrag(grid) {
+    let draggingId = "";
 
-    document.addEventListener("mouseup", () => {
-      if (drag || resize) {
-        let handled = false;
-        if (typeof onInteractionEnd === "function") {
-          handled = onInteractionEnd(el) === true;
+    document.querySelectorAll("[data-autotune-preview]").forEach((preview) => {
+      preview.addEventListener("dragstart", (event) => {
+        if (!isEditing()) {
+          event.preventDefault();
+          return;
         }
-        if (!handled) {
-          resolveOverlap(el, root);
-          if (typeof onInteractionEnd === "function") {
-            onInteractionEnd(el);
-          }
+        draggingId = preview.getAttribute("data-autotune-preview") || "";
+        if (event.dataTransfer) {
+          event.dataTransfer.setData("text/plain", draggingId);
+          event.dataTransfer.effectAllowed = "copy";
         }
-      }
-      drag = false;
-      resize = false;
-    });
-
-    el.addEventListener("mousedown", () => bringToFront(el));
-  }
-
-  function initFusionBody(bodyEl, onFinish) {
-    const pomodoroStore = window.AutoTunePomodoroStore && typeof window.AutoTunePomodoroStore.load === "function"
-      ? window.AutoTunePomodoroStore
-      : { load: () => ({ workMinutes: 25, breakMinutes: 5 }) };
-    const taskStore = window.AutoTuneTasklistStore && typeof window.AutoTuneTasklistStore.load === "function"
-      ? window.AutoTuneTasklistStore
-      : null;
-    const formatDuration = taskStore && typeof taskStore.formatDuration === "function"
-      ? taskStore.formatDuration
-      : (ms) => `${Math.floor((ms || 0) / 1000)}s`;
-
-    const settings = pomodoroStore.load();
-    let workMinutes = Math.max(1, Number(settings.workMinutes) || 25);
-    let breakMinutes = Math.max(1, Number(settings.breakMinutes) || 5);
-    let phase = "work";
-    let running = false;
-    let remainingMs = workMinutes * 60 * 1000;
-    let rafId = null;
-    let lastTs = 0;
-    let selectedTaskId = null;
-    let draftText = "";
-    let pendingTaskDeltaMs = 0;
-
-    bodyEl.innerHTML = `
-      <div class="autotune-fusion-wrap">
-        <div class="autotune-fusion-timer">
-          <div class="autotune-fusion-phase" data-role="phase">Foco</div>
-          <div class="autotune-fusion-display" data-role="display">25:00</div>
-          <div class="autotune-fusion-actions">
-            <button type="button" class="autotune-timer-btn" data-action="start">Iniciar</button>
-            <button type="button" class="autotune-timer-btn" data-action="pause">Pausar</button>
-            <button type="button" class="autotune-timer-btn ghost" data-action="reset">Resetar</button>
-          </div>
-        </div>
-        <div class="autotune-fusion-tasks">
-          <div class="autotune-fusion-input-row">
-            <input type="text" data-role="taskInput" placeholder="Adicionar tarefa..." />
-            <button type="button" class="autotune-tasklist-add-btn" data-action="add">+</button>
-          </div>
-          <ul class="autotune-fusion-task-list" data-role="taskList"></ul>
-          <button type="button" class="autotune-fusion-finish" data-action="finish">Finalizar</button>
-        </div>
-      </div>
-    `;
-
-    const displayEl = bodyEl.querySelector('[data-role="display"]');
-    const phaseEl = bodyEl.querySelector('[data-role="phase"]');
-    const inputEl = bodyEl.querySelector('[data-role="taskInput"]');
-    const listEl = bodyEl.querySelector('[data-role="taskList"]');
-
-    function loadTasks() {
-      if (!taskStore) return { tasks: [], activeTaskId: null };
-      return taskStore.load();
-    }
-
-    function saveTasks(state) {
-      if (taskStore) {
-        taskStore.save(state);
-      }
-    }
-
-    function renderTasks() {
-      const state = loadTasks();
-      if (!selectedTaskId && state.activeTaskId) {
-        selectedTaskId = state.activeTaskId;
-      }
-      if (!selectedTaskId && state.tasks[0]) {
-        selectedTaskId = state.tasks[0].id;
-      }
-      if (state.tasks.length === 0) {
-        listEl.innerHTML = `<li class="autotune-tasklist-empty">Crie uma tarefa para rastrear o tempo.</li>`;
-        return;
-      }
-      listEl.innerHTML = state.tasks
-        .map((task) => {
-          const active = selectedTaskId === task.id ? " is-active" : "";
-          const done = task.done ? " is-done" : "";
-          return `
-            <li class="autotune-tasklist-item${active}${done}" data-task-id="${task.id}">
-              <button type="button" class="autotune-tasklist-text" data-action="select" data-task-id="${task.id}">${task.text}</button>
-              <span class="autotune-tasklist-time">${formatDuration(task.totalMs || 0)}</span>
-            </li>
-          `;
-        })
-        .join("");
-    }
-
-    function updateTimerUi() {
-      const totalSec = Math.max(0, Math.ceil(remainingMs / 1000));
-      const min = Math.floor(totalSec / 60);
-      const sec = totalSec % 60;
-      displayEl.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-      phaseEl.textContent = phase === "work" ? "Foco" : "Pausa";
-    }
-
-    function switchPhase(nextPhase) {
-      phase = nextPhase;
-      remainingMs = (phase === "work" ? workMinutes : breakMinutes) * 60 * 1000;
-      updateTimerUi();
-    }
-
-    function flushTaskDelta() {
-      if (pendingTaskDeltaMs <= 0 || !selectedTaskId || phase !== "work") return;
-      const state = loadTasks();
-      const task = state.tasks.find((item) => item.id === selectedTaskId);
-      if (!task) return;
-      task.totalMs = Math.max(0, Number(task.totalMs || 0) + pendingTaskDeltaMs);
-      state.activeTaskId = selectedTaskId;
-      saveTasks(state);
-      pendingTaskDeltaMs = 0;
-      renderTasks();
-    }
-
-    function tick(ts) {
-      if (!running) return;
-      if (!lastTs) lastTs = ts;
-      const delta = ts - lastTs;
-      lastTs = ts;
-      remainingMs -= delta;
-      if (selectedTaskId && phase === "work" && delta > 0) {
-        pendingTaskDeltaMs += delta;
-        if (pendingTaskDeltaMs >= 1000) {
-          flushTaskDelta();
-        }
-      }
-      if (remainingMs <= 0) {
-        flushTaskDelta();
-        switchPhase(phase === "work" ? "break" : "work");
-      }
-      updateTimerUi();
-      rafId = requestAnimationFrame(tick);
-    }
-
-    function start() {
-      if (running) return;
-      running = true;
-      lastTs = 0;
-      rafId = requestAnimationFrame(tick);
-    }
-
-    function pause() {
-      running = false;
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      flushTaskDelta();
-    }
-
-    function reset() {
-      pause();
-      phase = "work";
-      remainingMs = workMinutes * 60 * 1000;
-      updateTimerUi();
-    }
-
-    function addTaskFromInput() {
-      const nextText = String(inputEl.value || "").trim();
-      if (!nextText) return;
-      if (taskStore && typeof taskStore.addTask === "function") {
-        taskStore.addTask(nextText);
-      }
-      inputEl.value = "";
-      renderTasks();
-    }
-
-    bodyEl.addEventListener("click", (event) => {
-      const actionEl = event.target.closest("[data-action]");
-      if (!actionEl) return;
-      const action = actionEl.getAttribute("data-action");
-      const taskId = actionEl.getAttribute("data-task-id");
-      if (action === "start") start();
-      if (action === "pause") pause();
-      if (action === "reset") reset();
-      if (action === "add") addTaskFromInput();
-      if (action === "select" && taskId) {
-        selectedTaskId = taskId;
-        const state = loadTasks();
-        state.activeTaskId = selectedTaskId;
-        saveTasks(state);
-        renderTasks();
-      }
-      if (action === "finish") {
-        pause();
-        flushTaskDelta();
-        if (typeof onFinish === "function") onFinish();
-      }
-    });
-
-    inputEl.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addTaskFromInput();
-      }
-    });
-
-    inputEl.addEventListener("input", () => {
-      draftText = inputEl.value;
-    });
-
-    renderTasks();
-    updateTimerUi();
-    if (draftText) {
-      inputEl.value = draftText;
-    }
-  }
-
-  function splitFusion(root, fusionEl) {
-    if (!fusionEl) return;
-    const rect = getRect(fusionEl);
-    fusionEl.remove();
-    const halfW = Math.max(190, Math.floor((rect.right - rect.left - 12) / 2));
-    const height = Math.max(180, rect.bottom - rect.top);
-    const timerLayout = clampState(rect.left, rect.top, halfW, height);
-    const taskLayout = clampState(rect.left + halfW + 12, rect.top, halfW, height);
-    spawnWidget("timer", root, { x: timerLayout.x, y: timerLayout.y, w: timerLayout.w, h: timerLayout.h });
-    spawnWidget("tasklist", root, { x: taskLayout.x, y: taskLayout.y, w: taskLayout.w, h: taskLayout.h });
-  }
-
-  function fuseTimerAndTasklist(root, timerEl, tasklistEl) {
-    if (!timerEl || !tasklistEl || fusionExists(root)) return false;
-    const u = unionRect(timerEl, tasklistEl);
-    const w = Math.max(380, u.right - u.left);
-    const h = Math.max(240, u.bottom - u.top);
-    const clamped = clampState(u.left, u.top, w, h);
-
-    timerEl.remove();
-    tasklistEl.remove();
-
-    const fusionEl = document.createElement("div");
-    fusionEl.className = "floating-widget floating-widget--fusion";
-    fusionEl.dataset.widgetId = `${FUSION_TYPE}-${Date.now()}`;
-    fusionEl.dataset.widgetType = FUSION_TYPE;
-    fusionEl.innerHTML = `
-      <div class="floating-widget-body"></div>
-      <div class="floating-widget-resize" aria-label="Redimensionar"></div>
-    `;
-    applyLayout(fusionEl, clamped);
-    root.appendChild(fusionEl);
-    bringToFront(fusionEl);
-
-    const body = fusionEl.querySelector(".floating-widget-body");
-    initFusionBody(body, () => {
-      splitFusion(root, fusionEl);
-      snapshotAll(root);
-      syncPanelToggles();
-    });
-
-    attachDragResize(fusionEl, root, () => {
-      snapshotAll(root);
-      return false;
-    });
-    snapshotAll(root);
-    syncPanelToggles();
-    return true;
-  }
-
-  function maybeFuseByOverlap(root, movedEl) {
-    if (!movedEl) return false;
-    const movedType = movedEl.dataset.widgetType;
-    if (movedType !== "timer" && movedType !== "tasklist") return false;
-    const timerEl = root.querySelector('.floating-widget[data-widget-type="timer"]');
-    const tasklistEl = root.querySelector('.floating-widget[data-widget-type="tasklist"]');
-    if (!timerEl || !tasklistEl) return false;
-    if (overlapRatio(timerEl, tasklistEl) < FUSION_RATIO_TRIGGER) return false;
-    return fuseTimerAndTasklist(root, timerEl, tasklistEl);
-  }
-
-  function spawnWidget(type, root, initial) {
-    if (!TYPES.includes(type)) return;
-    if (type === "timer" || type === "tasklist") {
-      removeFusion(root);
-    }
-    removeWidgetOfType(root, type);
-    const id = initial && initial.id ? initial.id : `${type}-${Date.now()}`;
-    const el = createWidgetElement(type, id);
-    const b = getContentBounds();
-    const meta = (window.AutoTuneWidgetMeta && window.AutoTuneWidgetMeta[type]) || {};
-    const defW = meta.defaultWidth
-      || (type === "timer" ? 230 : type === "tasklist" ? 260 : type === "music" ? 360 : 220);
-    const defH = meta.defaultHeight
-      || (type === "timer" ? 180 : type === "tasklist" ? 260 : type === "music" ? 150 : 180);
-    let x = initial ? initial.x : b.left + 24 + Math.random() * 40;
-    let y = initial ? initial.y : b.top + 24 + Math.random() * 40;
-    let w = initial ? initial.w : defW;
-    let h = initial ? initial.h : defH;
-    const c = clampState(x, y, w, h);
-    applyLayout(el, c);
-    bringToFront(el);
-    root.appendChild(el);
-    attachDragResize(el, root, (node) => {
-      const fused = maybeFuseByOverlap(root, node);
-      snapshotAll(root);
-      syncPanelToggles();
-      return fused;
-    });
-    if (!(type === "timer" || type === "tasklist")) {
-      resolveOverlap(el, root);
-    }
-    snapshotAll(root);
-    syncPanelToggles();
-    syncMediaGatedVisibility();
-  }
-
-  function restore(root) {
-    const settings = loadSettings();
-    TYPES.forEach((t) => {
-      const s = settings[t];
-      if (!s || s.active === false) return;
-      // Music só existe como minimal — nunca restaura o card flutuante.
-      if (t === "music") {
-        if (!settings.music.minimal) {
-          settings.music = { ...settings.music, minimal: true };
-          saveSettings(settings);
-        }
-        return;
-      }
-      if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[t]) return;
-      spawnWidget(t, root, {
-        id: s.id,
-        x: s.x,
-        y: s.y,
-        w: s.w,
-        h: s.h
       });
-    });
-  }
-
-  function setPanelTypeActive(type, active, root) {
-    const settings = loadSettings();
-    if (!TYPES.includes(type)) return;
-
-    // Music existe apenas no modo minimal — nunca spawna o card flutuante.
-    if (type === "music") {
-      if (!settings.music || typeof settings.music !== "object") {
-        settings.music = { id: "music-minimal", active: false };
-      }
-      settings.music = {
-        ...settings.music,
-        active: !!active,
-        minimal: true,
-      };
-      saveSettings(settings);
-      syncPanelToggles();
-      syncMusicWidgetPresentation(root);
-      if (window.AutoTuneMusicMinimal) {
-        window.AutoTuneMusicMinimal.setEnabled(!!active);
-      }
-      return;
-    }
-
-    if (!window.AutoTuneWidgets || !window.AutoTuneWidgets[type]) return;
-
-    if (!active && (type === "timer" || type === "tasklist")) {
-      const fusion = root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
-      if (fusion) {
-        splitFusion(root, fusion);
-      }
-    }
-
-    if (active) {
-      const s = settings[type];
-      const initial =
-        s && typeof s.x === "number"
-          ? { id: s.id, x: s.x, y: s.y, w: s.w, h: s.h }
-          : undefined;
-      spawnWidget(type, root, initial);
-    } else {
-      const el = root.querySelector(`.floating-widget[data-widget-type="${type}"]`);
-      if (el) {
-        settings[type] = {
-          id: el.dataset.widgetId,
-          x: parseFloat(el.style.left) || 0,
-          y: parseFloat(el.style.top) || 0,
-          w: el.offsetWidth,
-          h: el.offsetHeight,
-          active: false
-        };
-        el.remove();
-        saveSettings(settings);
-      } else if (settings[type]) {
-        settings[type] = { ...settings[type], active: false };
-        saveSettings(settings);
-      }
-    }
-    syncPanelToggles();
-    syncMusicWidgetPresentation(root);
-    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
-      window.AutoTuneMusicMinimal.sync();
-    }
-  }
-
-  function syncPanelToggles() {
-    const settings = loadSettings();
-    document.querySelectorAll("[data-autotune-panel-toggle]").forEach((input) => {
-      const type = input.getAttribute("data-autotune-panel-toggle");
-      if (!type || !TYPES.includes(type)) return;
-      const s = settings[type];
-      const on = !!(s && s.active === true);
-      input.checked = on;
-      const label = document.querySelector(`[data-autotune-panel-label="${type}"]`);
-      if (label) label.textContent = on ? "Ativo" : "Inativo";
-    });
-  }
-
-  function initPanelToggles(root) {
-    document.querySelectorAll("[data-autotune-panel-toggle]").forEach((input) => {
-      input.addEventListener("change", () => {
-        const type = input.getAttribute("data-autotune-panel-toggle");
-        if (!type) return;
-        setPanelTypeActive(type, input.checked, root);
+      preview.addEventListener("dragend", () => {
+        draggingId = "";
+        clearHover(grid);
       });
     });
 
-    document.addEventListener("click", (e) => {
-      if (e.target.closest('a[href="#autotune-widget"]')) {
-        requestAnimationFrame(syncPanelToggles);
-      }
-    });
-    window.addEventListener("hashchange", () => {
-      if (window.location.hash === "#autotune-widget") {
-        syncPanelToggles();
-        syncMusicMinimalPanel();
-      }
-    });
+    grid.addEventListener("dragover", (event) => {
+      if (!isEditing() || !draggingId) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      paintHover(grid, draggingId, cellFromPoint(grid, event.clientX, event.clientY));
+    }, true);
+
+    grid.addEventListener("drop", (event) => {
+      if (!isEditing()) return;
+      event.preventDefault();
+      const id = (event.dataTransfer && event.dataTransfer.getData("text/plain")) || draggingId;
+      const cell = cellFromPoint(grid, event.clientX, event.clientY);
+      clearHover(grid);
+      draggingId = "";
+      if (!id || !cell) return;
+      place(id, cell.col, cell.row);
+    }, true);
+  }
+
+  function syncEditMode(root, grid) {
+    const editing = isEditing();
+    root.classList.toggle("autotune-editing", editing);
+    grid.classList.toggle("is-editing", editing);
+    if (!editing) clearHover(grid);
   }
 
   function syncVisibilityFromHome() {
@@ -792,8 +338,7 @@
       root.classList.remove("floating-cosmetics--hidden");
       return;
     }
-    const onHome = !home.classList.contains("hidden");
-    root.classList.toggle("floating-cosmetics--hidden", !onHome);
+    root.classList.toggle("floating-cosmetics--hidden", home.classList.contains("hidden"));
   }
 
   window.setAutoTuneHomeVisible = function (visible) {
@@ -802,89 +347,20 @@
     root.classList.toggle("floating-cosmetics--hidden", !visible);
   };
 
-  function isMusicMinimalEnabled() {
-    const settings = loadSettings();
-    return !!(settings.music && settings.music.active === true);
-  }
-
-  function setMusicMinimalEnabled(enabled, root) {
-    setPanelTypeActive("music", !!enabled, root);
-  }
-
-  /**
-   * Alterna visibilidade entre o widget Music flutuante e o modo minimalista.
-   * O card flutuante fica sempre oculto — só o minimal permanece.
-   */
-  window.syncMusicWidgetPresentation = function syncMusicWidgetPresentation(rootEl) {
-    const root = rootEl || document.getElementById("floating-cosmetics-root");
-    if (!root) return;
-    const musicEl = root.querySelector('.floating-widget[data-widget-type="music"]');
-    if (musicEl) musicEl.style.display = "none";
-  };
-
-  function syncMusicMinimalPanel() {
-    /* toggle music-minimal removido do catálogo — no-op */
-  }
-
-  function initMusicMinimalToggle(root) {
-    syncMusicWidgetPresentation(root);
-    if (window.AutoTuneMusicMinimal) {
-      window.AutoTuneMusicMinimal.setEnabled(isMusicMinimalEnabled());
-    }
-  }
-
-  function hasActiveMedia() {
-    return !!(window.DragonMedia && window.DragonMedia.snapshot && window.DragonMedia.snapshot.title);
-  }
-
-  /**
-   * Aplica o gating "só aparece quando há mídia ativa" para widgets
-   * registrados em MEDIA_GATED_TYPES. Mantém o widget no DOM, apenas alterna
-   * `display`, para preservar listeners do widget e estado interno.
-   */
-  function syncMediaGatedVisibility() {
-    const root = document.getElementById("floating-cosmetics-root");
-    if (!root) return;
-    const active = hasActiveMedia();
-    root.querySelectorAll(".floating-widget--media-gated").forEach((el) => {
-      if (el.dataset.widgetType === "music" && isMusicMinimalEnabled()) {
-        el.style.display = "none";
-        return;
-      }
-      el.style.display = active ? "" : "none";
-    });
-    syncMusicWidgetPresentation(root);
-    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
-      window.AutoTuneMusicMinimal.sync();
-    }
-  }
-
-  function bindMediaGating() {
-    const events = ["media_change", "media_play", "media_pause", "media_progress",
-      "media_stop", "hello", "connected", "disconnected"];
-    if (window.DragonMedia && typeof window.DragonMedia.on === "function") {
-      events.forEach((evt) => window.DragonMedia.on(evt, syncMediaGatedVisibility));
-    } else {
-      // SDK ainda não inicializado; tenta de novo depois
-      setTimeout(bindMediaGating, 250);
-    }
+  function reloadFromStorage() {
+    restore();
+    syncVisibilityFromHome();
   }
 
   function boot() {
     const root = document.getElementById("floating-cosmetics-root");
     if (!root) return;
-    removeFusion(root);
-    restore(root);
-    initPanelToggles(root);
-    initMusicMinimalToggle(root);
-    syncPanelToggles();
-    syncMusicMinimalPanel();
-    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
-      window.AutoTuneMusicMinimal.mount(root);
-    }
+    const grid = ensureGrid(root);
+    bindDrag(grid);
+    restore();
+    syncEditMode(root, grid);
     syncVisibilityFromHome();
-    syncMediaGatedVisibility();
-    bindMediaGating();
+    window.addEventListener("hashchange", () => syncEditMode(root, grid));
   }
 
   if (document.readyState === "loading") {
@@ -893,65 +369,20 @@
     boot();
   }
 
-  window.addEventListener("resize", () => {
-    const root = document.getElementById("floating-cosmetics-root");
-    if (!root) return;
-    root.querySelectorAll(".floating-widget").forEach((el) => {
-      const x = parseFloat(el.style.left) || 0;
-      const y = parseFloat(el.style.top) || 0;
-      const c = clampState(x, y, el.offsetWidth, el.offsetHeight);
-      el.style.left = `${c.x}px`;
-      el.style.top = `${c.y}px`;
-    });
-    snapshotAll(root);
-  });
-
-  function clearWidgets(root) {
-    if (!root) return;
-    root.querySelectorAll(".floating-widget").forEach((el) => el.remove());
-    root.querySelectorAll(".autotune-music-minimal").forEach((el) => el.remove());
-  }
-
-  function reloadFromStorage() {
-    const root = document.getElementById("floating-cosmetics-root");
-    if (!root) return;
-    clearWidgets(root);
-    removeFusion(root);
-    restore(root);
-    syncPanelToggles();
-    syncMusicMinimalPanel();
-    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.mount === "function") {
-      window.AutoTuneMusicMinimal.mount(root);
-    }
-    if (window.AutoTuneMusicMinimal && typeof window.AutoTuneMusicMinimal.sync === "function") {
-      window.AutoTuneMusicMinimal.sync();
-    }
-    syncVisibilityFromHome();
-    syncMediaGatedVisibility();
-  }
-
-  document.addEventListener("user:changed", () => {
-    reloadFromStorage();
-  });
-
-  window.AutoTuneEngine = {
-    spawnWidget,
-    getContentBounds,
-    getSettings: loadSettings,
-    reloadFromStorage,
-    splitFusion: () => {
-      const root = document.getElementById("floating-cosmetics-root");
-      if (!root) return;
-      const fusion = root.querySelector(`.floating-widget[data-widget-type="${FUSION_TYPE}"]`);
-      if (fusion) {
-        splitFusion(root, fusion);
-        snapshotAll(root);
-      }
-    }
-  };
+  document.addEventListener("user:changed", reloadFromStorage);
 
   window.AutoTune = {
     reloadFromStorage,
     getSettings: loadSettings,
+    place,
+    remove: removeWidget,
+    isEditing,
+    grid: { cols: COLS, rows: ROWS },
+  };
+
+  window.AutoTuneEngine = {
+    getSettings: loadSettings,
+    reloadFromStorage,
+    place,
   };
 })();

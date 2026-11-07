@@ -1,309 +1,100 @@
-# AutoTune — Onde fica cada coisa
+# AutoTune — grade fixa
 
-O **AutoTune** é o sistema de widgets flutuantes do Dragon-SX2000. Eles aparecem sobre a interface (principalmente na home) e podem ser arrastados, redimensionados e personalizados no Factory.
+Os AutoTunes da home ocupam células de uma grade. O tipo de encaixe é `fixo` ou `flutuante`. Nesta etapa só o `fixo` entra na tela. O `flutuante` fica no registro para um passo seguinte e não é montado.
 
----
+## Grade
 
-## Mapa de pastas
+A área útil da home, abaixo da barra e das abas, é uma grade de **3 linhas por 4 colunas** (12 células), dentro de `#floating-cosmetics-root`.
 
-```
-UserINTer/Tabline/idget/AutoTune/
-├── catalog.html      ← Catálogo do painel (montado por core/Shell.js)
-├── index.js          ← Motor: spawn, drag, resize, persistência de posição
-├── index.css         ← Estilos dos widgets flutuantes + painel AutoTune
-├── index.html        ← Página de teste local (opcional)
-├── Timer/index.js    ← Widget Timer (Pomodoro)
-├── Share/index.js    ← Widget Share (busca rápida)
-├── Tasklist/index.js ← Widget Tasklist
-├── Music/index.js    ← Widget Music (+ Music/index.css)
-└── Clock/            ← Widget Clock (config, fonts, render, factory, index)
-    ├── config.js
-    ├── fonts.js
-    ├── render.js
-    ├── index.js
-    ├── factory.js
-    └── index.css
+| | |
+|---|---|
+| Colunas | 4 |
+| Linhas | 3 |
+| Tamanho da célula | `1fr`, definido no CSS |
+| Borda | só no modo de edição, como guia |
 
-Frontend/src/
-├── index.html        ← Shell mínimo; `#floating-cosmetics-root` + mount points
-├── core/Shell.js     ← Monta background, top, tabs, wallpaper, catalog.html
-├── core/manifest.css ← Agregador CSS único
-├── Wallpaper/Wallpaper.html
-└── js/app.js         ← Bootstrap da aplicação
+Redimensionar a janela estica as células. Não há cálculo de `left`/`top` depois da montagem. A grade de vários monitores ainda não existe: o contrato de hoje é uma região. O passo futuro é repetir esta mesma grade em cada tela.
 
-UserINTer/Factory/
-├── index.js          ← Editor visual (Stage 1 e Stage 2)
-└── index.css
-```
+## Vãos
 
----
+Cada AutoTune declara o vão em `window.AutoTuneWidgetMeta`. A âncora é o canto superior esquerdo. Dois fixos não dividem célula. Vão que sai da grade é recusado.
 
-## O que cada arquivo faz
+| AutoTune | Colunas | Linhas |
+|---|---|---|
+| Relógio | 2 | 1 |
+| Lista | 1 | 2 |
+| Timer | 1 | 1 |
+| Share | 1 | 1 |
+| Música | 1 | 1 |
 
-### `AutoTune/index.js` — Motor principal
+A música é o card de uma célula, ligado ao Dragon Media SDK. A barra minimalista do topo não é mais montada.
 
-Responsabilidades:
+## Modo de edição
 
-- Registrar tipos de widget em `TYPES` e `TITLES`
-- Criar elementos `.floating-widget` e chamar `window.AutoTuneWidgets[tipo](bodyEl)`
-- Salvar posição/tamanho/ativo em `localStorage` → chave `settingsAUTO`
-- Drag, resize, colisão entre widgets, fusão Timer+Tasklist
-- Expor `window.AutoTuneEngine`
+O item AutoTune da lateral abre `#autotune-widget`. Esse painel é a prateleira: um preview de cada bloco, arrastável só com o painel aberto. Soltar grava a célula e monta o widget. Fora do modo de edição a soltura não grava.
 
-### `AutoTune/{Widget}/index.js` — Widget individual
+Enquanto o bloco está na grade, o preview some da prateleira. No modo de edição o botão **Tirar** devolve o bloco à prateleira.
 
-Cada widget registra sua função de init:
+Um de cada id. A fusão do timer com a lista não existe mais.
 
-```javascript
-window.AutoTuneWidgets = window.AutoTuneWidgets || {};
+## O que fica salvo
 
-window.AutoTuneWidgets.timer = function initTimerWidget(bodyEl) {
-  bodyEl.innerHTML = `...`;
-  // lógica do widget
-};
-```
-
-Opcionalmente, metadados de tamanho:
-
-```javascript
-window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
-
-window.AutoTuneWidgetMeta.timer = {
-  defaultWidth: 230,
-  defaultHeight: 180
-};
-```
-
-### `AutoTune/index.css` — Estilos compartilhados
-
-Contém:
-
-- Overlay do painel AutoTune (`.autotune-overlay`, catálogo, toggles)
-- Chrome dos widgets flutuantes (`.floating-widget`, resize handle)
-- Estilos específicos por widget (`.autotune-timer-*`, `.autotune-share-*`, etc.)
-
-Widgets com muitos estilos podem ter CSS próprio (ex.: `Music/index.css`, `Clock/index.css`).
-
-### `Frontend/src/index.html` — Ponto de entrada
-
-Três coisas obrigatórias para um widget aparecer:
-
-1. **Container na página**
-
-```html
-<div id="floating-cosmetics-root" aria-live="polite"></div>
-```
-
-2. **Linha no catálogo AutoTune** (toggle + botão Factory)
-
-3. **Scripts carregados na ordem correta**
-
-```html
-<script src="../../UserINTer/Factory/index.js"></script>
-<!-- widgets individuais -->
-<script src="../../UserINTer/Tabline/idget/AutoTune/Timer/index.js"></script>
-<!-- ... -->
-<script src="../../UserINTer/Tabline/idget/AutoTune/index.js"></script>
-```
-
-O motor (`AutoTune/index.js`) deve ser o **último** script AutoTune.
-
----
-
-## Persistência de posição (`settingsAUTO`)
-
-Separada das configurações visuais do Factory.
+Chave `settingsAUTO`, versão 2. Posição antiga em pixels não é convertida: a grade começa vazia.
 
 ```json
 {
-  "timer": {
-    "id": "timer-1718123456789",
-    "x": 120,
-    "y": 80,
-    "w": 230,
-    "h": 180,
-    "active": true
-  },
-  "share": null,
-  "clock": {
-    "id": "clock-1718123456790",
-    "x": 400,
-    "y": 100,
-    "w": 240,
-    "h": 140,
-    "active": false
-  }
+  "version": 2,
+  "items": [
+    { "id": "clock", "placement": "fixo", "col": 0, "row": 0, "cols": 2, "rows": 1 }
+  ]
 }
 ```
 
-| Campo | Significado |
-|-------|-------------|
-| `active: true` | Widget visível na tela |
-| `active: false` | Widget oculto, posição preservada |
-| `null` | Nunca foi usado |
+`col` e `row` começam em 0. `placement: "flutuante"` pode estar na lista e é ignorado na montagem.
 
----
+Na abertura, o motor lê essa lista uma vez e coloca cada fixo na célula. Não há listener de `resize` reescrevendo posição.
 
-## Como um widget chega na tela
+## Arquivos
 
-```
-1. Usuário abre #autotune-widget (aba AutoTune na Tabline)
-   ↳ markup em UserINTer/Tabline/idget/AutoTune/catalog.html (montado por Shell.js)
-2. Ativa o toggle do widget desejado
-3. setPanelTypeActive() → spawnWidget()
-4. createWidgetElement() cria .floating-widget
-5. AutoTuneWidgets[tipo](bodyEl) monta o conteúdo
-6. applyPersistedToElement() aplica preset do Factory
-7. Widget é appendado em #floating-cosmetics-root
+```text
+UserINTer/Tabline/idget/AutoTune/
+├── catalog.html          prateleira de previews
+├── index.js              grade, ocupação, gravação
+├── index.css             prateleira, grade e blocos
+├── Timer/index.js        1×1
+├── Share/index.js        1×1
+├── Tasklist/index.js     1×2
+├── Music/index.js        1×1, SDK
+└── Clock/                2×1
 ```
 
-### Estrutura DOM gerada
+`Music/minimal.js` permanece no disco e não entra no carregamento da Tabline.
 
-```html
-<div
-  class="floating-widget"
-  data-widget-id="timer-123"
-  data-widget-type="timer"
-  data-factory-key="autotune-widget-timer"
-  data-factory-scope="autotune-widget-timer"
-  style="left: 120px; top: 80px; width: 230px; height: 180px;"
->
-  <div class="floating-widget-body">
-    <!-- conteúdo do widget -->
-  </div>
-  <div class="floating-widget-resize"></div>
-</div>
-```
+## O que um mod futuro declara
 
----
-
-## Registro no motor — `AutoTune/index.js`
-
-Para cada novo tipo, altere **três lugares**:
+O motor lê `window.AutoTuneWidgetMeta[id]` e chama `window.AutoTuneWidgets[id](body)`. Um mod fixo precisa disto:
 
 ```javascript
-const TYPES = ["timer", "share", "tasklist", "music", "clock"];
-
-const TITLES = {
-  timer: "Timer",
-  share: "Share",
-  tasklist: "Tasklist",
-  music: "Music",
-  clock: "Clock"
+window.AutoTuneWidgetMeta.notas = {
+  title: "Notas",
+  placement: "fixo",
+  cols: 1,
+  rows: 1
 };
 
-function emptyState() {
-  return {
-    timer: null,
-    share: null,
-    tasklist: null,
-    music: null,
-    clock: null
-  };
-}
+window.AutoTuneWidgets.notas = function initNotas(bodyEl) {
+  bodyEl.textContent = "Notas";
+};
 ```
 
-Sem isso, o motor ignora o tipo na restauração e nos toggles.
+`placement: "flutuante"` fica reservado. O motor recusa colocá-lo na grade. Ainda não há carregador de pacote nem loja: o formato da célula já aceita um id que não seja um dos cinco atuais.
 
----
+## API da página
 
-## Catálogo no `Frontend/src/index.html`
-
-Cada widget precisa de uma linha no catálogo:
-
-O visual do widget fica no CSS (e, no relógio, em `Clock/config.js`). Não há editor em runtime.
-
-```html
-<div class="autotune-catalog-row">
-  <div class="autotune-row-text">
-    <strong>Clock</strong>
-    <span>Relógio</span>
-  </div>
-  <label class="autotune-panel-toggle">
-    <span class="autotune-panel-toggle-label" data-autotune-panel-label="clock">Inativo</span>
-    <input type="checkbox" data-autotune-panel-toggle="clock" />
-    <span class="autotune-panel-switch" aria-hidden="true"></span>
-  </label>
-</div>
-```
-
-| Atributo | Deve coincidir com |
-|----------|-------------------|
-| `data-autotune-panel-toggle` | tipo em `TYPES` |
-
----
-
-## Visibilidade na home
-
-Por padrão, widgets só aparecem na **página inicial**. O `app.js` chama:
-
-```javascript
-window.setAutoTuneHomeVisible(true/false);
-```
-
-Widgets marcados como persistentes em `PERSISTENT_TYPES` (ex.: `music`) ignoram essa regra.
-
-Para tornar um widget persistente em todas as telas:
-
-```javascript
-const PERSISTENT_TYPES = new Set(["music", "clock"]);
-```
-
-E no `createWidgetElement`:
-
-```javascript
-if (PERSISTENT_TYPES.has(type)) {
-  wrap.classList.add("floating-widget--persistent");
-}
-```
-
----
-
-## Widget vs Idget (Wallpaper, Tema)
-
-| Tipo | Onde fica | Como aparece |
-|------|-----------|--------------|
-| **AutoTune widget** | `AutoTune/{Nome}/` | Flutuante em `#floating-cosmetics-root` |
-| **Idget (painel)** | `Tabline/idget/Wallpaper/` | Painel lateral/overlay próprio, não usa AutoTune engine |
-
-Wallpaper e Tema **não** passam pelo catálogo AutoTune. São carregados separadamente no `index.html`.
-
----
-
-## Checklist — widget aparece na tela
-
-- [ ] `window.AutoTuneWidgets.{tipo}` registrado
-- [ ] Tipo adicionado em `TYPES`, `TITLES` e `emptyState()`
-- [ ] Script incluído no `Frontend/src/index.html`
-- [ ] CSS incluído (se houver arquivo próprio)
-- [ ] Linha no catálogo com toggle e botão ⚙
-- [ ] `#floating-cosmetics-root` presente no HTML
-- [ ] `AutoTune/index.js` carregado por último entre os scripts AutoTune
-
----
-
-## Music minimal — posições no Topo Global (v1.4)
-
-Além do widget flutuante clássico, o Music tem o modo **minimal** (`Music/minimal.js` + `minimal.css`):
-
-| Posição | Onde monta | Arraste |
-|---------|------------|---------|
-| `right` (padrão) | `#navMusicSlotRight` (entre busca e botões) | Não |
-| `left` | `#navMusicSlotLeft` (entre nav e busca) | Não |
-| `bottom` | Fixed sob a tabs-bar | Sim (`minimalOffsetX`) |
-
-Posição do Music: constante `musicPosition: 'right'` em `Frontend/src/settings/chromeLayoutSettings.js`.
-
-Persistência complementar em `settingsAUTO.music`: `minimal`, `minimalOffsetX`, `minimalVolumeLevel`.
-
-Espaçamento simétrico busca ↔ Music: CSS var `--nav-music-gap` no Top. Detalhes em [`Top.MD`](./Frontend/Top.MD).
-
----
-
-## Referências úteis
-
-| API | Local |
-|-----|-------|
-| `window.AutoTuneEngine.spawnWidget(type, root, layout)` | `AutoTune/index.js` |
-| `window.setAutoTuneHomeVisible(bool)` | `AutoTune/index.js` |
-| Release v1.4 | [`Log v1.4.MD`](../Lançamento/Log%20v1.4.MD) |
+| Chamada | Efeito |
+|---|---|
+| `AutoTune.place(id, col, row)` | Grava e monta, só em modo de edição |
+| `AutoTune.remove(id)` | Tira da grade, só em modo de edição |
+| `AutoTune.getSettings()` | Lê `settingsAUTO` v2 |
+| `AutoTune.reloadFromStorage()` | Remonta a grade a partir do que está salvo |
+| `AutoTune.grid` | `{ cols: 4, rows: 3 }` |

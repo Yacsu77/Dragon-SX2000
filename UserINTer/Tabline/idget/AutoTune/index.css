@@ -1,48 +1,36 @@
-/* Painel AutoTune (overlay) */
-.autotune-overlay {
+/* Prateleira lateral. Só aparece em modo de edição (#autotune-widget). */
+.autotune-shelf {
   position: fixed;
-  inset: 0;
-  background: rgba(8, 10, 18, 0.55);
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-  opacity: 0;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: calc(var(--sidebar-dock-top, 84px) + 12px);
+  right: 12px;
+  bottom: 12px;
+  width: min(280px, 86vw);
   z-index: 25;
-  transition: opacity 180ms ease;
-}
-
-.autotune-overlay:target {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.autotune-shell {
-  position: relative;
-  width: min(420px, 92vw);
-  max-height: min(520px, 88vh);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 16px 14px;
+  border-radius: 18px;
   background: rgba(16, 20, 30, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-  transform: translateY(18px) scale(0.98);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   opacity: 0;
-  transition: transform 220ms ease, opacity 220ms ease;
+  pointer-events: none;
+  transform: translateX(16px);
+  transition: opacity 180ms ease, transform 180ms ease;
   overflow: auto;
-  padding: 22px 20px 18px;
 }
 
-.autotune-overlay:target .autotune-shell {
-  transform: translateY(0) scale(1);
+.autotune-shelf:target {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .autotune-close {
   position: absolute;
-  right: 14px;
-  top: 12px;
+  right: 12px;
+  top: 10px;
   width: 32px;
   height: 32px;
   border-radius: 10px;
@@ -58,13 +46,13 @@
   justify-content: center;
 }
 
-.autotune-shell h2 {
-  margin: 0 0 6px;
+.autotune-shelf h2 {
+  margin: 0 28px 0 0;
   font-size: 18px;
 }
 
-.autotune-shell > p {
-  margin: 0 0 16px;
+.autotune-shelf > p {
+  margin: 0 0 8px;
   font-size: 12px;
   opacity: 0.75;
 }
@@ -75,178 +63,120 @@
   gap: 10px;
 }
 
-.autotune-add-btn {
+.autotune-preview {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #e5e7eb;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.autotune-add-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(155, 175, 255, 0.35);
-}
-
-.autotune-add-btn span {
-  font-size: 11px;
-  opacity: 0.65;
-  font-weight: 500;
-}
-
-.autotune-catalog-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+  cursor: grab;
 }
 
-.autotune-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+.autotune-preview:active {
+  cursor: grabbing;
 }
 
-.autotune-beta-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: rgba(255, 180, 60, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  flex-shrink: 0;
+.autotune-preview[hidden] {
+  display: none;
 }
 
-.autotune-panel-toggle--minimal {
-  gap: 6px;
-}
-
-.autotune-panel-toggle--minimal .autotune-panel-toggle-label {
-  min-width: 28px;
-}
-
-.autotune-row-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.autotune-row-text strong {
+.autotune-preview strong {
   font-size: 13px;
-  font-weight: 600;
 }
 
-.autotune-row-text span {
+.autotune-preview > span {
   font-size: 11px;
   opacity: 0.65;
 }
 
-.autotune-panel-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.autotune-panel-toggle-label {
-  font-size: 11px;
-  font-weight: 600;
-  min-width: 44px;
-  text-align: right;
-}
-
-.autotune-panel-toggle input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-}
-
-.autotune-panel-switch {
-  width: 40px;
+.autotune-preview-shape {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
   height: 22px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  position: relative;
-  transition: background 0.2s ease;
-  flex-shrink: 0;
 }
 
-.autotune-panel-toggle input:checked + .autotune-panel-switch {
-  background: rgba(100, 200, 130, 0.55);
+.autotune-preview-shape[data-shape="h2"] {
+  grid-template-columns: 1fr 1fr;
 }
 
-.autotune-panel-switch::after {
-  content: "";
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #f3f4f6;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+.autotune-preview-shape[data-shape="v2"] {
+  grid-template-rows: 1fr 1fr;
+  height: 44px;
 }
 
-.autotune-panel-toggle input:checked + .autotune-panel-switch::after {
-  transform: translateX(18px);
+.autotune-preview-shape i {
+  display: block;
+  border-radius: 4px;
+  background: rgba(122, 140, 255, 0.45);
 }
 
-/* Camada dos cosméticos na tela (só visível na página inicial,
-   exceto widgets marcados como persistentes — ex.: Music) */
+/* Grade 3×4 na área útil da home. Sem borda fora do modo de edição. */
 #floating-cosmetics-root {
   position: fixed;
-  inset: 0;
+  top: var(--sidebar-dock-top, 84px);
+  left: var(--sidebar-dock-width, 52px);
+  right: 0;
+  bottom: 0;
   pointer-events: none;
   z-index: 12;
 }
 
-#floating-cosmetics-root .floating-widget {
-  pointer-events: auto;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+#floating-cosmetics-root.autotune-editing .autotune-grid {
+  padding-right: 304px;
 }
 
-/* Widgets normais somem fora da home */
-#floating-cosmetics-root.floating-cosmetics--hidden .floating-widget:not(.floating-widget--persistent) {
+.autotune-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.autotune-grid.is-editing {
+  pointer-events: auto;
+}
+
+.autotune-cell {
+  border-radius: 12px;
+  border: 1px dashed transparent;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.autotune-grid.is-editing .autotune-cell {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.autotune-cell.is-hover {
+  background: rgba(122, 140, 255, 0.22);
+  border-color: rgba(122, 140, 255, 0.7);
+}
+
+.autotune-cell.is-blocked {
+  background: rgba(236, 88, 88, 0.18);
+  border-color: rgba(236, 88, 88, 0.7);
+}
+
+#floating-cosmetics-root.floating-cosmetics--hidden .autotune-block {
   visibility: hidden;
   pointer-events: none;
   opacity: 0;
 }
 
-/* Widgets persistentes ficam acima do conteúdo do navegador */
-.floating-widget--persistent {
-  z-index: 30 !important;
-}
-
-/* Widget flutuante */
-.floating-widget {
-  position: fixed;
-  min-width: 140px;
-  min-height: 100px;
+.autotune-block {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
   border-radius: 14px;
   background: rgba(18, 22, 32, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -254,57 +184,50 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  user-select: none;
+  pointer-events: auto;
 }
 
-.floating-widget[data-widget-type="share"] {
+.autotune-block[data-widget-type="share"] {
   overflow: visible;
 }
 
-.floating-widget-header {
-  padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.06);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  cursor: grab;
-  flex-shrink: 0;
-}
-
-.floating-widget-header:active {
-  cursor: grabbing;
-}
-
-.floating-widget-title {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.floating-widget-body {
-  padding: 10px;
+.autotune-block-body {
   flex: 1;
   min-height: 0;
+  padding: 10px;
   font-size: 12px;
-  user-select: text;
 }
 
-.floating-widget-resize {
+.autotune-block-remove {
+  display: none;
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 14px;
-  height: 14px;
-  cursor: nwse-resize;
-  background: linear-gradient(
-    135deg,
-    transparent 50%,
-    rgba(255, 255, 255, 0.25) 50%
-  );
-  border-radius: 0 0 12px 0;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #f3f4f6;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.autotune-grid.is-editing .autotune-block-remove {
+  display: inline-flex;
+}
+
+.autotune-block[data-widget-type="timer"] .autotune-block-body,
+.autotune-block[data-widget-type="share"] .autotune-block-body,
+.autotune-block[data-widget-type="music"] .autotune-block-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.autotune-block[data-widget-type="tasklist"] .autotune-block-body {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Timer */
@@ -381,12 +304,13 @@
   padding: 7px 8px;
 }
 
-/* Tasklist */
+/* Lista: o vão vertical é a própria altura da célula, sem teto em pixels. */
 .autotune-tasklist-add {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 6px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .autotune-tasklist-input {
@@ -415,7 +339,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 190px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -472,89 +397,6 @@
   padding: 10px;
   font-size: 11px;
   opacity: 0.7;
-}
-
-/* Fusion */
-.floating-widget--fusion {
-  border-color: rgba(158, 121, 255, 0.42);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), 0 0 28px rgba(156, 111, 255, 0.3);
-}
-
-.autotune-fusion-wrap {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  height: 100%;
-}
-
-.autotune-fusion-timer,
-.autotune-fusion-tasks {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.autotune-fusion-phase {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.82;
-}
-
-.autotune-fusion-display {
-  font-size: 30px;
-  font-weight: 700;
-  text-align: center;
-  margin: 10px 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.autotune-fusion-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-}
-
-.autotune-fusion-input-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.autotune-fusion-input-row input {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(12, 16, 25, 0.85);
-  color: #e5e7eb;
-  padding: 0 8px;
-}
-
-.autotune-fusion-task-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow: auto;
-  flex: 1;
-}
-
-.autotune-fusion-finish {
-  margin-top: 8px;
-  border: 1px solid rgba(236, 88, 88, 0.44);
-  background: rgba(236, 88, 88, 0.18);
-  color: #fef2f2;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 /* Share */

@@ -53,7 +53,7 @@ async function createSuiteUser(nickname, password) {
   }
   const workspace = await waitFor(() => {
     return document.getElementById('tabs')
-      && document.querySelector('[data-autotune-panel-toggle]')
+      && document.querySelector('[data-autotune-preview]')
       && document.querySelector('.wallpaper-recommended-card')
       && window.ShortcutManager
       && window.SidePanelHost;
@@ -175,16 +175,89 @@ async function openWindowFromTab() {
   };
 }
 
-async function toggleAutotune(type, active) {
+async function exerciseAutotuneGrid() {
   const started = Date.now();
-  window.location.hash = 'autotune-widget';
-  const input = document.querySelector(`[data-autotune-panel-toggle="${type}"]`);
-  if (!input) {
-    return { ok: false, type, active, error: 'interruptor não encontrado', durationMs: Date.now() - started };
+  const steps = [];
+  const push = (name, ok, detail) => {
+    const at = Date.now();
+    steps.push({
+      name,
+      ok,
+      durationMs: at - started,
+      loadMs: at - started,
+      note: ok ? detail || null : null,
+      error: ok ? null : detail || 'falhou',
+    });
+  };
+
+  if (!window.AutoTune || typeof window.AutoTune.place !== 'function') {
+    push('Grade', false, 'motor da grade não iniciou');
+    return { ok: false, steps };
   }
-  input.checked = active;
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-  return { ok: true, type, active, loadMs: Date.now() - started, durationMs: Date.now() - started };
+
+  window.location.hash = 'autotune-widget';
+  const cells = document.querySelectorAll('.autotune-cell').length;
+  const size = window.AutoTune.grid || {};
+  push(
+    'Grade 3×4',
+    cells === 12 && size.cols === 4 && size.rows === 3,
+    cells === 12 ? '12 células' : `${cells} células`,
+  );
+
+  const clock = window.AutoTune.place('clock', 0, 0);
+  const clockEl = document.querySelector('.autotune-block[data-widget-type="clock"]');
+  push(
+    'Relógio em 2×1',
+    !!(clock.ok && clock.item && clock.item.cols === 2 && clock.item.rows === 1
+      && clockEl && clockEl.style.left === '' && clockEl.style.top === ''
+      && clockEl.style.gridColumn.indexOf('span 2') !== -1),
+    clock.ok ? null : clock.error,
+  );
+
+  const occupied = window.AutoTune.place('timer', 0, 0);
+  push('Célula ocupada', !occupied.ok && !document.querySelector('.autotune-block[data-widget-type="timer"]'), occupied.ok ? 'gravou em célula ocupada' : null);
+
+  const offGrid = window.AutoTune.place('tasklist', 3, 2);
+  push('Fora da grade', !offGrid.ok, offGrid.ok ? 'gravou fora da grade' : null);
+
+  window.location.hash = '';
+  const locked = window.AutoTune.place('share', 3, 0);
+  push('Fora do modo de edição', !locked.ok && !document.querySelector('.autotune-block[data-widget-type="share"]'), locked.ok ? 'gravou fora do modo de edição' : null);
+
+  window.location.hash = 'autotune-widget';
+  const list = window.AutoTune.place('tasklist', 0, 1);
+  const timer = window.AutoTune.place('timer', 2, 0);
+  const share = window.AutoTune.place('share', 3, 0);
+  const music = window.AutoTune.place('music', 1, 1);
+  const listEl = document.querySelector('.autotune-block[data-widget-type="tasklist"]');
+  push(
+    'Lista em 1×2',
+    !!(list.ok && list.item && list.item.cols === 1 && list.item.rows === 2 && listEl && listEl.style.gridRow.indexOf('span 2') !== -1),
+    list.ok ? null : list.error,
+  );
+  push('Timer em 1×1', !!(timer.ok && timer.item && timer.item.cols === 1 && timer.item.rows === 1), timer.ok ? null : timer.error);
+  push('Share em 1×1', !!(share.ok && share.item && share.item.cols === 1 && share.item.rows === 1), share.ok ? null : share.error);
+  push(
+    'Música em 1×1',
+    !!(music.ok && music.item && music.item.cols === 1 && document.querySelector('.autotune-music-card')),
+    music.ok ? null : music.error,
+  );
+
+  const before = window.AutoTune.getSettings();
+  window.AutoTune.reloadFromStorage();
+  const after = window.AutoTune.getSettings();
+  const saved = after && after.items && after.items.find((item) => item.id === 'clock');
+  const restored = document.querySelector('.autotune-block[data-widget-type="clock"]');
+  const sameCount = before.items.length === after.items.length;
+  push(
+    'Restaura pelas células',
+    !!(saved && saved.col === 0 && saved.row === 0 && saved.cols === 2 && !('x' in saved) && !('y' in saved)
+      && restored && restored.style.left === '' && restored.style.top === '' && sameCount),
+    saved ? null : 'o relógio não voltou pela célula',
+  );
+
+  window.location.hash = '';
+  return { ok: steps.every((step) => step.ok), steps };
 }
 
 async function mediaCommand(action) {
@@ -1075,7 +1148,7 @@ module.exports = {
   openSidePanel,
   splitFirstTab,
   openWindowFromTab,
-  toggleAutotune,
+  exerciseAutotuneGrid,
   mediaCommand,
   applyWallpaper,
   exerciseShortcuts,

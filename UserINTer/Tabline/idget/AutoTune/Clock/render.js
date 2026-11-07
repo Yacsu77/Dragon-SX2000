@@ -73,7 +73,7 @@ window.AutoTuneClockRender = (function () {
   }
 
   function applyToWidget(widgetEl, clockConfig) {
-    const body = widgetEl.querySelector(".floating-widget-body") || widgetEl;
+    const body = widgetEl.querySelector(".autotune-block-body") || widgetEl;
     applyToRoot(findClockRoot(body) || body, clockConfig);
   }
 

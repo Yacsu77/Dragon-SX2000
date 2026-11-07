@@ -29,10 +29,10 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
   }
 
   window.AutoTuneWidgetMeta.clock = {
-    defaultWidth: 240,
-    defaultHeight: 140,
-    minWidth: 120,
-    minHeight: 80
+    title: "Relógio",
+    placement: "fixo",
+    cols: 2,
+    rows: 1,
   };
 
   window.AutoTuneWidgets.clock = function initClockWidget(bodyEl) {

@@ -16,29 +16,33 @@
       <div class="user-gate__brand" data-role="brand">DSX</div>
 
       <section class="user-gate__view" data-role="view-select">
-        <h1 class="user-gate__title">Quem está navegando?</h1>
+        <h1 class="user-gate__title" data-i18n="gate.quemNavega">Quem está navegando?</h1>
         <p class="user-gate__status" data-role="status" hidden></p>
         <div class="user-gate__profiles" data-role="profiles"></div>
       </section>
 
       <section class="user-gate__view" data-role="view-register" hidden>
-        <button type="button" class="user-gate__back" data-role="back-register" aria-label="Voltar">←</button>
-        <h1 class="user-gate__title">Criar perfil</h1>
+        <button type="button" class="user-gate__back" data-role="back-register" aria-label="Voltar" data-i18n-aria="gate.voltar">←</button>
+        <h1 class="user-gate__title" data-i18n="gate.criarPerfil">Criar perfil</h1>
         <form class="user-gate__register" data-role="create-form">
           <button type="button" class="user-gate__photo-pick" data-role="photo-pick" aria-label="Escolher foto">
             <div class="user-gate__photo-preview" data-role="photo-preview">+</div>
-            <span>Adicionar foto</span>
+            <span data-i18n="gate.adicionarFoto">Adicionar foto</span>
           </button>
           <input type="file" name="photo" accept="image/*" hidden data-role="photo-input" />
           <label>
-            Nickname
-            <input type="text" name="nickname" maxlength="32" required autocomplete="username" placeholder="Seu apelido" />
+            <span data-i18n="gate.apelido">Nickname</span>
+            <input type="text" name="nickname" maxlength="32" required autocomplete="username" placeholder="Seu apelido" data-i18n-placeholder="gate.apelido" />
           </label>
           <label>
-            Senha <span class="user-gate__optional">(opcional)</span>
-            <input type="password" name="password" autocomplete="new-password" placeholder="Vazio = acesso livre" />
+            <span data-i18n="gate.senha">Senha</span> <span class="user-gate__optional" data-i18n="gate.senhaOpcional">(opcional)</span>
+            <input type="password" name="password" autocomplete="new-password" placeholder="Vazio = acesso livre" data-i18n-placeholder="gate.senhaVazia" />
           </label>
-          <button type="submit" class="user-gate__enter">Criar perfil</button>
+          <div class="user-gate__idiomas" data-role="idioma-criar" hidden>
+            <span data-i18n="gate.idioma">Idioma</span>
+            <div data-role="idioma-opcoes"></div>
+          </div>
+          <button type="submit" class="user-gate__enter" data-i18n="gate.criarPerfil">Criar perfil</button>
           <p class="user-gate__error" data-role="form-error" hidden></p>
         </form>
       </section>
@@ -47,7 +51,7 @@
     <div class="user-boot-loader" data-role="boot-loader" hidden>
       <div class="user-boot-loader__orb"></div>
       <div class="user-boot-loader__brand">DSX</div>
-      <p class="user-boot-loader__text" data-role="boot-loader-text">Carregando seu espaço…</p>
+      <p class="user-boot-loader__text" data-role="boot-loader-text" data-i18n="gate.carregando">Carregando seu espaço…</p>
     </div>
   `;
 
@@ -94,6 +98,7 @@
     overlayEl.className = 'user-gate-overlay';
     overlayEl.setAttribute('aria-hidden', 'true');
     overlayEl.innerHTML = GATE_HTML.trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
     document.body.appendChild(overlayEl);
 
     overlayEl.querySelector('[data-role="back-register"]').addEventListener('click', showSelectView);
@@ -139,6 +144,20 @@
     preview.innerHTML = '+';
     preview.style.background = '';
     overlayEl.querySelector('[data-role="form-error"]').hidden = true;
+    const idiomaCriar = overlayEl.querySelector('[data-role="idioma-criar"]');
+    if (idiomaCriar && window.Idioma) {
+      const jaSalvo = typeof window.Idioma.guardado === 'function' && window.Idioma.guardado();
+      idiomaCriar.hidden = !!jaSalvo;
+      if (!jaSalvo && window.Idioma.botoes) {
+        window.Idioma.botoes(idiomaCriar.querySelector('[data-role="idioma-opcoes"]'), 'en', (id) => {
+          idiomaCriar.dataset.escolha = id;
+          idiomaCriar.querySelectorAll('.idioma-escolha__opcao').forEach((item) => {
+            item.classList.toggle('is-suggested', item.dataset.idioma === id);
+          });
+        });
+        idiomaCriar.dataset.escolha = 'en';
+      }
+    }
     setTimeout(() => form.querySelector('input[name="nickname"]')?.focus(), 80);
   }
 
@@ -214,7 +233,7 @@
     addBtn.setAttribute('aria-label', 'Adicionar usuário');
     addBtn.innerHTML = `
       <div class="user-gate__tile-face">+</div>
-      <p class="user-gate__tile-nick">${users.length ? 'Adicionar' : 'Criar perfil'}</p>
+      <p class="user-gate__tile-nick">${window.Idioma ? window.Idioma.t(users.length ? 'favoritos.adicionar' : 'gate.criarPerfil') : (users.length ? 'Adicionar' : 'Criar perfil')}</p>
     `;
     addBtn.addEventListener('click', showRegisterView);
     grid.appendChild(addBtn);
@@ -313,10 +332,20 @@
         await window.UserSession.setActiveUser(updated, { reason: 'photo' });
       }
 
+      const idiomaCriar = overlayEl.querySelector('[data-role="idioma-criar"]');
+      if (idiomaCriar && !idiomaCriar.hidden && window.Idioma) {
+        const escolha = idiomaCriar.dataset.escolha || 'en';
+        if (escolha !== 'en') {
+          await window.Idioma.reiniciar(escolha);
+          return;
+        }
+        await window.Idioma.definir('en');
+      }
+
       finish();
     } catch (err) {
       if (formError) {
-        formError.textContent = err.message || 'Não foi possível criar o usuário';
+        formError.textContent = err.message || (window.Idioma ? window.Idioma.t('gate.erroCriar') : 'Não foi possível criar o usuário');
         formError.hidden = false;
       }
     }

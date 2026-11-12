@@ -92,7 +92,7 @@
     if (!tabs.length) {
       const empty = document.createElement('p');
       empty.className = 'tab-groups-hover-preview__empty';
-      empty.textContent = 'Sem abas';
+      empty.textContent = window.Idioma ? window.Idioma.t('abas.semAbas') : 'Sem abas';
       previewEl.appendChild(empty);
     } else {
       tabs.forEach((tab) => {
@@ -228,7 +228,7 @@
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.className = 'tab-group-card__name';
-    nameInput.value = group.name || 'Grupo';
+    nameInput.value = group.name || (window.Idioma ? window.Idioma.t('abas.grupo') : 'Grupo');
     nameInput.title = 'Nome';
     nameInput.maxLength = 48;
 
@@ -239,7 +239,9 @@
     const openBtn = document.createElement('button');
     openBtn.type = 'button';
     openBtn.className = 'tab-group-card__open';
-    openBtn.textContent = active ? 'Ativo' : 'Abrir';
+    openBtn.textContent = active
+      ? (window.Idioma ? window.Idioma.t('abas.ativo') : 'Ativo')
+      : (window.Idioma ? window.Idioma.t('abas.abrir') : 'Abrir');
 
     nameInput.addEventListener('input', () => scheduleGroupUpdate(group.id, { name: nameInput.value }));
     swatch.addEventListener('input', () => {
@@ -288,7 +290,7 @@
     if (!allGroups.length) {
       const empty = document.createElement('p');
       empty.className = 'tab-groups-panel__empty';
-      empty.textContent = 'Nenhum grupo.';
+      empty.textContent = window.Idioma ? window.Idioma.t('abas.nenhumGrupo') : 'Nenhum grupo.';
       listEl.appendChild(empty);
       return;
     }
@@ -300,7 +302,7 @@
 
   async function createGroup() {
     const group = await window.TabGroupsRuntime?.createGroup?.({
-      name: `Grupo ${groups().length + 1}`,
+      name: `${window.Idioma ? window.Idioma.t('abas.grupo') : 'Grupo'} ${groups().length + 1}`,
       color: '#7a8cff',
       icon: 'folder',
     });

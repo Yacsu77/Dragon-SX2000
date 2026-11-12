@@ -117,6 +117,7 @@ contextBridge.exposeInMainWorld('DragonApp', {
     ipcRenderer.on('app:saving', listener);
     return () => ipcRenderer.removeListener('app:saving', listener);
   },
+  relaunch: () => ipcRenderer.invoke('app:relaunch'),
 });
 
 contextBridge.exposeInMainWorld('DragonPerf', {

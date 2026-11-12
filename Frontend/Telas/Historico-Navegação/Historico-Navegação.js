@@ -61,6 +61,7 @@
     const response = await fetch(TEMPLATE_PATH);
     const html = await response.text();
     overlayEl.innerHTML = html.trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
     screenEl = overlayEl.querySelector('[data-role="history-screen"]');
 
     tbodyEl = overlayEl.querySelector('[data-role="tbody"]');

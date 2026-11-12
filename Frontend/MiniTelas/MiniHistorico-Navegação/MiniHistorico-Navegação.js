@@ -44,6 +44,7 @@
 
     const wrapper = document.createElement('div');
     wrapper.innerHTML = html.trim();
+    if (window.Idioma) window.Idioma.aplicar(wrapper);
     rootEl = wrapper.firstElementChild;
 
     listEl = rootEl.querySelector('[data-role="list"]');

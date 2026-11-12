@@ -72,6 +72,11 @@ function createMainApp(options) {
   const shortcuts = createShortcutsServices();
 
   user.register(ipcMain);
+  ipcMain.handle('app:relaunch', () => {
+    isAppQuitting = true;
+    app.relaunch();
+    app.quit();
+  });
   wallpaper.register(ipcMain);
   files.register(ipcMain);
   downloads.register(ipcMain);

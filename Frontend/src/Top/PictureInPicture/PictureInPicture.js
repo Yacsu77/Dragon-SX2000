@@ -553,6 +553,7 @@
     menu.className = 'pip-menu';
     menu.setAttribute('aria-hidden', 'true');
     menu.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(menu);
     document.body.appendChild(menu);
 
     actionButton = menu.querySelector('[data-role="pip-action"]');

@@ -22,6 +22,9 @@
     }
 
     mount.innerHTML = (await response.text()).trim();
+    if (window.Idioma && typeof window.Idioma.aplicar === "function") {
+      window.Idioma.aplicar(mount);
+    }
   }
 
   async function mountAll() {

@@ -52,6 +52,7 @@
 
     const response = await fetch(TEMPLATE_PATH);
     overlayEl.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
 
     toggleEl = overlayEl.querySelector('[data-role="toggle-render-all"]');
     warningEl = overlayEl.querySelector('[data-role="render-all-warning"]');

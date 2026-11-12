@@ -197,6 +197,13 @@ async function mountWorkspace(options = {}) {
 
 async function initApp() {
   window.DragonPerf?.mark('scripts-parsed');
+  if (window.Idioma && typeof window.Idioma.preparar === 'function') {
+    try {
+      await window.Idioma.preparar();
+    } catch (err) {
+      console.warn('[initApp] idioma ficou em inglês', err);
+    }
+  }
   if (!window.UserSession || !window.UserGate) {
     console.error('[initApp] UserSession/UserGate indisponíveis');
     document.body.insertAdjacentHTML(

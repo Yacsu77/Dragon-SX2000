@@ -8,7 +8,7 @@
   function getTranslateAction() {
     return {
       id: 'translate',
-      label: 'Traduzir',
+      label: window.Idioma ? window.Idioma.t('cursor.traduzir') : 'Traduzir',
       icon: 'languages',
       comingSoon: true,
       disabled: true,

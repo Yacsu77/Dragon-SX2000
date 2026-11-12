@@ -1,0 +1,244 @@
+{
+  "versao": 1,
+  "secoes": {
+    "idioma": {
+      "titulo": "Choose your language",
+      "sugestao": "Suggested from this computer",
+      "ingles": "English",
+      "portugues": "Português",
+      "espanhol": "Español",
+      "continuar": "Continue",
+      "idioma": "Language"
+    },
+    "topo": {
+      "menu": "Menu",
+      "voltar": "Back",
+      "avancar": "Forward",
+      "busca": "Search or type a site name",
+      "recarregar": "Reload",
+      "pip": "Picture in Picture",
+      "pipAbrir": "Open Picture in Picture options",
+      "senhas": "Passwords",
+      "downloads": "Downloads",
+      "arquivos": "Files",
+      "novaAba": "New tab",
+      "visaoAbas": "Tab overview",
+      "editar": "Edit"
+    },
+    "home": {
+      "busca": "Search the web...",
+      "buscar": "Search"
+    },
+    "abas": {
+      "grupos": "Groups",
+      "novoGrupo": "New group",
+      "semAbas": "No tabs",
+      "nenhumGrupo": "No groups.",
+      "grupo": "Group",
+      "ativo": "Active",
+      "abrir": "Open"
+    },
+    "lateral": {
+      "ferramentas": "Tools",
+      "ia": "AI",
+      "chats": "Chats",
+      "widgets": "Widgets",
+      "wallpaper": "Wallpaper",
+      "tema": "Theme",
+      "donate": "Donate",
+      "autotune": "AutoTune",
+      "midia": "Media",
+      "anterior": "Previous",
+      "reproduzir": "Play/Pause",
+      "proxima": "Next",
+      "sincronizando": "Syncing…",
+      "perfil": "Profile",
+      "editar": "Edit",
+      "trocarConta": "Switch account",
+      "idioma": "Language"
+    },
+    "autotune": {
+      "titulo": "AutoTunes",
+      "ajuda": "Drag a block onto the grid. In edit mode, the corner grows or shrinks the span.",
+      "relogio": "Clock",
+      "lista": "List",
+      "timer": "Timer",
+      "share": "Share",
+      "musica": "Music",
+      "tirar": "Remove",
+      "fechar": "Close",
+      "aumentar": "Grow or shrink"
+    },
+    "menu": {
+      "editar": "Edit",
+      "editarPrevia": "Performance and behavior settings.",
+      "historico": "History",
+      "favoritos": "Favorites",
+      "atalhos": "Shortcuts",
+      "senhas": "Passwords",
+      "senhasPrevia": "Password manager protected by profile.",
+      "usuarios": "Switch user",
+      "usuariosPrevia": "Switch profile on this device.",
+      "sobre": "About",
+      "sobrePrevia": "Dragon SX2000 — Browse with style and speed.",
+      "emBreve": "Coming soon.",
+      "previa": "Hover an option to see the preview."
+    },
+    "gate": {
+      "quemNavega": "Who is browsing?",
+      "criarPerfil": "Create profile",
+      "entrar": "Enter",
+      "apelido": "Nickname",
+      "senha": "Password",
+      "senhaOpcional": "(optional)",
+      "senhaVazia": "Empty = open access",
+      "adicionarFoto": "Add photo",
+      "escolherFoto": "Choose photo",
+      "voltar": "Back",
+      "carregando": "Loading your space…",
+      "erroCriar": "Could not create the user"
+    },
+    "historico": {
+      "titulo": "Browsing history",
+      "subtitulo": "Manage your recent visits",
+      "buscar": "Search by title or URL…",
+      "tituloColuna": "Title",
+      "url": "URL",
+      "visitas": "Visits",
+      "tipo": "Type",
+      "ultimaVisita": "Last visit",
+      "acoes": "Actions",
+      "vazioTitulo": "No history found",
+      "vazioTexto": "Your visits will show up here as you browse.",
+      "apagarSelecionados": "Delete selected",
+      "limparTudo": "Clear everything",
+      "limparHistorico": "Clear history",
+      "confirmarTitulo": "Clear all history?",
+      "confirmarTexto": "This cannot be undone. Every record will be removed.",
+      "cancelar": "Cancel",
+      "selecionarTodos": "Select all",
+      "recente": "Recent history",
+      "verTudo": "See all",
+      "carregando": "Loading history…",
+      "nenhumaVisita": "No visits recorded yet."
+    },
+    "downloads": {
+      "titulo": "Downloads",
+      "limpar": "Clear",
+      "vazio": "No downloads in this profile."
+    },
+    "cofre": {
+      "titulo": "Password manager",
+      "trancado": "Locked",
+      "dica": "Passwords are filled in on sites automatically. This panel only lists saved sites.",
+      "sitesSalvos": "Saved sites",
+      "vazio": "No saved sites yet.",
+      "salvarSenha": "Save password",
+      "nao": "No",
+      "conta": "Account"
+    },
+    "arquivos": {
+      "titulo": "Files",
+      "abrirPasta": "Open folder",
+      "vazio": "Empty folder."
+    },
+    "atalhos": {
+      "titulo": "Shortcuts",
+      "subtitulo": "Manage the keys for each action. Click Edit and press the new combination (keyboard or extra mouse button).",
+      "verTodos": "See all"
+    },
+    "editar": {
+      "titulo": "Edit",
+      "subtitulo": "Performance and behavior settings for the browser.",
+      "desempenho": "Performance",
+      "abasRenderizadas": "Keep every tab rendered",
+      "abasRenderizadasDesc": "Keeps background tabs composited for faster switching, at a high CPU, GPU, and RAM cost. With many tabs this gets slower — leave it off for normal use.",
+      "avisoRecursos": "Higher resource use. With this on, every tab keeps using CPU, GPU, and RAM in the background. Past about 8 tabs the impact is easy to notice. Prefer leaving it off day to day.",
+      "paineisLaterais": "Keep side-bar panels loaded",
+      "paineisLateraisDesc": "Keeps sites opened from the side bar in memory after the panel closes, so they reopen instantly.",
+      "avisoRam": "Uses more RAM than usual. Each side panel stays loaded in the background. The more items you open, the more memory it uses. Turn it off if the browser feels slow.",
+      "sessao": "Session",
+      "restaurarAbas": "Restore tabs on startup",
+      "restaurarAbasDesc": "Saves open tabs before the browser closes and reopens them the next time it starts.",
+      "avisoSessao": "Higher CPU and memory use. On startup every saved tab loads at once — more tabs mean more CPU and RAM. Turn it off if DSX feels slow to open."
+    },
+    "favoritos": {
+      "titulo": "Favorites",
+      "tituloCampo": "Title",
+      "url": "https://...",
+      "adicionar": "Add",
+      "vazio": "No saved favorites."
+    },
+    "config": {
+      "titulo": "Open tabs",
+      "vazio": "No open tabs."
+    },
+    "wallpaper": {
+      "titulo": "Wallpaper",
+      "subtitulo": "Choose and adjust the wallpaper.",
+      "selecione": "Select an image or video",
+      "subirImagem": "Upload image",
+      "subirVideo": "Upload video",
+      "rotacao": "Rotation",
+      "inverterX": "Flip X",
+      "inverterY": "Flip Y",
+      "resetar": "Reset",
+      "arraste": "Drag the preview to move the wallpaper.",
+      "aplicar": "Apply",
+      "recomendados": "Recommended",
+      "recomendadosDica": "Suggestions packed with DSX — pick one or leave the profile's random default."
+    },
+    "tema": {
+      "titulo": "Theme",
+      "subtitulo": "Switch between light, dark, or the system theme.",
+      "aparencia": "Appearance",
+      "alternar": "Switch theme",
+      "escuro": "Dark"
+    },
+    "donate": {
+      "titulo": "Donate",
+      "texto": "Donate widget area."
+    },
+    "cursor": {
+      "abrirLink": "Open link",
+      "abrirLinkAba": "Open link in new tab",
+      "abrirLinkJanela": "Open link in new window",
+      "copiarLink": "Copy link",
+      "favoritarLink": "Add link to favorites",
+      "pesquisar": "Search on Google",
+      "copiar": "Copy",
+      "colar": "Paste",
+      "cortar": "Cut",
+      "colarIr": "Paste and go",
+      "voltar": "Back",
+      "recarregar": "Reload page",
+      "removerFavorito": "Remove from favorites",
+      "adicionarFavorito": "Add to favorites",
+      "duplicarAba": "Duplicate tab",
+      "fecharAba": "Close tab",
+      "adicionarGrupo": "Add to group...",
+      "moverGrupo": "Move to group...",
+      "criarGrupo": "Create group with this tab",
+      "copiarUrl": "Copy URL",
+      "ativarSom": "Unmute tab",
+      "silenciar": "Mute tab",
+      "baixarImagem": "Download image",
+      "baixarComo": "Download as…",
+      "copiarImagem": "Copy image address",
+      "abrirImagem": "Open image in new tab",
+      "traduzir": "Translate"
+    },
+    "sessao": {
+      "salvando": "Saving…",
+      "falhaInicio": "DSX failed to start. Reload the app.",
+      "notaDatas": "Dates and numbers stay in Portuguese until the menus switch language."
+    },
+    "comum": {
+      "fechar": "Close"
+    },
+    "pip": {
+      "titulo": "Picture in Picture",
+      "fonte": "Video from the current tab"
+    }
+  }
+}

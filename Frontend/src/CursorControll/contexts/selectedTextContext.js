@@ -13,7 +13,7 @@
     return [
       {
         id: 'search-google',
-        label: 'Pesquisar no Google',
+        label: window.Idioma ? window.Idioma.t('cursor.pesquisar') : 'Pesquisar no Google',
         icon: 'search',
         disabled: !text.trim(),
         execute: async () => {

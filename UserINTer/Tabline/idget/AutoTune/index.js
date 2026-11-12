@@ -1,14 +1,15 @@
 /**
  * Motor da grade fixa dos AutoTunes.
  *
- * A home tem 3 linhas por 4 colunas. Cada AutoTune fixo ocupa um vão
- * declarado no próprio registro e só entra na grade em modo de edição.
- * A posição salva é a célula. O tipo flutuante fica reservado e não monta.
+ * A home tem 9 linhas por 12 colunas, o triplo da grade 3×4.
+ * Cada AutoTune fixo entra com o vão do registro e, no modo de edição,
+ * pode crescer ou encolher por células. A posição salva é a célula.
+ * O tipo flutuante fica reservado e não monta.
  */
 (function () {
   const SETTINGS_KEY = "settingsAUTO";
-  const COLS = 4;
-  const ROWS = 3;
+  const COLS = 12;
+  const ROWS = 9;
 
   function emptyState() {
     return { version: 2, items: [] };
@@ -105,6 +106,11 @@
     block.remove();
   }
 
+  function applySpan(block, item) {
+    block.style.gridColumn = `${item.col + 1} / span ${item.cols}`;
+    block.style.gridRow = `${item.row + 1} / span ${item.rows}`;
+  }
+
   function mountBlock(item) {
     const grid = gridEl();
     if (!grid) return null;
@@ -115,8 +121,13 @@
     block.className = "autotune-block";
     block.dataset.widgetType = item.id;
     block.dataset.placement = "fixo";
-    block.style.gridColumn = `${item.col + 1} / span ${item.cols}`;
-    block.style.gridRow = `${item.row + 1} / span ${item.rows}`;
+    applySpan(block, item);
+
+    const resizeHandle = document.createElement("button");
+    resizeHandle.type = "button";
+    resizeHandle.className = "autotune-block-resize";
+    resizeHandle.setAttribute("aria-label", "Aumentar ou diminuir");
+    resizeHandle.addEventListener("pointerdown", (event) => startResize(event, item.id));
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -130,7 +141,7 @@
 
     const body = document.createElement("div");
     body.className = "autotune-block-body";
-    block.append(remove, body);
+    block.append(remove, resizeHandle, body);
     grid.appendChild(block);
 
     const init = window.AutoTuneWidgets && window.AutoTuneWidgets[item.id];
@@ -160,14 +171,16 @@
       if (item.placement !== "fixo") return;
       const widget = getWidget(item.id);
       if (!widget || widget.placement !== "fixo") return;
-      if (!fits(item.col, item.row, widget.cols, widget.rows, accepted)) return;
+      const cols = Math.max(1, Number(item.cols) || widget.cols);
+      const rows = Math.max(1, Number(item.rows) || widget.rows);
+      if (!fits(item.col, item.row, cols, rows, accepted)) return;
       const next = {
         id: item.id,
         placement: "fixo",
         col: item.col,
         row: item.row,
-        cols: widget.cols,
-        rows: widget.rows,
+        cols,
+        rows,
       };
       accepted.push(next);
       mountBlock(next);
@@ -222,13 +235,98 @@
     return { ok: true, error: null };
   }
 
+  function resize(id, cols, rows) {
+    if (!isEditing()) return { ok: false, error: "fora do modo de edição", item: null };
+    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 1 || rows < 1) {
+      return { ok: false, error: "mínimo é uma célula", item: null };
+    }
+    const state = loadSettings();
+    const item = state.items.find((entry) => entry.id === id && entry.placement === "fixo");
+    if (!item) return { ok: false, error: "não está na grade", item: null };
+    if (!inside(item.col, item.row, cols, rows)) {
+      return { ok: false, error: "fora da grade", item: null };
+    }
+    if (!fits(item.col, item.row, cols, rows, state.items, id)) {
+      return { ok: false, error: "célula ocupada", item: null };
+    }
+    item.cols = cols;
+    item.rows = rows;
+    saveSettings(state);
+    const block = gridEl() && gridEl().querySelector(`.autotune-block[data-widget-type="${id}"]`);
+    if (block) applySpan(block, item);
+    return { ok: true, error: null, item: { ...item } };
+  }
+
+  let resizeDrag = null;
+
+  function spanFromPointer(origin, clientX, clientY) {
+    const grid = gridEl();
+    const cell = grid && cellFromPoint(grid, clientX, clientY);
+    if (!cell) return null;
+    return {
+      cols: Math.max(1, cell.col - origin.col + 1),
+      rows: Math.max(1, cell.row - origin.row + 1),
+    };
+  }
+
+  function paintSpan(grid, col, row, cols, rows, ok) {
+    clearHover(grid);
+    cellsFor(col, row, cols, rows).forEach((spot) => {
+      const node = grid.querySelector(`.autotune-cell[data-col="${spot.col}"][data-row="${spot.row}"]`);
+      if (node) node.classList.add(ok ? "is-hover" : "is-blocked");
+    });
+  }
+
+  function onResizeMove(event) {
+    if (!resizeDrag) return;
+    const grid = gridEl();
+    const next = spanFromPointer(resizeDrag, event.clientX, event.clientY);
+    if (!grid || !next) return;
+    const ok = fits(resizeDrag.col, resizeDrag.row, next.cols, next.rows, loadSettings().items, resizeDrag.id);
+    paintSpan(grid, resizeDrag.col, resizeDrag.row, next.cols, next.rows, ok);
+  }
+
+  function onResizeEnd(event) {
+    const handle = event.currentTarget;
+    handle.removeEventListener("pointermove", onResizeMove);
+    handle.removeEventListener("pointerup", onResizeEnd);
+    handle.removeEventListener("pointercancel", onResizeEnd);
+    const drag = resizeDrag;
+    resizeDrag = null;
+    const grid = gridEl();
+    if (grid) clearHover(grid);
+    if (!drag) return;
+    const next = spanFromPointer(drag, event.clientX, event.clientY);
+    if (!next) return;
+    resize(drag.id, next.cols, next.rows);
+  }
+
+  function startResize(event, id) {
+    if (!isEditing() || event.button !== 0) return;
+    const item = loadSettings().items.find((entry) => entry.id === id);
+    if (!item) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeDrag = { id, col: item.col, row: item.row };
+    const handle = event.currentTarget;
+    if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+    handle.addEventListener("pointermove", onResizeMove);
+    handle.addEventListener("pointerup", onResizeEnd);
+    handle.addEventListener("pointercancel", onResizeEnd);
+  }
+
   function ensureGrid(root) {
     let grid = root.querySelector(".autotune-grid");
-    if (grid) return grid;
-    grid = document.createElement("div");
-    grid.className = "autotune-grid";
+    if (!grid) {
+      grid = document.createElement("div");
+      grid.className = "autotune-grid";
+      root.appendChild(grid);
+    }
     grid.dataset.cols = String(COLS);
     grid.dataset.rows = String(ROWS);
+    grid.style.setProperty("--autotune-cols", String(COLS));
+    grid.style.setProperty("--autotune-rows", String(ROWS));
+    if (grid.querySelector(".autotune-cell")) return grid;
     for (let row = 0; row < ROWS; row += 1) {
       for (let col = 0; col < COLS; col += 1) {
         const cell = document.createElement("div");
@@ -240,7 +338,6 @@
         grid.appendChild(cell);
       }
     }
-    root.appendChild(grid);
     return grid;
   }
 
@@ -376,6 +473,7 @@
     getSettings: loadSettings,
     place,
     remove: removeWidget,
+    resize,
     isEditing,
     grid: { cols: COLS, rows: ROWS },
   };
@@ -384,5 +482,6 @@
     getSettings: loadSettings,
     reloadFromStorage,
     place,
+    resize,
   };
 })();

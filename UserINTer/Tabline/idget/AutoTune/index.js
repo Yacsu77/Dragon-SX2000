@@ -126,13 +126,14 @@
     const resizeHandle = document.createElement("button");
     resizeHandle.type = "button";
     resizeHandle.className = "autotune-block-resize";
-    resizeHandle.setAttribute("aria-label", "Aumentar ou diminuir");
+    resizeHandle.setAttribute("aria-label", window.Idioma ? window.Idioma.t("autotune.aumentar") : "Aumentar ou diminuir");
     resizeHandle.addEventListener("pointerdown", (event) => startResize(event, item.id));
 
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "autotune-block-remove";
-    remove.textContent = "Tirar";
+    remove.textContent = window.Idioma ? window.Idioma.t('autotune.tirar') : 'Tirar';
+    remove.setAttribute('aria-label', window.Idioma ? window.Idioma.t('autotune.tirar') : 'Tirar');
     remove.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();

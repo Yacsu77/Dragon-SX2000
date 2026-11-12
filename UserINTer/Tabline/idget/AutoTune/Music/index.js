@@ -7,8 +7,8 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 window.AutoTuneWidgetMeta.music = {
   title: "Música",
   placement: "fixo",
-  cols: 1,
-  rows: 1,
+  cols: 3,
+  rows: 3,
 };
 
 (function () {

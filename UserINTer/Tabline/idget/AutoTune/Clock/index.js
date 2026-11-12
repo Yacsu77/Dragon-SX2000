@@ -31,8 +31,8 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
   window.AutoTuneWidgetMeta.clock = {
     title: "Relógio",
     placement: "fixo",
-    cols: 2,
-    rows: 1,
+    cols: 6,
+    rows: 3,
   };
 
   window.AutoTuneWidgets.clock = function initClockWidget(bodyEl) {

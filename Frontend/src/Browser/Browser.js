@@ -47,6 +47,7 @@
 
     const response = await fetch(TEMPLATE_PATH);
     mount.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(mount);
     isBuilt = true;
   }
 

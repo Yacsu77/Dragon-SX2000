@@ -18,7 +18,7 @@
     return [
       {
         id: 'open-link',
-        label: 'Abrir link',
+        label: window.Idioma ? window.Idioma.t('cursor.abrirLink') : 'Abrir link',
         icon: 'external-link',
         disabled: !isAllowed,
         execute: async () => {
@@ -27,7 +27,7 @@
       },
       {
         id: 'open-link-new-tab',
-        label: 'Abrir link em nova aba',
+        label: window.Idioma ? window.Idioma.t('cursor.abrirLinkAba') : 'Abrir link em nova aba',
         icon: 'square-plus',
         disabled: !isAllowed,
         execute: async () => {
@@ -36,7 +36,7 @@
       },
       {
         id: 'open-link-new-window',
-        label: 'Abrir link em nova janela',
+        label: window.Idioma ? window.Idioma.t('cursor.abrirLinkJanela') : 'Abrir link em nova janela',
         icon: 'app-window',
         disabled: !isAllowed,
         execute: async () => {
@@ -45,7 +45,7 @@
       },
       {
         id: 'copy-link',
-        label: 'Copiar link',
+        label: window.Idioma ? window.Idioma.t('cursor.copiarLink') : 'Copiar link',
         icon: 'link',
         separatorBefore: true,
         disabled: !isAllowed,
@@ -55,7 +55,7 @@
       },
       {
         id: 'add-link-favorite',
-        label: 'Adicionar link aos favoritos',
+        label: window.Idioma ? window.Idioma.t('cursor.favoritarLink') : 'Adicionar link aos favoritos',
         icon: 'star',
         disabled: !isAllowed,
         execute: async () => {

@@ -4,12 +4,12 @@ Os AutoTunes da home ocupam células de uma grade. O tipo de encaixe é `fixo` o
 
 ## Grade
 
-A área útil da home, abaixo da barra e das abas, é uma grade de **3 linhas por 4 colunas** (12 células), dentro de `#floating-cosmetics-root`.
+A área útil da home, abaixo da barra e das abas, é uma grade de **9 linhas por 12 colunas** (108 células), dentro de `#floating-cosmetics-root`. É o triplo da grade 3×4, para o vão poder crescer e encolher de uma célula em uma célula.
 
 | | |
 |---|---|
-| Colunas | 4 |
-| Linhas | 3 |
+| Colunas | 12 |
+| Linhas | 9 |
 | Tamanho da célula | `1fr`, definido no CSS |
 | Borda | só no modo de edição, como guia |
 
@@ -21,17 +21,21 @@ Cada AutoTune declara o vão em `window.AutoTuneWidgetMeta`. A âncora é o cant
 
 | AutoTune | Colunas | Linhas |
 |---|---|---|
-| Relógio | 2 | 1 |
-| Lista | 1 | 2 |
-| Timer | 1 | 1 |
-| Share | 1 | 1 |
-| Música | 1 | 1 |
+| Relógio | 6 | 3 |
+| Lista | 3 | 6 |
+| Timer | 3 | 3 |
+| Share | 3 | 3 |
+| Música | 3 | 3 |
+
+Esses números são o vão inicial, a mesma proporção da grade antiga. No modo de edição, o canto inferior direito aumenta ou diminui o vão. O mínimo é 1×1. A âncora não se move. Se o vão novo pisa em outro fixo ou sai da grade, o tamanho anterior permanece.
 
 A música é o card de uma célula, ligado ao Dragon Media SDK. A barra minimalista do topo não é mais montada.
 
 ## Modo de edição
 
 O item AutoTune da lateral abre `#autotune-widget`. Esse painel é a prateleira: um preview de cada bloco, arrastável só com o painel aberto. Soltar grava a célula e monta o widget. Fora do modo de edição a soltura não grava.
+
+No mesmo modo, o canto inferior direito do bloco aumenta ou diminui o vão. A âncora fica no lugar. Fora do modo de edição o canto não grava.
 
 Enquanto o bloco está na grade, o preview some da prateleira. No modo de edição o botão **Tirar** devolve o bloco à prateleira.
 
@@ -45,14 +49,14 @@ Chave `settingsAUTO`, versão 2. Posição antiga em pixels não é convertida: 
 {
   "version": 2,
   "items": [
-    { "id": "clock", "placement": "fixo", "col": 0, "row": 0, "cols": 2, "rows": 1 }
+    { "id": "clock", "placement": "fixo", "col": 0, "row": 0, "cols": 6, "rows": 3 }
   ]
 }
 ```
 
 `col` e `row` começam em 0. `placement: "flutuante"` pode estar na lista e é ignorado na montagem.
 
-Na abertura, o motor lê essa lista uma vez e coloca cada fixo na célula. Não há listener de `resize` reescrevendo posição.
+Na abertura, o motor lê essa lista uma vez e coloca cada fixo na célula, com o `cols` e `rows` que foram salvos. Não há listener de `resize` da janela reescrevendo posição.
 
 ## Arquivos
 
@@ -61,11 +65,11 @@ UserINTer/Tabline/idget/AutoTune/
 ├── catalog.html          prateleira de previews
 ├── index.js              grade, ocupação, gravação
 ├── index.css             prateleira, grade e blocos
-├── Timer/index.js        1×1
-├── Share/index.js        1×1
-├── Tasklist/index.js     1×2
-├── Music/index.js        1×1, SDK
-└── Clock/                2×1
+├── Timer/index.js        3×3
+├── Share/index.js        3×3
+├── Tasklist/index.js     3×6
+├── Music/index.js        3×3, SDK
+└── Clock/                6×3
 ```
 
 `Music/minimal.js` permanece no disco e não entra no carregamento da Tabline.
@@ -94,7 +98,8 @@ window.AutoTuneWidgets.notas = function initNotas(bodyEl) {
 | Chamada | Efeito |
 |---|---|
 | `AutoTune.place(id, col, row)` | Grava e monta, só em modo de edição |
+| `AutoTune.resize(id, cols, rows)` | Muda o vão a partir da âncora, só em modo de edição |
 | `AutoTune.remove(id)` | Tira da grade, só em modo de edição |
 | `AutoTune.getSettings()` | Lê `settingsAUTO` v2 |
 | `AutoTune.reloadFromStorage()` | Remonta a grade a partir do que está salvo |
-| `AutoTune.grid` | `{ cols: 4, rows: 3 }` |
+| `AutoTune.grid` | `{ cols: 12, rows: 9 }` |

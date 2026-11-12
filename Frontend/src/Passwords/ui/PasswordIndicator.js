@@ -162,7 +162,7 @@
     saveEl = document.createElement('div');
     saveEl.className = 'password-popover password-popover--save';
     saveEl.innerHTML = `
-      <div class="password-popover__eyebrow">Salvar senha</div>
+      <div class="password-popover__eyebrow">${window.Idioma ? window.Idioma.t('cofre.salvarSenha') : 'Salvar senha'}</div>
       <div class="password-popover__identity">
         <span class="password-popover__lock">${LOCK_ICON}</span>
         <div class="password-popover__copy">
@@ -172,8 +172,8 @@
       </div>
       <p class="password-popover__hint" data-role="hint" hidden></p>
       <div class="password-popover__actions password-popover__actions--save">
-        <button type="button" class="password-popover__save-primary" data-role="save">Salvar senha</button>
-        <button type="button" data-role="decline">Não</button>
+        <button type="button" class="password-popover__save-primary" data-role="save">${window.Idioma ? window.Idioma.t('cofre.salvarSenha') : 'Salvar senha'}</button>
+        <button type="button" data-role="decline">${window.Idioma ? window.Idioma.t('cofre.nao') : 'Não'}</button>
       </div>
     `;
     popoverRoot.appendChild(saveEl);

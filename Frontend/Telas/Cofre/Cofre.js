@@ -32,6 +32,7 @@
 
     const response = await fetch(TEMPLATE_PATH);
     overlayEl.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
 
     overlayEl.querySelector('[data-role="close"]').addEventListener('click', close);
     overlayEl.addEventListener('click', (e) => {

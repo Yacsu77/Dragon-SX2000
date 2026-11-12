@@ -199,49 +199,66 @@ async function exerciseAutotuneGrid() {
   const cells = document.querySelectorAll('.autotune-cell').length;
   const size = window.AutoTune.grid || {};
   push(
-    'Grade 3×4',
-    cells === 12 && size.cols === 4 && size.rows === 3,
-    cells === 12 ? '12 células' : `${cells} células`,
+    'Grade 9×12',
+    cells === 108 && size.cols === 12 && size.rows === 9,
+    cells === 108 ? '108 células' : `${cells} células`,
   );
 
   const clock = window.AutoTune.place('clock', 0, 0);
   const clockEl = document.querySelector('.autotune-block[data-widget-type="clock"]');
   push(
-    'Relógio em 2×1',
-    !!(clock.ok && clock.item && clock.item.cols === 2 && clock.item.rows === 1
+    'Relógio em 6×3',
+    !!(clock.ok && clock.item && clock.item.cols === 6 && clock.item.rows === 3
       && clockEl && clockEl.style.left === '' && clockEl.style.top === ''
-      && clockEl.style.gridColumn.indexOf('span 2') !== -1),
+      && clockEl.style.gridColumn.indexOf('span 6') !== -1),
     clock.ok ? null : clock.error,
   );
 
   const occupied = window.AutoTune.place('timer', 0, 0);
   push('Célula ocupada', !occupied.ok && !document.querySelector('.autotune-block[data-widget-type="timer"]'), occupied.ok ? 'gravou em célula ocupada' : null);
 
-  const offGrid = window.AutoTune.place('tasklist', 3, 2);
+  const offGrid = window.AutoTune.place('tasklist', 10, 4);
   push('Fora da grade', !offGrid.ok, offGrid.ok ? 'gravou fora da grade' : null);
 
   window.location.hash = '';
-  const locked = window.AutoTune.place('share', 3, 0);
+  const locked = window.AutoTune.place('share', 9, 0);
   push('Fora do modo de edição', !locked.ok && !document.querySelector('.autotune-block[data-widget-type="share"]'), locked.ok ? 'gravou fora do modo de edição' : null);
 
   window.location.hash = 'autotune-widget';
-  const list = window.AutoTune.place('tasklist', 0, 1);
-  const timer = window.AutoTune.place('timer', 2, 0);
-  const share = window.AutoTune.place('share', 3, 0);
-  const music = window.AutoTune.place('music', 1, 1);
+  const list = window.AutoTune.place('tasklist', 0, 3);
+  const timer = window.AutoTune.place('timer', 6, 0);
+  const share = window.AutoTune.place('share', 9, 0);
+  const music = window.AutoTune.place('music', 6, 3);
   const listEl = document.querySelector('.autotune-block[data-widget-type="tasklist"]');
   push(
-    'Lista em 1×2',
-    !!(list.ok && list.item && list.item.cols === 1 && list.item.rows === 2 && listEl && listEl.style.gridRow.indexOf('span 2') !== -1),
+    'Lista em 3×6',
+    !!(list.ok && list.item && list.item.cols === 3 && list.item.rows === 6 && listEl && listEl.style.gridRow.indexOf('span 6') !== -1),
     list.ok ? null : list.error,
   );
-  push('Timer em 1×1', !!(timer.ok && timer.item && timer.item.cols === 1 && timer.item.rows === 1), timer.ok ? null : timer.error);
-  push('Share em 1×1', !!(share.ok && share.item && share.item.cols === 1 && share.item.rows === 1), share.ok ? null : share.error);
+  push('Timer em 3×3', !!(timer.ok && timer.item && timer.item.cols === 3 && timer.item.rows === 3), timer.ok ? null : timer.error);
+  push('Share em 3×3', !!(share.ok && share.item && share.item.cols === 3 && share.item.rows === 3), share.ok ? null : share.error);
   push(
-    'Música em 1×1',
-    !!(music.ok && music.item && music.item.cols === 1 && document.querySelector('.autotune-music-card')),
+    'Música em 3×3',
+    !!(music.ok && music.item && music.item.cols === 3 && document.querySelector('.autotune-music-card')),
     music.ok ? null : music.error,
   );
+
+  const smaller = window.AutoTune.resize('clock', 4, 2);
+  const grown = window.AutoTune.resize('share', 3, 4);
+  const blocked = window.AutoTune.resize('clock', 7, 3);
+  const clockNow = document.querySelector('.autotune-block[data-widget-type="clock"]');
+  push(
+    'Diminuir o relógio',
+    !!(smaller.ok && smaller.item && smaller.item.cols === 4 && smaller.item.rows === 2
+      && clockNow && clockNow.style.gridColumn.indexOf('span 4') !== -1 && clockNow.style.left === ''),
+    smaller.ok ? null : smaller.error,
+  );
+  push('Aumentar o share', !!(grown.ok && grown.item && grown.item.rows === 4), grown.ok ? null : grown.error);
+  push('Aumento em célula ocupada', !blocked.ok, blocked.ok ? 'o relógio invadiu o timer' : null);
+
+  window.location.hash = '';
+  const lockedResize = window.AutoTune.resize('clock', 5, 2);
+  push('Redimensionar fora do modo de edição', !lockedResize.ok, lockedResize.ok ? 'redimensionou fora do modo de edição' : null);
 
   const before = window.AutoTune.getSettings();
   window.AutoTune.reloadFromStorage();
@@ -251,7 +268,8 @@ async function exerciseAutotuneGrid() {
   const sameCount = before.items.length === after.items.length;
   push(
     'Restaura pelas células',
-    !!(saved && saved.col === 0 && saved.row === 0 && saved.cols === 2 && !('x' in saved) && !('y' in saved)
+    !!(saved && saved.col === 0 && saved.row === 0 && saved.cols === 4 && saved.rows === 2
+      && !('x' in saved) && !('y' in saved)
       && restored && restored.style.left === '' && restored.style.top === '' && sameCount),
     saved ? null : 'o relógio não voltou pela célula',
   );

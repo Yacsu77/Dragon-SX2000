@@ -11,8 +11,9 @@
     el.id = 'dsx-session-saving';
     el.className = 'dsx-session-saving';
     el.setAttribute('role', 'alertdialog');
-    el.setAttribute('aria-label', 'Salvando');
-    el.innerHTML = '<div class="dsx-session-saving__card"><p>Salvando…</p></div>';
+    el.setAttribute('aria-label', window.Idioma ? window.Idioma.t('sessao.salvando') : 'Salvando');
+    const texto = window.Idioma ? window.Idioma.t('sessao.salvando') : 'Salvando…';
+    el.innerHTML = `<div class="dsx-session-saving__card"><p>${texto}</p></div>`;
     document.body.appendChild(el);
   }
 

@@ -192,6 +192,19 @@
           action: { type: 'command', payload: { name: 'switch-user' } },
         });
       });
+
+      const idiomaBtn = flyout.querySelector('[data-profile-action="idioma"]');
+      const idiomaBox = flyout.querySelector('[data-role="idioma-opcoes"]');
+      idiomaBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (!idiomaBox || !window.Idioma) return;
+        const aberto = !idiomaBox.hidden;
+        idiomaBox.hidden = aberto;
+        if (aberto) return;
+        window.Idioma.botoes(idiomaBox, window.Idioma.codigo(), (id) => {
+          window.Idioma.reiniciar(id);
+        });
+      });
     }
 
     function refreshAvatar() {
@@ -340,6 +353,7 @@
     if (root.childElementCount === 0) {
       const response = await fetch(TEMPLATE_PATH);
       root.innerHTML = (await response.text()).trim();
+      if (window.Idioma) window.Idioma.aplicar(root);
     }
 
     isBuilt = true;

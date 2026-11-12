@@ -17,7 +17,7 @@
     return [
       {
         id: 'go-back',
-        label: 'Voltar',
+        label: window.Idioma ? window.Idioma.t('cursor.voltar') : 'Voltar',
         icon: 'arrow-left',
         shortcut: 'Alt+←',
         disabled: !context.canGoBack,
@@ -27,7 +27,7 @@
       },
       {
         id: 'reload-page',
-        label: 'Recarregar página',
+        label: window.Idioma ? window.Idioma.t('cursor.recarregar') : 'Recarregar página',
         icon: 'rotate-cw',
         shortcut: 'Ctrl+R',
         separatorBefore: false,
@@ -37,7 +37,9 @@
       },
       {
         id: 'toggle-page-favorite',
-        label: isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos',
+        label: isFavorite
+          ? (window.Idioma ? window.Idioma.t('cursor.removerFavorito') : 'Remover dos favoritos')
+          : (window.Idioma ? window.Idioma.t('cursor.adicionarFavorito') : 'Adicionar aos favoritos'),
         icon: isFavorite ? 'star-off' : 'star',
         separatorBefore: true,
         disabled: !hasUrl,

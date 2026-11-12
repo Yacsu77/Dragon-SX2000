@@ -114,7 +114,7 @@
   background: rgba(122, 140, 255, 0.45);
 }
 
-/* Grade 3×4 na área útil da home. Sem borda fora do modo de edição. */
+/* Grade 9×12 na área útil da home. Sem borda fora do modo de edição. */
 #floating-cosmetics-root {
   position: fixed;
   top: var(--sidebar-dock-top, 84px);
@@ -133,9 +133,9 @@
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(var(--autotune-cols, 12), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--autotune-rows, 9), minmax(0, 1fr));
+  gap: 6px;
   padding: 16px;
   box-sizing: border-box;
   pointer-events: none;
@@ -215,6 +215,25 @@
 
 .autotune-grid.is-editing .autotune-block-remove {
   display: inline-flex;
+}
+
+.autotune-block-resize {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0 0 12px 0;
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.45) 50%);
+  cursor: nwse-resize;
+}
+
+.autotune-grid.is-editing .autotune-block-resize {
+  display: block;
 }
 
 .autotune-block[data-widget-type="timer"] .autotune-block-body,

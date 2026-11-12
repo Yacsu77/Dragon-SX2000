@@ -4,8 +4,8 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 window.AutoTuneWidgetMeta.tasklist = {
   title: "Lista",
   placement: "fixo",
-  cols: 1,
-  rows: 2,
+  cols: 3,
+  rows: 6,
 };
 
 (function () {

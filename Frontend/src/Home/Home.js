@@ -13,6 +13,7 @@
 
     const response = await fetch('Home/Home.html');
     homePage.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(homePage);
     isBuilt = true;
   }
 

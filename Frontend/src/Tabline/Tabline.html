@@ -1,20 +1,20 @@
-<aside class="side-dock" id="sideDock" aria-label="Barra lateral">
+<aside class="side-dock" id="sideDock" aria-label="Barra lateral" data-i18n-aria="lateral.ferramentas">
   <div class="side-dock__join" aria-hidden="true"></div>
 
   <div class="side-dock__body">
-    <section class="side-section" data-section="tools" aria-label="Ferramentas">
+    <section class="side-section" data-section="tools" aria-label="Ferramentas" data-i18n-aria="lateral.ferramentas">
       <div class="side-section__list" data-role="section-list"></div>
     </section>
 
-    <section class="side-section" data-section="llm" aria-label="IA">
+    <section class="side-section" data-section="llm" aria-label="IA" data-i18n-aria="lateral.ia">
       <div class="side-section__list" data-role="section-list"></div>
     </section>
 
-    <section class="side-section" data-section="chats" aria-label="Chats">
+    <section class="side-section" data-section="chats" aria-label="Chats" data-i18n-aria="lateral.chats">
       <div class="side-section__list" data-role="section-list"></div>
     </section>
 
-    <section class="side-section side-section--widgets" data-section="widgets" aria-label="Widgets">
+    <section class="side-section side-section--widgets" data-section="widgets" aria-label="Widgets" data-i18n-aria="lateral.widgets">
       <div class="widgets-orb-wrap">
         <button
           type="button"
@@ -24,16 +24,18 @@
           aria-expanded="false"
           aria-haspopup="true"
           title="Widgets"
+          data-i18n-aria="lateral.widgets"
+          data-i18n-title="lateral.widgets"
         >
           <span class="widgets-orb__ring" aria-hidden="true"></span>
           <span class="widgets-orb__core" aria-hidden="true"></span>
         </button>
 
         <div class="widgets-flyout" id="widgetsFlyout" hidden>
-          <a class="side-item" data-widget="wallpaper" href="#wallpaper-widget" aria-label="Wallpaper" title="Wallpaper">
+          <a class="side-item" data-widget="wallpaper" href="#wallpaper-widget" aria-label="Wallpaper" title="Wallpaper" data-i18n-aria="lateral.wallpaper" data-i18n-title="lateral.wallpaper">
             <span class="side-item__icon" data-lucide="image"></span>
           </a>
-          <button type="button" class="side-item side-item--theme" id="temaTabBtn" data-widget="tema" aria-label="Tema" title="Tema">
+          <button type="button" class="side-item side-item--theme" id="temaTabBtn" data-widget="tema" aria-label="Tema" title="Tema" data-i18n-aria="lateral.tema" data-i18n-title="lateral.tema">
             <span class="theme-toggler-viewport" aria-hidden="true">
               <span class="theme-toggler-strip" id="themeTogglerStrip" data-index="0">
                 <span class="theme-toggler-slot">
@@ -56,10 +58,10 @@
               </span>
             </span>
           </button>
-          <button type="button" class="side-item" data-widget="donate" aria-label="Donate" title="Donate">
+          <button type="button" class="side-item" data-widget="donate" aria-label="Donate" title="Donate" data-i18n-aria="lateral.donate" data-i18n-title="lateral.donate">
             <span class="side-item__icon" data-lucide="heart"></span>
           </button>
-          <a class="side-item" data-widget="autotune" href="#autotune-widget" aria-label="AutoTune" title="AutoTune">
+          <a class="side-item" data-widget="autotune" href="#autotune-widget" aria-label="AutoTune" title="AutoTune" data-i18n-aria="lateral.autotune" data-i18n-title="lateral.autotune">
             <span class="side-item__icon" data-lucide="sparkles"></span>
           </a>
         </div>
@@ -70,39 +72,41 @@
 
     <section class="side-section side-section--footer" data-section="footer" aria-label="Conta">
       <div class="side-media-wrap" id="sideMediaWrap" hidden>
-        <button type="button" class="side-media" id="sideMediaHint" aria-label="Mídia" title="Mídia">
+        <button type="button" class="side-media" id="sideMediaHint" aria-label="Mídia" title="Mídia" data-i18n-aria="lateral.midia" data-i18n-title="lateral.midia">
           <span class="side-media__eq" aria-hidden="true">
             <i></i><i></i><i></i>
           </span>
         </button>
         <div class="side-media-flyout" id="sideMediaFlyout" hidden>
           <div class="side-media-flyout__controls">
-            <button type="button" data-media-action="prev" title="Anterior" aria-label="Anterior">
+            <button type="button" data-media-action="prev" title="Anterior" aria-label="Anterior" data-i18n-title="lateral.anterior" data-i18n-aria="lateral.anterior">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6L18 6v12z"/></svg>
             </button>
-            <button type="button" data-media-action="play_pause" title="Play/Pause" aria-label="Play/Pause" data-role="media-play-btn">
+            <button type="button" data-media-action="play_pause" title="Play/Pause" aria-label="Play/Pause" data-role="media-play-btn" data-i18n-title="lateral.reproduzir" data-i18n-aria="lateral.reproduzir">
               <svg data-icon="play" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
               <svg data-icon="pause" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" hidden aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
             </button>
-            <button type="button" data-media-action="next" title="Próxima" aria-label="Próxima">
+            <button type="button" data-media-action="next" title="Próxima" aria-label="Próxima" data-i18n-title="lateral.proxima" data-i18n-aria="lateral.proxima">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
             </button>
           </div>
         </div>
       </div>
 
-      <button type="button" class="side-sync" id="sideSyncBtn" aria-label="Sincronização" title="Sincronizando…">
+      <button type="button" class="side-sync" id="sideSyncBtn" aria-label="Sincronização" title="Sincronizando…" data-i18n-aria="lateral.sincronizando" data-i18n-title="lateral.sincronizando">
         <span class="side-sync__icon" data-lucide="cloud"></span>
         <span class="side-sync__pulse" aria-hidden="true"></span>
       </button>
 
       <div class="side-profile-wrap">
-        <button type="button" class="side-profile" id="sideProfileBtn" aria-label="Perfil" aria-expanded="false" aria-haspopup="true">
+        <button type="button" class="side-profile" id="sideProfileBtn" aria-label="Perfil" data-i18n-aria="lateral.perfil" aria-expanded="false" aria-haspopup="true">
           <span class="side-profile__avatar" data-role="avatar">?</span>
         </button>
         <div class="side-profile-flyout" id="sideProfileFlyout" hidden>
-          <button type="button" class="side-profile-flyout__btn" data-profile-action="edit">Editar</button>
-          <button type="button" class="side-profile-flyout__btn" data-profile-action="switch">Trocar de conta</button>
+          <button type="button" class="side-profile-flyout__btn" data-profile-action="edit" data-i18n="lateral.editar">Editar</button>
+          <button type="button" class="side-profile-flyout__btn" data-profile-action="idioma" data-i18n="lateral.idioma">Idioma</button>
+          <div class="side-profile-flyout__idiomas" data-role="idioma-opcoes" hidden></div>
+          <button type="button" class="side-profile-flyout__btn" data-profile-action="switch" data-i18n="lateral.trocarConta">Trocar de conta</button>
         </div>
       </div>
     </section>

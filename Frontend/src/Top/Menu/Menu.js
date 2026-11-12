@@ -5,14 +5,18 @@
   const TEMPLATE_PATH = 'Top/Menu/Menu.html';
 
   const MENU_ITEMS = [
-    { id: 'editar', label: 'Editar', placeholder: 'Ajustes de desempenho e comportamento.' },
-    { id: 'historico', label: 'Histórico', preview: 'history' },
-    { id: 'favoritos', label: 'Favoritos', action: 'favoritos' },
-    { id: 'atalhos', label: 'Atalhos', preview: 'shortcuts' },
-    { id: 'cofre', label: 'Senhas', placeholder: 'Gerenciador de senhas protegido por perfil.' },
-    { id: 'usuarios', label: 'Trocar usuário', placeholder: 'Alternar perfil neste aparelho.' },
-    { id: 'sobre', label: 'Sobre', placeholder: 'Dragon SX2000 — Navegue com estilo e velocidade.' },
+    { id: 'editar', label: 'menu.editar', placeholder: 'menu.editarPrevia' },
+    { id: 'historico', label: 'menu.historico', preview: 'history' },
+    { id: 'favoritos', label: 'menu.favoritos', action: 'favoritos' },
+    { id: 'atalhos', label: 'menu.atalhos', preview: 'shortcuts' },
+    { id: 'cofre', label: 'menu.senhas', placeholder: 'menu.senhasPrevia' },
+    { id: 'usuarios', label: 'menu.usuarios', placeholder: 'menu.usuariosPrevia' },
+    { id: 'sobre', label: 'menu.sobre', placeholder: 'menu.sobrePrevia' },
   ];
+
+  function frase(chave) {
+    return window.Idioma ? window.Idioma.t(chave) : chave;
+  }
 
   let rootEl = null;
   let previewEl = null;
@@ -30,6 +34,7 @@
     rootEl.className = 'main-menu';
     rootEl.setAttribute('aria-hidden', 'true');
     rootEl.innerHTML = panelHtml;
+    if (window.Idioma) window.Idioma.aplicar(rootEl);
 
     const listEl = rootEl.querySelector('[data-role="menu-list"]');
     previewEl = rootEl.querySelector('[data-role="preview"]');
@@ -43,7 +48,7 @@
       btn.type = 'button';
       btn.className = 'main-menu__trigger';
       btn.setAttribute('role', 'menuitem');
-      btn.textContent = item.label;
+      btn.textContent = frase(item.label);
       btn.dataset.menuId = item.id;
 
       btn.addEventListener('mouseenter', () => showPreview(item));
@@ -104,7 +109,7 @@
       return;
     }
 
-    showPlaceholder(item.placeholder || 'Em breve.');
+    showPlaceholder(item.placeholder ? frase(item.placeholder) : frase('menu.emBreve'));
   }
 
   function handleMenuClick(item) {

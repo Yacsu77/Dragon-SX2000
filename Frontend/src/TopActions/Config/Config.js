@@ -171,6 +171,7 @@
 
     const response = await fetch(TEMPLATE_PATH);
     overlayEl.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
 
     gridEl = overlayEl.querySelector('[data-role="grid"]');
     emptyEl = overlayEl.querySelector('[data-role="empty"]');

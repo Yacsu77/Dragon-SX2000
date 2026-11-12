@@ -4,8 +4,8 @@ window.AutoTuneWidgetMeta = window.AutoTuneWidgetMeta || {};
 window.AutoTuneWidgetMeta.share = {
   title: "Share",
   placement: "fixo",
-  cols: 1,
-  rows: 1,
+  cols: 3,
+  rows: 3,
 };
 
 window.AutoTuneWidgets.share = function initShareWidget(bodyEl) {

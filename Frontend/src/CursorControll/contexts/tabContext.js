@@ -18,7 +18,7 @@
     if (!isHomeTab) {
       actions.push({
         id: 'duplicate-tab',
-        label: 'Duplicar aba',
+        label: window.Idioma ? window.Idioma.t('cursor.duplicarAba') : 'Duplicar aba',
         icon: 'copy-plus',
         execute: async () => {
           await window.CursorTabActions?.duplicateTab(tabId);
@@ -28,7 +28,7 @@
 
     actions.push({
       id: 'close-tab',
-      label: 'Fechar aba',
+      label: window.Idioma ? window.Idioma.t('cursor.fecharAba') : 'Fechar aba',
       icon: 'x',
       destructive: true,
       separatorBefore: !isHomeTab,
@@ -70,7 +70,7 @@
     if (!isHomeTab && hasUrl) {
       actions.push({
         id: 'copy-tab-url',
-        label: 'Copiar URL',
+        label: window.Idioma ? window.Idioma.t('cursor.copiarUrl') : 'Copiar URL',
         icon: 'link',
         separatorBefore: true,
         execute: async () => {
@@ -80,7 +80,9 @@
 
       actions.push({
         id: 'toggle-tab-mute',
-        label: isMuted ? 'Ativar som da aba' : 'Silenciar aba',
+        label: isMuted
+          ? (window.Idioma ? window.Idioma.t('cursor.ativarSom') : 'Ativar som da aba')
+          : (window.Idioma ? window.Idioma.t('cursor.silenciar') : 'Silenciar aba'),
         icon: isMuted ? 'volume-2' : 'volume-x',
         execute: async () => {
           await window.CursorTabActions?.toggleTabMute(tabId);
@@ -89,7 +91,9 @@
 
       actions.push({
         id: 'toggle-tab-favorite',
-        label: isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos',
+        label: isFavorite
+          ? (window.Idioma ? window.Idioma.t('cursor.removerFavorito') : 'Remover dos favoritos')
+          : (window.Idioma ? window.Idioma.t('cursor.adicionarFavorito') : 'Adicionar aos favoritos'),
         icon: isFavorite ? 'star-off' : 'star',
         execute: async () => {
           const title = context.tabTitle || context.currentUrl || '';

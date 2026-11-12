@@ -20,6 +20,7 @@
     "test:crypto": "node Core/tests/crypto/verify-vectors.js",
     "test:contract": "node Core/tests/contract/api-contract.js",
     "test:suite": "electron test-main.js",
+    "i18n:check": "node Tests/i18n/validar.js",
     "perf:measure": "node scripts/perf/measure.js",
     "perf:static": "node scripts/perf/measure.js --static --md",
     "core:build": "cmake -S Core -B Core/build -DCMAKE_BUILD_TYPE=Release && cmake --build Core/build --config Release",

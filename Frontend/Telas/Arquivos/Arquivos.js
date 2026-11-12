@@ -130,6 +130,7 @@
 
     const response = await fetch(TEMPLATE_PATH);
     overlayEl.innerHTML = (await response.text()).trim();
+    if (window.Idioma) window.Idioma.aplicar(overlayEl);
 
     listEl = overlayEl.querySelector('[data-role="list"]');
     emptyEl = overlayEl.querySelector('[data-role="empty"]');
